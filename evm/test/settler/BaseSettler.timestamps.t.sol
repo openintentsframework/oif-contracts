@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import "forge-std/Test.sol";
+import { Test } from "forge-std/Test.sol";
 
-import { BaseSettler } from "src/settlers/BaseSettler.sol";
+import { BaseSettler } from "../../src/settlers/BaseSettler.sol";
 
 contract MockSettler is BaseSettler {
     function _domainNameAndVersion()

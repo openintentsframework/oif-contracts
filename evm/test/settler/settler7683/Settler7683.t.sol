@@ -1,19 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import "forge-std/Test.sol";
-
 import { Settler7683TestBase } from "./Settler7683.base.t.sol";
-import { Settler7683 } from "src/settlers/7683/Settler7683.sol";
 
-import { GaslessCrossChainOrder, OnchainCrossChainOrder } from "src/interfaces/IERC7683.sol";
-
-import { MandateERC7683 } from "src/settlers/7683/Order7683Type.sol";
-
-import { MandateOutput, MandateOutputType } from "src/settlers/types/MandateOutputType.sol";
-import { StandardOrder } from "src/settlers/types/StandardOrderType.sol";
-
-import { MandateOutputEncodingLib } from "src/libs/MandateOutputEncodingLib.sol";
+import { GaslessCrossChainOrder, OnchainCrossChainOrder } from "../../../src/interfaces/IERC7683.sol";
+import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
+import { MandateERC7683 } from "../../../src/settlers/7683/Order7683Type.sol";
+import { Settler7683 } from "../../../src/settlers/7683/Settler7683.sol";
+import { MandateOutput, MandateOutputType } from "../../../src/settlers/types/MandateOutputType.sol";
+import { StandardOrder } from "../../../src/settlers/types/StandardOrderType.sol";
 
 contract Settler7683Test is Settler7683TestBase {
     struct OrderFulfillmentDescription {

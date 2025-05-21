@@ -4,12 +4,13 @@ pragma solidity ^0.8.26;
 import { Ownable } from "solady/auth/Ownable.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
-import { WormholeVerifier } from "./external/callworm/WormholeVerifier.sol";
-import { IWormhole } from "./interfaces/IWormhole.sol";
+import { IPayloadCreator } from "../../interfaces/IPayloadCreator.sol";
+import { MessageEncodingLib } from "../../libs/MessageEncodingLib.sol";
 
 import { BaseOracle } from "../BaseOracle.sol";
-import { IPayloadCreator } from "src/interfaces/IPayloadCreator.sol";
-import { MessageEncodingLib } from "src/libs/MessageEncodingLib.sol";
+
+import { WormholeVerifier } from "./external/callworm/WormholeVerifier.sol";
+import { IWormhole } from "./interfaces/IWormhole.sol";
 
 /**
  * @notice Wormhole Oracle.

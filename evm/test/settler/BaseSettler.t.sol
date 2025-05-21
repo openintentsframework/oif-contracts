@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import "forge-std/Test.sol";
+import { Test } from "forge-std/Test.sol";
 
-import { MockERC20 } from "test/mocks/MockERC20.sol";
+import { MockERC20 } from "../mocks/MockERC20.sol";
 
-import { BaseSettler } from "src/settlers/BaseSettler.sol";
-import { OrderPurchase, OrderPurchaseType } from "src/settlers/types/OrderPurchaseType.sol";
+import { BaseSettler } from "../../src/settlers/BaseSettler.sol";
+import { OrderPurchase, OrderPurchaseType } from "../../src/settlers/types/OrderPurchaseType.sol";
 
 interface EIP712 {
     function DOMAIN_SEPARATOR() external view returns (bytes32);

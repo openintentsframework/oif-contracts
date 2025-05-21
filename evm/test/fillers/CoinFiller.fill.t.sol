@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import "forge-std/Test.sol";
+import { Test } from "forge-std/Test.sol";
 
-import { CoinFiller } from "src/fillers/coin/CoinFiller.sol";
-import { MandateOutput } from "src/libs/MandateOutputEncodingLib.sol";
+import { CoinFiller } from "../../src/fillers/coin/CoinFiller.sol";
+import { MandateOutput } from "../../src/libs/MandateOutputEncodingLib.sol";
 
-import { MockCallbackExecutor } from "test/mocks/MockCallbackExecutor.sol";
-import { MockERC20 } from "test/mocks/MockERC20.sol";
+import { MockCallbackExecutor } from "../mocks/MockCallbackExecutor.sol";
+import { MockERC20 } from "../mocks/MockERC20.sol";
 
 contract CoinFillerTestFill is Test {
     error ZeroValue();

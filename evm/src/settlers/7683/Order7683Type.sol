@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.26;
 
+import { GaslessCrossChainOrder, OnchainCrossChainOrder } from "../../interfaces/IERC7683.sol";
 import { MandateOutput, MandateOutputType } from "../types/MandateOutputType.sol";
-import { GaslessCrossChainOrder, OnchainCrossChainOrder } from "src/interfaces/IERC7683.sol";
 
 /**
  * @dev The ERC7683 order uses the same order type as TheCompact orders. However, we have a different witness.

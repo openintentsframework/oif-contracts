@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.22;
 
-import { BaseOracle } from "src/oracles/BaseOracle.sol";
+import { Test } from "forge-std/Test.sol";
 
-import "forge-std/Test.sol";
+import { BaseOracle } from "../../src/oracles/BaseOracle.sol";
 
 contract MockBaseOracle is BaseOracle {
     function setAttestation(

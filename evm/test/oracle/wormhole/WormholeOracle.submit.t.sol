@@ -2,18 +2,17 @@
 
 pragma solidity ^0.8.22;
 
-import { WormholeOracle } from "src/oracles/wormhole/WormholeOracle.sol";
-import "src/oracles/wormhole/external/wormhole/Messages.sol";
-import "src/oracles/wormhole/external/wormhole/Setters.sol";
-import { MockERC20 } from "test/mocks/MockERC20.sol";
+import { Test } from "forge-std/Test.sol";
 
-import { CoinFiller } from "src/fillers/coin/CoinFiller.sol";
+import { CoinFiller } from "../../../src/fillers/coin/CoinFiller.sol";
+import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
+import { MessageEncodingLib } from "../../../src/libs/MessageEncodingLib.sol";
+import { WormholeOracle } from "../../../src/oracles/wormhole/WormholeOracle.sol";
+import "../../../src/oracles/wormhole/external/wormhole/Messages.sol";
+import "../../../src/oracles/wormhole/external/wormhole/Setters.sol";
+import { MandateOutput } from "../../../src/settlers/types/MandateOutputType.sol";
 
-import { MandateOutputEncodingLib } from "src/libs/MandateOutputEncodingLib.sol";
-import { MessageEncodingLib } from "src/libs/MessageEncodingLib.sol";
-import { MandateOutput } from "src/settlers/types/MandateOutputType.sol";
-
-import "forge-std/Test.sol";
+import { MockERC20 } from "../../mocks/MockERC20.sol";
 
 event PackagePublished(uint32 nonce, bytes payload, uint8 consistencyLevel);
 

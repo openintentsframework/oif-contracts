@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import "forge-std/Test.sol";
+import { Test } from "forge-std/Test.sol";
 
-import { MessageEncodingLib } from "src/libs/MessageEncodingLib.sol";
+import { MessageEncodingLib } from "../../src/libs/MessageEncodingLib.sol";
 
 contract MessageEncodingLibTest is Test {
     function encodeMemoryToCalldata(

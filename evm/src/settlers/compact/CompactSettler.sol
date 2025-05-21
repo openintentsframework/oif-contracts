@@ -2,26 +2,22 @@
 pragma solidity ^0.8.26;
 
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-
 import { TheCompact } from "the-compact/src/TheCompact.sol";
-
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 import { IdLib } from "the-compact/src/lib/IdLib.sol";
 import { BatchClaim } from "the-compact/src/types/BatchClaims.sol";
 import { BatchClaimComponent, Component } from "the-compact/src/types/Components.sol";
 
-import { BaseSettler } from "../BaseSettler.sol";
+import { ICatalystCallback } from "../../interfaces/ICatalystCallback.sol";
+import { IOracle } from "../../interfaces/IOracle.sol";
+import { BytesLib } from "../../libs/BytesLib.sol";
+import { GovernanceFee } from "../../libs/GovernanceFee.sol";
+import { MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 
+import { BaseSettler } from "../BaseSettler.sol";
 import { MandateOutput } from "../types/MandateOutputType.sol";
 import { OrderPurchase } from "../types/OrderPurchaseType.sol";
 import { StandardOrder, StandardOrderType } from "../types/StandardOrderType.sol";
-
-import { ICatalystCallback } from "src/interfaces/ICatalystCallback.sol";
-import { IOracle } from "src/interfaces/IOracle.sol";
-import { BytesLib } from "src/libs/BytesLib.sol";
-
-import { GovernanceFee } from "src/libs/GovernanceFee.sol";
-import { MandateOutputEncodingLib } from "src/libs/MandateOutputEncodingLib.sol";
 
 /**
  * @title Catalyst Settler supporting The Compact

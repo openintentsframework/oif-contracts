@@ -2,11 +2,12 @@
 
 pragma solidity ^0.8.22;
 
-import "forge-std/Test.sol";
-import { WormholeVerifier } from "src/oracles/wormhole/external/callworm/WormholeVerifier.sol";
-import "src/oracles/wormhole/external/wormhole/Messages.sol";
-import "src/oracles/wormhole/external/wormhole/Setters.sol";
-import "src/oracles/wormhole/external/wormhole/Structs.sol";
+import { Test } from "forge-std/Test.sol";
+
+import { WormholeVerifier } from "../../../src/oracles/wormhole/external/callworm/WormholeVerifier.sol";
+import "../../../src/oracles/wormhole/external/wormhole/Messages.sol";
+import "../../../src/oracles/wormhole/external/wormhole/Setters.sol";
+import "../../../src/oracles/wormhole/external/wormhole/Structs.sol";
 
 contract ExportedMessages is Messages, Setters {
     function storeGuardianSetPub(Structs.GuardianSet memory set, uint32 index) public {

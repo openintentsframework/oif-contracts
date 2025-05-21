@@ -3,11 +3,11 @@ pragma solidity ^0.8.26;
 
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
-import { ICatalystCallback } from "src/interfaces/ICatalystCallback.sol";
-import { IDestinationSettler } from "src/interfaces/IERC7683.sol";
+import { ICatalystCallback } from "../../interfaces/ICatalystCallback.sol";
+import { IDestinationSettler } from "../../interfaces/IERC7683.sol";
+import { MandateOutput, MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 
 import { BaseFiller } from "../BaseFiller.sol";
-import { MandateOutput, MandateOutputEncodingLib } from "src/libs/MandateOutputEncodingLib.sol";
 
 /**
  * @dev Solvers use Oracles to pay outputs. This allows us to record the payment.

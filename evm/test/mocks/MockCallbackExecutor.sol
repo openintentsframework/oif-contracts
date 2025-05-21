@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.26;
 
-import { ICatalystCallback } from "src/interfaces/ICatalystCallback.sol";
+import { ICatalystCallback } from "../../src/interfaces/ICatalystCallback.sol";
 
 contract MockCallbackExecutor is ICatalystCallback {
     event InputsFilled(bytes executionData);

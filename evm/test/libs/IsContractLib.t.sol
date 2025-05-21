@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import "forge-std/Test.sol";
+import { Test } from "forge-std/Test.sol";
 
-import { CoinFiller } from "src/fillers/coin/CoinFiller.sol";
+import { CoinFiller } from "../../src/fillers/coin/CoinFiller.sol";
+import { IsContractLib } from "../../src/libs/IsContractLib.sol";
+import { CompactSettler } from "../../src/settlers/compact/CompactSettler.sol";
 
-import { CompactSettler } from "src/settlers/compact/CompactSettler.sol";
-import { MockERC20 } from "test/mocks/MockERC20.sol";
-
-import { IsContractLib } from "src/libs/IsContractLib.sol";
+import { MockERC20 } from "../mocks/MockERC20.sol";
 
 /// @dev harness is used to place the revert at a lower call depth than our current.
 contract IsContractLibHarness {

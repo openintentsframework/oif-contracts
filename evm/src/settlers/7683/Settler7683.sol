@@ -1,15 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.26;
 
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-
 import { ISignatureTransfer } from "permit2/src/interfaces/ISignatureTransfer.sol";
+import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
-import { BaseSettler } from "../BaseSettler.sol";
-import { MandateOutput } from "src/settlers/types/MandateOutputType.sol";
-
-import { ICatalystCallback } from "src/interfaces/ICatalystCallback.sol";
+import { ICatalystCallback } from "../../interfaces/ICatalystCallback.sol";
 import {
     FillInstruction,
     GaslessCrossChainOrder,
@@ -18,13 +14,15 @@ import {
     Open,
     Output,
     ResolvedCrossChainOrder
-} from "src/interfaces/IERC7683.sol";
-import { IOracle } from "src/interfaces/IOracle.sol";
-import { BytesLib } from "src/libs/BytesLib.sol";
+} from "../../interfaces/IERC7683.sol";
+import { IOracle } from "../../interfaces/IOracle.sol";
+import { BytesLib } from "../../libs/BytesLib.sol";
+import { GovernanceFee } from "../../libs/GovernanceFee.sol";
+import { IsContractLib } from "../../libs/IsContractLib.sol";
+import { MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
+import { MandateOutput } from "../types/MandateOutputType.sol";
 
-import { GovernanceFee } from "src/libs/GovernanceFee.sol";
-import { IsContractLib } from "src/libs/IsContractLib.sol";
-import { MandateOutputEncodingLib } from "src/libs/MandateOutputEncodingLib.sol";
+import { BaseSettler } from "../BaseSettler.sol";
 
 import { MandateERC7683, Order7683Type, StandardOrder } from "./Order7683Type.sol";
 

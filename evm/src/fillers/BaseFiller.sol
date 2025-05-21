@@ -3,11 +3,11 @@ pragma solidity ^0.8.26;
 
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
-import { ICatalystCallback } from "src/interfaces/ICatalystCallback.sol";
-import { IPayloadCreator } from "src/interfaces/IPayloadCreator.sol";
-import { BaseOracle } from "src/oracles/BaseOracle.sol";
+import { ICatalystCallback } from "../interfaces/ICatalystCallback.sol";
+import { IPayloadCreator } from "../interfaces/IPayloadCreator.sol";
+import { MandateOutput, MandateOutputEncodingLib } from "../libs/MandateOutputEncodingLib.sol";
 
-import { MandateOutput, MandateOutputEncodingLib } from "src/libs/MandateOutputEncodingLib.sol";
+import { BaseOracle } from "../oracles/BaseOracle.sol";
 
 /**
  * @notice Base Filler implementation that implements common and shared logic between filler implementations.

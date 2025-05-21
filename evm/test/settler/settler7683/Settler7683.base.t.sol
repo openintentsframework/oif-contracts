@@ -1,26 +1,20 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import "forge-std/Test.sol";
-
-import { Permit2Test } from "./Permit2.t.sol";
-import { CoinFiller } from "src/fillers/coin/CoinFiller.sol";
-import { Settler7683 } from "src/settlers/7683/Settler7683.sol";
-
-import { StandardOrder } from "src/settlers/types/StandardOrderType.sol";
-
-import { GaslessCrossChainOrder } from "src/interfaces/IERC7683.sol";
-
-import { AllowOpenType } from "src/settlers/types/AllowOpenType.sol";
-import { OrderPurchase } from "src/settlers/types/OrderPurchaseType.sol";
-
-import { AlwaysYesOracle } from "test/mocks/AlwaysYesOracle.sol";
-import { MockERC20 } from "test/mocks/MockERC20.sol";
-
-import { MandateERC7683 } from "src/settlers/7683/Order7683Type.sol";
-import { MandateOutput } from "src/settlers/types/MandateOutputType.sol";
-
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
+
+import { CoinFiller } from "../../../src/fillers/coin/CoinFiller.sol";
+import { GaslessCrossChainOrder } from "../../../src/interfaces/IERC7683.sol";
+import { MandateERC7683 } from "../../../src/settlers/7683/Order7683Type.sol";
+import { Settler7683 } from "../../../src/settlers/7683/Settler7683.sol";
+import { AllowOpenType } from "../../../src/settlers/types/AllowOpenType.sol";
+import { MandateOutput } from "../../../src/settlers/types/MandateOutputType.sol";
+import { OrderPurchase } from "../../../src/settlers/types/OrderPurchaseType.sol";
+import { StandardOrder } from "../../../src/settlers/types/StandardOrderType.sol";
+
+import { AlwaysYesOracle } from "../../mocks/AlwaysYesOracle.sol";
+import { MockERC20 } from "../../mocks/MockERC20.sol";
+import { Permit2Test } from "./Permit2.t.sol";
 
 interface EIP712 {
     function DOMAIN_SEPARATOR() external view returns (bytes32);

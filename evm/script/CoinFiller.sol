@@ -2,7 +2,8 @@
 pragma solidity ^0.8.22;
 
 import { Script } from "forge-std/Script.sol";
-import { CoinFiller } from "src/fillers/coin/CoinFiller.sol";
+
+import { CoinFiller } from "../src/fillers/coin/CoinFiller.sol";
 
 contract DeployCoinFiller is Script {
     function deploy() external {

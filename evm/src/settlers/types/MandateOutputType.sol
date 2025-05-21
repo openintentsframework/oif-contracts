@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.26;
 
-import { MandateOutput } from "src/libs/MandateOutputEncodingLib.sol";
+import { MandateOutput } from "../../libs/MandateOutputEncodingLib.sol";
 
 /**
  * @notice Helper library for the Output description order type.

@@ -1,34 +1,30 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import "forge-std/Test.sol";
-
-import { CoinFiller } from "src/fillers/coin/CoinFiller.sol";
-import { CompactSettler } from "src/settlers/compact/CompactSettler.sol";
-import { AllowOpenType } from "src/settlers/types/AllowOpenType.sol";
-
-import { AlwaysYesOracle } from "test/mocks/AlwaysYesOracle.sol";
-import { MockERC20 } from "test/mocks/MockERC20.sol";
-
-import { MandateOutput, MandateOutputType } from "src/settlers/types/MandateOutputType.sol";
-import { StandardOrder, StandardOrderType } from "src/settlers/types/StandardOrderType.sol";
-
-import { MandateOutputEncodingLib } from "src/libs/MandateOutputEncodingLib.sol";
-import { MessageEncodingLib } from "src/libs/MessageEncodingLib.sol";
-
-import { WormholeOracle } from "src/oracles/wormhole/WormholeOracle.sol";
-import { Messages } from "src/oracles/wormhole/external/wormhole/Messages.sol";
-import { Setters } from "src/oracles/wormhole/external/wormhole/Setters.sol";
-import { Structs } from "src/oracles/wormhole/external/wormhole/Structs.sol";
+import { Test } from "forge-std/Test.sol";
 
 import { TheCompact } from "the-compact/src/TheCompact.sol";
-
 import { SimpleAllocator } from "the-compact/src/examples/allocator/SimpleAllocator.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 import { IdLib } from "the-compact/src/lib/IdLib.sol";
 import { AlwaysOKAllocator } from "the-compact/src/test/AlwaysOKAllocator.sol";
 import { ResetPeriod } from "the-compact/src/types/ResetPeriod.sol";
 import { Scope } from "the-compact/src/types/Scope.sol";
+
+import { CoinFiller } from "../../src/fillers/coin/CoinFiller.sol";
+import { MandateOutputEncodingLib } from "../../src/libs/MandateOutputEncodingLib.sol";
+import { MessageEncodingLib } from "../../src/libs/MessageEncodingLib.sol";
+import { WormholeOracle } from "../../src/oracles/wormhole/WormholeOracle.sol";
+import { Messages } from "../../src/oracles/wormhole/external/wormhole/Messages.sol";
+import { Setters } from "../../src/oracles/wormhole/external/wormhole/Setters.sol";
+import { Structs } from "../../src/oracles/wormhole/external/wormhole/Structs.sol";
+import { CompactSettler } from "../../src/settlers/compact/CompactSettler.sol";
+import { AllowOpenType } from "../../src/settlers/types/AllowOpenType.sol";
+import { MandateOutput, MandateOutputType } from "../../src/settlers/types/MandateOutputType.sol";
+import { StandardOrder, StandardOrderType } from "../../src/settlers/types/StandardOrderType.sol";
+
+import { AlwaysYesOracle } from "../mocks/AlwaysYesOracle.sol";
+import { MockERC20 } from "../mocks/MockERC20.sol";
 
 interface EIP712 {
     function DOMAIN_SEPARATOR() external view returns (bytes32);

@@ -4,8 +4,9 @@ pragma solidity ^0.8.0;
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
-import { ICatalystCallback } from "src/interfaces/ICatalystCallback.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
+
+import { ICatalystCallback } from "../interfaces/ICatalystCallback.sol";
 
 /**
  * @title Allows a user to specify a series of calls that should be made by the handler

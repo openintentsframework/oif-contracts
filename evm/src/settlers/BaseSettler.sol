@@ -4,17 +4,15 @@ pragma solidity ^0.8.26;
 import { EIP712 } from "solady/utils/EIP712.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { SignatureCheckerLib } from "solady/utils/SignatureCheckerLib.sol";
-
 import { SignatureCheckerLib } from "solady/utils/SignatureCheckerLib.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
-import { AllowOpenType } from "./types/AllowOpenType.sol";
+import { ICatalystCallback } from "../interfaces/ICatalystCallback.sol";
+import { IOracle } from "../interfaces/IOracle.sol";
 
+import { AllowOpenType } from "./types/AllowOpenType.sol";
 import { MandateOutput } from "./types/MandateOutputType.sol";
 import { OrderPurchase, OrderPurchaseType } from "./types/OrderPurchaseType.sol";
-
-import { ICatalystCallback } from "src/interfaces/ICatalystCallback.sol";
-import { IOracle } from "src/interfaces/IOracle.sol";
 
 /**
  * @title Base Catalyst Order Intent Settler

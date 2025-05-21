@@ -9,8 +9,9 @@ import { AddressType, BitcoinAddress, BtcScript } from "bitcoinprism-evm/src/lib
 
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
+import { MandateOutput, MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
+
 import { BaseOracle } from "../BaseOracle.sol";
-import { MandateOutput, MandateOutputEncodingLib } from "src/libs/MandateOutputEncodingLib.sol";
 
 /**
  * @dev Bitcoin oracle can operate in 2 modes:

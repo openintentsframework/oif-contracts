@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import "forge-std/Test.sol";
+import { Test } from "forge-std/Test.sol";
 
 address constant PERMIT2 = address(0x000000000022D473030F116dDEE9F6B43aC78BA3);
 

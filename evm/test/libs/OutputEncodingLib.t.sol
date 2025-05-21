@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.22;
 
-import "forge-std/Test.sol";
+import { Test } from "forge-std/Test.sol";
 
-import { MandateOutput, MandateOutputEncodingLib } from "src/libs/MandateOutputEncodingLib.sol";
+import { MandateOutput, MandateOutputEncodingLib } from "../../src/libs/MandateOutputEncodingLib.sol";
 
 contract MandateOutputEncodingLibTest is Test {
     function encodeMandateOutputHarness(
