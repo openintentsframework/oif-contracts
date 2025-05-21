@@ -1,0 +1,15 @@
+[submodule "evm/lib/forge-std"]
+	path = evm/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "evm/lib/bitcoinprism-evm"]
+	path = evm/lib/bitcoinprism-evm
+	url = https://github.com/catalystdao/bitcoinprism-evm
+[submodule "evm/lib/solady"]
+	path = evm/lib/solady
+	url = https://github.com/Vectorized/solady
+[submodule "evm/lib/the-compact"]
+	path = evm/lib/the-compact
+	url = https://github.com/Uniswap/the-compact
+[submodule "evm/lib/permit2"]
+	path = evm/lib/permit2
+	url = https://github.com/Uniswap/permit2
