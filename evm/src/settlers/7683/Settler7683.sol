@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
 import { ISignatureTransfer } from "permit2/src/interfaces/ISignatureTransfer.sol";
@@ -16,8 +16,8 @@ import {
     ResolvedCrossChainOrder
 } from "../../interfaces/IERC7683.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
+import { ISettler7683 } from "../../interfaces/ISettler7683.sol";
 import { BytesLib } from "../../libs/BytesLib.sol";
-import { GovernanceFee } from "../../libs/GovernanceFee.sol";
 import { IsContractLib } from "../../libs/IsContractLib.sol";
 import { MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 import { MandateOutput } from "../types/MandateOutputType.sol";
@@ -37,7 +37,7 @@ import { MandateERC7683, Order7683Type, StandardOrder } from "./Order7683Type.so
  *
  * This contract does not support fee on transfer tokens.
  */
-contract Settler7683 is BaseSettler, GovernanceFee {
+contract Settler7683 is BaseSettler, ISettler7683 {
     error NotImplemented();
     error NotOrderOwner();
     error DeadlinePassed();
@@ -58,12 +58,6 @@ contract Settler7683 is BaseSettler, GovernanceFee {
 
     // Address of the Permit2 contract.
     ISignatureTransfer constant PERMIT2 = ISignatureTransfer(0x000000000022D473030F116dDEE9F6B43aC78BA3);
-
-    constructor(
-        address initialOwner
-    ) {
-        _initializeOwner(initialOwner);
-    }
 
     function _domainNameAndVersion()
         internal
@@ -582,21 +576,12 @@ contract Settler7683 is BaseSettler, GovernanceFee {
         // revert and it will unmark it. This acts as a reentry check.
         _deposited[orderId] = OrderStatus.Claimed;
 
-        uint256 fee = governanceFee;
         // We have now ensured that this point can only be reached once. We can now process the asset delivery.
         uint256 numInputs = inputs.length;
         for (uint256 i; i < numInputs; ++i) {
             uint256[2] memory input = inputs[i];
             address token = EfficiencyLib.asSanitizedAddress(input[0]);
             uint256 amount = input[1];
-
-            uint256 calculatedFee = _calcFee(amount, fee);
-            if (calculatedFee > 0) {
-                SafeTransferLib.safeTransfer(token, owner(), calculatedFee);
-                unchecked {
-                    amount = amount - calculatedFee;
-                }
-            }
 
             SafeTransferLib.safeTransfer(token, solvedBy, amount);
         }

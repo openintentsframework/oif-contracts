@@ -1,10 +1,11 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
 import { CoinFiller } from "../../../src/fillers/coin/CoinFiller.sol";
 import { GaslessCrossChainOrder } from "../../../src/interfaces/IERC7683.sol";
+import { ISettler7683 } from "../../../src/interfaces/ISettler7683.sol";
 import { MandateERC7683 } from "../../../src/settlers/7683/Order7683Type.sol";
 import { Settler7683 } from "../../../src/settlers/7683/Settler7683.sol";
 import { AllowOpenType } from "../../../src/settlers/types/AllowOpenType.sol";
@@ -20,11 +21,25 @@ interface EIP712 {
     function DOMAIN_SEPARATOR() external view returns (bytes32);
 }
 
-contract Settler7683Harness is Settler7683 {
-    constructor(
-        address initialOwner
-    ) Settler7683(initialOwner) { }
+interface ISettler7683Harness is ISettler7683 {
+    function validateFills(
+        StandardOrder calldata order,
+        bytes32 orderId,
+        bytes32[] calldata solvers,
+        uint32[] calldata timestamps
+    ) external view;
 
+    function validateFills(
+        StandardOrder calldata order,
+        bytes32 orderId,
+        bytes32 solver,
+        uint32[] calldata timestamps
+    ) external view;
+
+    function validateFills(address localOracle, bytes32 orderId, MandateOutput[] memory MandateOutputs) external view;
+}
+
+contract Settler7683Harness is Settler7683, ISettler7683Harness {
     function validateFills(
         StandardOrder calldata order,
         bytes32 orderId,
@@ -58,7 +73,7 @@ contract Settler7683TestBase is Permit2Test {
     uint64 constant GOVERNANCE_FEE_CHANGE_DELAY = 7 days;
     uint64 constant MAX_GOVERNANCE_FEE = 10 ** 18 * 0.05; // 10%
 
-    Settler7683Harness settler7683;
+    address settler7683;
     CoinFiller coinFiller;
 
     address alwaysYesOracle;
@@ -91,10 +106,9 @@ contract Settler7683TestBase is Permit2Test {
 
     function setUp() public virtual override {
         super.setUp();
-        owner = makeAddr("owner");
-        settler7683 = new Settler7683Harness(owner);
+        settler7683 = address(new Settler7683Harness());
 
-        DOMAIN_SEPARATOR = EIP712(address(settler7683)).DOMAIN_SEPARATOR();
+        DOMAIN_SEPARATOR = EIP712(settler7683).DOMAIN_SEPARATOR();
 
         coinFiller = new CoinFiller();
 
@@ -184,7 +198,7 @@ contract Settler7683TestBase is Permit2Test {
         bytes32 destination,
         bytes calldata call
     ) external view returns (bytes memory sig) {
-        bytes32 domainSeparator = settler7683.DOMAIN_SEPARATOR();
+        bytes32 domainSeparator = EIP712(settler7683).DOMAIN_SEPARATOR();
         bytes32 msgHash = keccak256(
             abi.encodePacked("\x19\x01", domainSeparator, AllowOpenType.hashAllowOpen(orderId, destination, call))
         );
@@ -221,7 +235,7 @@ contract Settler7683TestBase is Permit2Test {
                             "PermitBatchWitnessTransferFrom(TokenPermissions[] permitted,address spender,uint256 nonce,uint256 deadline,GaslessCrossChainOrder witness)GaslessCrossChainOrder(address originSettler,address user,uint256 nonce,uint256 originChainId,uint32 openDeadline,uint32 fillDeadline,bytes32 orderDataType,MandateERC7683 orderData)MandateERC7683(uint32 expiry,address localOracle,uint256[2][] inputs,MandateOutput[] outputs)MandateOutput(bytes32 remoteOracle,bytes32 remoteFiller,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes remoteCall,bytes fulfillmentContext)TokenPermissions(address token,uint256 amount)"
                         ),
                         keccak256(tokenPermissionsHashes),
-                        address(settler7683),
+                        settler7683,
                         order.nonce,
                         order.openDeadline,
                         witnessHash(order)

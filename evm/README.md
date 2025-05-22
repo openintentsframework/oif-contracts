@@ -35,12 +35,11 @@ Refer to the SVG diagram chart.
 ## Settler
 
 Settlers are located in `src/settlers`. Currently 2 Settlers are implemented:
-- `src/settlers/compact/CompactSettler.sol`
-- `src/settlers/compact/CompactSettlerWithDeposit.sol`
+- `src/settlers/compact/SettlerCompact.sol`
 
 To implement a new lock or a different order type, the following considerations are required to make it compatible with the rest of the system:
 1. Implement outputs that match the `MandateOutput` described in `src/libs/MandateOutputEncodingLib.sol` to make it compatible with existing fillers.
-2. Implement a function similarly to `_validateFills` of `src/settlers/compact/CompactSettler.sol` to make it compatible with the existing oracles.
+2. Implement a function similarly to `_validateFills` of `src/settlers/compact/SettlerCompact.sol` to make it compatible with the existing oracles.
 
 Assuming the Settler supports these structures, it is now compatible with the existing solvers and fillers.
 

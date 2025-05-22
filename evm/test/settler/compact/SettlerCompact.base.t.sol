@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
 import { Test } from "forge-std/Test.sol";
@@ -13,13 +13,14 @@ import { Scope } from "the-compact/src/types/Scope.sol";
 
 import { CoinFiller } from "../../../src/fillers/coin/CoinFiller.sol";
 
+import { ISettlerCompact } from "../../../src/interfaces/ISettlerCompact.sol";
 import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
 import { MessageEncodingLib } from "../../../src/libs/MessageEncodingLib.sol";
 import { WormholeOracle } from "../../../src/oracles/wormhole/WormholeOracle.sol";
 import { Messages } from "../../../src/oracles/wormhole/external/wormhole/Messages.sol";
 import { Setters } from "../../../src/oracles/wormhole/external/wormhole/Setters.sol";
 import { Structs } from "../../../src/oracles/wormhole/external/wormhole/Structs.sol";
-import { CompactSettler } from "../../../src/settlers/compact/CompactSettler.sol";
+import { SettlerCompact } from "../../../src/settlers/compact/SettlerCompact.sol";
 import { AllowOpenType } from "../../../src/settlers/types/AllowOpenType.sol";
 import { MandateOutput, MandateOutputType } from "../../../src/settlers/types/MandateOutputType.sol";
 import { OrderPurchase, OrderPurchaseType } from "../../../src/settlers/types/OrderPurchaseType.sol";
@@ -32,15 +33,26 @@ interface EIP712 {
     function DOMAIN_SEPARATOR() external view returns (bytes32);
 }
 
-interface ImmutableCreate2Factory {
-    function safeCreate2(
-        bytes32 salt,
-        bytes calldata initializationCode
-    ) external payable returns (address deploymentAddress);
+interface ISettlerCompactHarness is ISettlerCompact {
+    function validateFills(
+        StandardOrder calldata order,
+        bytes32 orderId,
+        bytes32[] calldata solvers,
+        uint32[] calldata timestamps
+    ) external view;
+
+    function validateFills(
+        StandardOrder calldata order,
+        bytes32 orderId,
+        bytes32 solver,
+        uint32[] calldata timestamps
+    ) external view;
 }
 
-contract CompactSettlerHarness is CompactSettler {
-    constructor(address compact, address initialOwner) CompactSettler(compact, initialOwner) { }
+contract SettlerCompactHarness is SettlerCompact, ISettlerCompactHarness {
+    constructor(
+        address compact
+    ) SettlerCompact(compact) { }
 
     function validateFills(
         StandardOrder calldata order,
@@ -78,8 +90,8 @@ contract ExportedMessages is Messages, Setters {
     }
 }
 
-contract CompactSettlerTestBase is Test {
-    CompactSettlerHarness compactSettler;
+contract SettlerCompactTestBase is Test {
+    address settlerCompact;
     CoinFiller coinFiller;
 
     // Oracles
@@ -110,24 +122,17 @@ contract CompactSettlerTestBase is Test {
         theCompact = new TheCompact();
 
         alwaysOKAllocator = address(new AlwaysOKAllocator());
-
         uint96 alwaysOkAllocatorId = theCompact.__registerAllocator(alwaysOKAllocator, "");
-
         // use scope 0 and reset period 0. This is okay as long as we don't use anything time based.
         alwaysOkAllocatorLockTag = bytes12(alwaysOkAllocatorId);
-
         (allocator, allocatorPrivateKey) = makeAddrAndKey("allocator");
-
         SimpleAllocator simpleAllocator = new SimpleAllocator(allocator, address(theCompact));
-
-        vm.prank(allocator);
         uint96 signAllocatorId = theCompact.__registerAllocator(address(simpleAllocator), "");
-
         signAllocatorLockTag = bytes12(signAllocatorId);
 
         DOMAIN_SEPARATOR = EIP712(address(theCompact)).DOMAIN_SEPARATOR();
 
-        compactSettler = new CompactSettlerHarness(address(theCompact), address(0));
+        settlerCompact = address(new SettlerCompactHarness(address(theCompact)));
         coinFiller = new CoinFiller();
         alwaysYesOracle = address(new AlwaysYesOracle());
 
@@ -138,14 +143,11 @@ contract CompactSettlerTestBase is Test {
         (solver, solverPrivateKey) = makeAddrAndKey("solver");
 
         // Oracles
-
         messages = new ExportedMessages();
         address wormholeDeployment = makeAddr("wormholeOracle");
         deployCodeTo("WormholeOracle.sol", abi.encode(address(this), address(messages)), wormholeDeployment);
         wormholeOracle = WormholeOracle(wormholeDeployment);
-
         wormholeOracle.setChainMap(uint16(block.chainid), block.chainid);
-
         (testGuardian, testGuardianPrivateKey) = makeAddrAndKey("testGuardian");
         // initialize guardian set with one guardian
         address[] memory keys = new address[](1);
@@ -263,7 +265,7 @@ contract CompactSettlerTestBase is Test {
         uint256 privateKey,
         OrderPurchase calldata orderPurchase
     ) external view returns (bytes memory sig) {
-        bytes32 domainSeparator = compactSettler.DOMAIN_SEPARATOR();
+        bytes32 domainSeparator = EIP712(settlerCompact).DOMAIN_SEPARATOR();
         bytes32 msgHash =
             keccak256(abi.encodePacked("\x19\x01", domainSeparator, OrderPurchaseType.hashOrderPurchase(orderPurchase)));
 
@@ -277,7 +279,7 @@ contract CompactSettlerTestBase is Test {
         bytes32 destination,
         bytes calldata call
     ) external view returns (bytes memory sig) {
-        bytes32 domainSeparator = compactSettler.DOMAIN_SEPARATOR();
+        bytes32 domainSeparator = EIP712(settlerCompact).DOMAIN_SEPARATOR();
         bytes32 msgHash = keccak256(
             abi.encodePacked("\x19\x01", domainSeparator, AllowOpenType.hashAllowOpen(orderId, destination, call))
         );

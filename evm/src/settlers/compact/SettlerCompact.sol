@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
@@ -10,8 +10,9 @@ import { BatchClaimComponent, Component } from "the-compact/src/types/Components
 
 import { ICatalystCallback } from "../../interfaces/ICatalystCallback.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
+
+import { ISettlerCompact } from "../../interfaces/ISettlerCompact.sol";
 import { BytesLib } from "../../libs/BytesLib.sol";
-import { GovernanceFee } from "../../libs/GovernanceFee.sol";
 import { MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 
 import { BaseSettler } from "../BaseSettler.sol";
@@ -30,7 +31,7 @@ import { StandardOrder, StandardOrderType } from "../types/StandardOrderType.sol
  *
  * The ownable component of the smart contract is only used for fees.
  */
-contract CompactSettler is BaseSettler, GovernanceFee {
+contract SettlerCompact is BaseSettler, ISettlerCompact {
     error NotImplemented();
     error NotOrderOwner();
     error InitiateDeadlinePassed();
@@ -41,9 +42,10 @@ contract CompactSettler is BaseSettler, GovernanceFee {
 
     TheCompact public immutable COMPACT;
 
-    constructor(address compact, address initialOwner) {
+    constructor(
+        address compact
+    ) {
         COMPACT = TheCompact(compact);
-        _initializeOwner(initialOwner);
     }
 
     /**
@@ -350,40 +352,12 @@ contract CompactSettler is BaseSettler, GovernanceFee {
             uint256 numInputs = order.inputs.length;
             batchClaimComponents = new BatchClaimComponent[](numInputs);
             uint256[2][] calldata maxInputs = order.inputs;
-            uint64 fee = governanceFee;
             for (uint256 i; i < numInputs; ++i) {
                 uint256[2] calldata input = maxInputs[i];
                 uint256 tokenId = input[0];
                 uint256 allocatedAmount = input[1];
 
-                Component[] memory components;
-
-                // If the governance fee is set, we need to add a governance fee split.
-                uint256 governanceShare = _calcFee(allocatedAmount, fee);
-                if (governanceShare != 0) {
-                    unchecked {
-                        // To reduce the cost associated with the governance fee,
-                        // we want to do a 6909 transfer instead of burn and mint.
-                        // Note: While this function is called with replaced token, it
-                        // replaces the rightmost 20 bytes. So it takes the locktag from TokenId
-                        // and places it infront of the current vault owner.
-                        uint256 ownerId = IdLib.withReplacedToken(tokenId, owner());
-                        components = new Component[](2);
-                        // For the user
-                        components[0] =
-                            Component({ claimant: uint256(claimant), amount: allocatedAmount - governanceShare });
-                        // For governance
-                        components[1] = Component({ claimant: uint256(ownerId), amount: governanceShare });
-                        batchClaimComponents[i] = BatchClaimComponent({
-                            id: tokenId, // The token ID of the ERC6909 token to allocate.
-                            allocatedAmount: allocatedAmount, // The original allocated amount of ERC6909 tokens.
-                            portions: components
-                        });
-                        continue;
-                    }
-                }
-
-                components = new Component[](1);
+                Component[] memory components = new Component[](1);
                 components[0] = Component({ claimant: uint256(claimant), amount: allocatedAmount });
                 batchClaimComponents[i] = BatchClaimComponent({
                     id: tokenId, // The token ID of the ERC6909 token to allocate.

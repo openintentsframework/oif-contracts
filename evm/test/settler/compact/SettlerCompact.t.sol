@@ -1,35 +1,18 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
 import { TheCompact } from "the-compact/src/TheCompact.sol";
-import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
-import { IdLib } from "the-compact/src/lib/IdLib.sol";
-import { AlwaysOKAllocator } from "the-compact/src/test/AlwaysOKAllocator.sol";
-import { ResetPeriod } from "the-compact/src/types/ResetPeriod.sol";
-import { Scope } from "the-compact/src/types/Scope.sol";
 
 import { CoinFiller } from "../../../src/fillers/coin/CoinFiller.sol";
-
 import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
-import { MessageEncodingLib } from "../../../src/libs/MessageEncodingLib.sol";
-import { WormholeOracle } from "../../../src/oracles/wormhole/WormholeOracle.sol";
-import { Messages } from "../../../src/oracles/wormhole/external/wormhole/Messages.sol";
-import { Setters } from "../../../src/oracles/wormhole/external/wormhole/Setters.sol";
-import { Structs } from "../../../src/oracles/wormhole/external/wormhole/Structs.sol";
-import { AllowOpenType } from "../../../src/settlers/types/AllowOpenType.sol";
 import { MandateOutput, MandateOutputType } from "../../../src/settlers/types/MandateOutputType.sol";
-import { OrderPurchase, OrderPurchaseType } from "../../../src/settlers/types/OrderPurchaseType.sol";
 import { StandardOrder, StandardOrderType } from "../../../src/settlers/types/StandardOrderType.sol";
 
 import { AlwaysYesOracle } from "../../mocks/AlwaysYesOracle.sol";
 import { MockERC20 } from "../../mocks/MockERC20.sol";
-import { CompactSettlerTestBase } from "./CompactSettler.base.t.sol";
+import { ISettlerCompactHarness, SettlerCompactTestBase } from "./SettlerCompact.base.t.sol";
 
-interface EIP712 {
-    function DOMAIN_SEPARATOR() external view returns (bytes32);
-}
-
-contract CompactSettlerTest is CompactSettlerTestBase {
+contract SettlerCompactTest is SettlerCompactTestBase {
     event Transfer(address from, address to, uint256 amount);
     event Transfer(address by, address from, address to, uint256 id, uint256 amount);
     event CompactRegistered(address indexed sponsor, bytes32 claimHash, bytes32 typehash);
@@ -98,7 +81,7 @@ contract CompactSettlerTest is CompactSettlerTestBase {
         }
         _validProofSeries[expectedProofPayload] = true;
 
-        compactSettler.validateFills(
+        ISettlerCompactHarness(settlerCompact).validateFills(
             StandardOrder({
                 user: address(0),
                 nonce: 0,
@@ -151,7 +134,7 @@ contract CompactSettlerTest is CompactSettlerTestBase {
         }
         _validProofSeries[expectedProofPayload] = true;
 
-        compactSettler.validateFills(
+        ISettlerCompactHarness(settlerCompact).validateFills(
             StandardOrder({
                 user: address(0),
                 nonce: 0,
@@ -217,7 +200,7 @@ contract CompactSettlerTest is CompactSettlerTestBase {
         idsAndAmounts[0] = [tokenId, amount];
 
         bytes memory sponsorSig = getCompactBatchWitnessSignature(
-            swapperPrivateKey, address(compactSettler), swapper, 0, type(uint32).max, idsAndAmounts, witnessHash(order)
+            swapperPrivateKey, settlerCompact, swapper, 0, type(uint32).max, idsAndAmounts, witnessHash(order)
         );
 
         bytes memory signature = abi.encode(sponsorSig, hex"");
@@ -230,13 +213,16 @@ contract CompactSettlerTest is CompactSettlerTestBase {
         // Other callers are disallowed:
         vm.prank(non_solver);
         vm.expectRevert(abi.encodeWithSignature("NotOrderOwner()"));
-        compactSettler.finaliseSelf(order, signature, timestamps, solverIdentifier);
+        ISettlerCompactHarness(settlerCompact).finaliseSelf(order, signature, timestamps, solverIdentifier);
 
         assertEq(token.balanceOf(solver), 0);
 
         {
             bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionM(
-                solverIdentifier, compactSettler.orderIdentifier(order), uint32(block.timestamp), outputs[0]
+                solverIdentifier,
+                ISettlerCompactHarness(settlerCompact).orderIdentifier(order),
+                uint32(block.timestamp),
+                outputs[0]
             );
             bytes32 payloadHash = keccak256(payload);
 
@@ -255,7 +241,7 @@ contract CompactSettlerTest is CompactSettlerTestBase {
         }
 
         vm.prank(solver);
-        compactSettler.finaliseSelf(order, signature, timestamps, solverIdentifier);
+        ISettlerCompactHarness(settlerCompact).finaliseSelf(order, signature, timestamps, solverIdentifier);
         vm.snapshotGasLastCall("settler", "CompactFinaliseSelf");
 
         assertEq(token.balanceOf(solver), amount);
@@ -305,7 +291,7 @@ contract CompactSettlerTest is CompactSettlerTestBase {
         idsAndAmounts[0] = [tokenId, amount];
 
         bytes memory sponsorSig = getCompactBatchWitnessSignature(
-            swapperPrivateKey, address(compactSettler), swapper, 0, type(uint32).max, idsAndAmounts, witnessHash(order)
+            swapperPrivateKey, settlerCompact, swapper, 0, type(uint32).max, idsAndAmounts, witnessHash(order)
         );
         bytes memory allocatorSig = hex"";
 
@@ -318,7 +304,7 @@ contract CompactSettlerTest is CompactSettlerTestBase {
 
         vm.prank(solver);
         vm.expectRevert(abi.encodeWithSignature("FilledTooLate(uint32,uint32)", fillDeadline, filledAt));
-        compactSettler.finaliseSelf(order, signature, timestamps, solverIdentifier);
+        ISettlerCompactHarness(settlerCompact).finaliseSelf(order, signature, timestamps, solverIdentifier);
     }
 
     /// forge-config: default.isolate = true
@@ -327,7 +313,7 @@ contract CompactSettlerTest is CompactSettlerTestBase {
     }
 
     function test_finalise_to(address non_solver, address destination) public {
-        vm.assume(destination != address(compactSettler));
+        vm.assume(destination != settlerCompact);
         vm.assume(destination != address(theCompact));
         vm.assume(destination != swapper);
         vm.assume(token.balanceOf(destination) == 0);
@@ -370,7 +356,7 @@ contract CompactSettlerTest is CompactSettlerTestBase {
         idsAndAmounts[0] = [tokenId, amount];
 
         bytes memory sponsorSig = getCompactBatchWitnessSignature(
-            swapperPrivateKey, address(compactSettler), swapper, 0, type(uint32).max, idsAndAmounts, witnessHash(order)
+            swapperPrivateKey, settlerCompact, swapper, 0, type(uint32).max, idsAndAmounts, witnessHash(order)
         );
 
         bytes memory signature = abi.encode(sponsorSig, hex"");
@@ -383,7 +369,7 @@ contract CompactSettlerTest is CompactSettlerTestBase {
         vm.prank(non_solver);
 
         vm.expectRevert(abi.encodeWithSignature("NotOrderOwner()"));
-        compactSettler.finaliseTo(
+        ISettlerCompactHarness(settlerCompact).finaliseTo(
             order,
             signature,
             timestamps,
@@ -395,7 +381,7 @@ contract CompactSettlerTest is CompactSettlerTestBase {
         assertEq(token.balanceOf(destination), 0);
 
         vm.prank(solver);
-        compactSettler.finaliseTo(
+        ISettlerCompactHarness(settlerCompact).finaliseTo(
             order,
             signature,
             timestamps,
@@ -414,7 +400,7 @@ contract CompactSettlerTest is CompactSettlerTestBase {
     }
 
     function test_finalise_for(address non_solver, address destination) public {
-        vm.assume(destination != address(compactSettler));
+        vm.assume(destination != settlerCompact);
         vm.assume(destination != address(theCompact));
         vm.assume(destination != address(swapper));
         vm.assume(destination != address(solver));
@@ -459,13 +445,7 @@ contract CompactSettlerTest is CompactSettlerTestBase {
             idsAndAmounts[0] = [tokenId, amount];
 
             bytes memory sponsorSig = getCompactBatchWitnessSignature(
-                swapperPrivateKey,
-                address(compactSettler),
-                swapper,
-                0,
-                type(uint32).max,
-                idsAndAmounts,
-                witnessHash(order)
+                swapperPrivateKey, settlerCompact, swapper, 0, type(uint32).max, idsAndAmounts, witnessHash(order)
             );
             signature = abi.encode(sponsorSig, hex"");
         }
@@ -478,7 +458,7 @@ contract CompactSettlerTest is CompactSettlerTestBase {
 
         vm.prank(non_solver);
         vm.expectRevert(abi.encodeWithSignature("InvalidSigner()"));
-        compactSettler.finaliseFor(
+        ISettlerCompactHarness(settlerCompact).finaliseFor(
             order,
             signature,
             timestamps,
@@ -491,11 +471,14 @@ contract CompactSettlerTest is CompactSettlerTestBase {
         assertEq(token.balanceOf(destination), 0);
 
         orderOwnerSignature = this.getOrderOpenSignature(
-            solverPrivateKey, compactSettler.orderIdentifier(order), bytes32(uint256(uint160(destination))), hex""
+            solverPrivateKey,
+            ISettlerCompactHarness(settlerCompact).orderIdentifier(order),
+            bytes32(uint256(uint160(destination))),
+            hex""
         );
 
         vm.prank(non_solver);
-        compactSettler.finaliseFor(
+        ISettlerCompactHarness(settlerCompact).finaliseFor(
             order,
             signature,
             timestamps,
@@ -511,115 +494,117 @@ contract CompactSettlerTest is CompactSettlerTestBase {
 
     // --- Fee tests --- //
 
-    function test_invalid_governance_fee() public {
-        vm.prank(owner);
-        compactSettler.setGovernanceFee(MAX_GOVERNANCE_FEE);
+    // function test_invalid_governance_fee() public {
+    //     vm.prank(owner);
+    //     ISettlerCompactHarness(settlerCompact).setGovernanceFee(MAX_GOVERNANCE_FEE);
 
-        vm.prank(owner);
-        vm.expectRevert(abi.encodeWithSignature("GovernanceFeeTooHigh()"));
-        compactSettler.setGovernanceFee(MAX_GOVERNANCE_FEE + 1);
+    //     vm.prank(owner);
+    //     vm.expectRevert(abi.encodeWithSignature("GovernanceFeeTooHigh()"));
+    //     ISettlerCompactHarness(settlerCompact).setGovernanceFee(MAX_GOVERNANCE_FEE + 1);
 
-        vm.prank(owner);
-        vm.expectRevert(abi.encodeWithSignature("GovernanceFeeTooHigh()"));
-        compactSettler.setGovernanceFee(MAX_GOVERNANCE_FEE + 123123123);
+    //     vm.prank(owner);
+    //     vm.expectRevert(abi.encodeWithSignature("GovernanceFeeTooHigh()"));
+    //     ISettlerCompactHarness(settlerCompact).setGovernanceFee(MAX_GOVERNANCE_FEE + 123123123);
 
-        vm.prank(owner);
-        vm.expectRevert(abi.encodeWithSignature("GovernanceFeeTooHigh()"));
-        compactSettler.setGovernanceFee(type(uint64).max);
-    }
+    //     vm.prank(owner);
+    //     vm.expectRevert(abi.encodeWithSignature("GovernanceFeeTooHigh()"));
+    //     ISettlerCompactHarness(settlerCompact).setGovernanceFee(type(uint64).max);
+    // }
 
-    function test_governance_fee_change_not_ready(uint64 fee, uint256 timeDelay) public {
-        vm.assume(fee <= MAX_GOVERNANCE_FEE);
-        vm.assume(timeDelay < uint32(block.timestamp) + GOVERNANCE_FEE_CHANGE_DELAY);
+    // function test_governance_fee_change_not_ready(uint64 fee, uint256 timeDelay) public {
+    //     vm.assume(fee <= MAX_GOVERNANCE_FEE);
+    //     vm.assume(timeDelay < uint32(block.timestamp) + GOVERNANCE_FEE_CHANGE_DELAY);
 
-        vm.prank(owner);
-        vm.expectEmit();
-        emit NextGovernanceFee(fee, uint32(block.timestamp) + GOVERNANCE_FEE_CHANGE_DELAY);
-        compactSettler.setGovernanceFee(fee);
+    //     vm.prank(owner);
+    //     vm.expectEmit();
+    //     emit NextGovernanceFee(fee, uint32(block.timestamp) + GOVERNANCE_FEE_CHANGE_DELAY);
+    //     ISettlerCompactHarness(settlerCompact).setGovernanceFee(fee);
 
-        vm.warp(timeDelay);
-        vm.expectRevert(abi.encodeWithSignature("GovernanceFeeChangeNotReady()"));
-        compactSettler.applyGovernanceFee();
+    //     vm.warp(timeDelay);
+    //     vm.expectRevert(abi.encodeWithSignature("GovernanceFeeChangeNotReady()"));
+    //     ISettlerCompactHarness(settlerCompact).applyGovernanceFee();
 
-        vm.warp(uint32(block.timestamp) + GOVERNANCE_FEE_CHANGE_DELAY + 1);
+    //     vm.warp(uint32(block.timestamp) + GOVERNANCE_FEE_CHANGE_DELAY + 1);
 
-        assertEq(compactSettler.governanceFee(), 0);
+    //     assertEq(ISettlerCompactHarness(settlerCompact).governanceFee(), 0);
 
-        vm.expectEmit();
-        emit GovernanceFeeChanged(0, fee);
-        compactSettler.applyGovernanceFee();
+    //     vm.expectEmit();
+    //     emit GovernanceFeeChanged(0, fee);
+    //     ISettlerCompactHarness(settlerCompact).applyGovernanceFee();
 
-        assertEq(compactSettler.governanceFee(), fee);
-    }
+    //     assertEq(ISettlerCompactHarness(settlerCompact).governanceFee(), fee);
+    // }
 
-    /// forge-config: default.isolate = true
-    function test_finalise_self_with_fee_gas() external {
-        test_finalise_self_with_fee(MAX_GOVERNANCE_FEE / 3);
-    }
+    // /// forge-config: default.isolate = true
+    // function test_finalise_self_with_fee_gas() external {
+    //     test_finalise_self_with_fee(MAX_GOVERNANCE_FEE / 3);
+    // }
 
-    function test_finalise_self_with_fee(
-        uint64 fee
-    ) public {
-        vm.assume(fee <= MAX_GOVERNANCE_FEE);
-        vm.prank(owner);
-        compactSettler.setGovernanceFee(fee);
-        vm.warp(uint32(block.timestamp) + GOVERNANCE_FEE_CHANGE_DELAY + 1);
-        compactSettler.applyGovernanceFee();
+    // function test_finalise_self_with_fee(
+    //     uint64 fee
+    // ) public {
+    //     vm.assume(fee <= MAX_GOVERNANCE_FEE);
+    //     vm.prank(owner);
+    //     ISettlerCompactHarness(settlerCompact).setGovernanceFee(fee);
+    //     vm.warp(uint32(block.timestamp) + GOVERNANCE_FEE_CHANGE_DELAY + 1);
+    //     ISettlerCompactHarness(settlerCompact).applyGovernanceFee();
 
-        uint256 amount = 1e18 / 10;
+    //     uint256 amount = 1e18 / 10;
 
-        token.mint(swapper, amount);
-        vm.prank(swapper);
-        token.approve(address(theCompact), type(uint256).max);
+    //     token.mint(swapper, amount);
+    //     vm.prank(swapper);
+    //     token.approve(address(theCompact), type(uint256).max);
 
-        vm.prank(swapper);
-        uint256 tokenId = theCompact.depositERC20(address(token), alwaysOkAllocatorLockTag, amount, swapper);
+    //     vm.prank(swapper);
+    //     uint256 tokenId = theCompact.depositERC20(address(token), alwaysOkAllocatorLockTag, amount, swapper);
 
-        uint256[2][] memory inputs = new uint256[2][](1);
-        inputs[0] = [tokenId, amount];
-        MandateOutput[] memory outputs = new MandateOutput[](1);
-        outputs[0] = MandateOutput({
-            remoteFiller: bytes32(uint256(uint160(address(coinFiller)))),
-            remoteOracle: bytes32(uint256(uint160(address(alwaysYesOracle)))),
-            chainId: block.chainid,
-            token: bytes32(uint256(uint160(address(anotherToken)))),
-            amount: amount,
-            recipient: bytes32(uint256(uint160(swapper))),
-            remoteCall: hex"",
-            fulfillmentContext: hex""
-        });
-        StandardOrder memory order = StandardOrder({
-            user: address(swapper),
-            nonce: 0,
-            originChainId: block.chainid,
-            fillDeadline: type(uint32).max,
-            expires: type(uint32).max,
-            localOracle: alwaysYesOracle,
-            inputs: inputs,
-            outputs: outputs
-        });
+    //     uint256[2][] memory inputs = new uint256[2][](1);
+    //     inputs[0] = [tokenId, amount];
+    //     MandateOutput[] memory outputs = new MandateOutput[](1);
+    //     outputs[0] = MandateOutput({
+    //         remoteFiller: bytes32(uint256(uint160(address(coinFiller)))),
+    //         remoteOracle: bytes32(uint256(uint160(address(alwaysYesOracle)))),
+    //         chainId: block.chainid,
+    //         token: bytes32(uint256(uint160(address(anotherToken)))),
+    //         amount: amount,
+    //         recipient: bytes32(uint256(uint160(swapper))),
+    //         remoteCall: hex"",
+    //         fulfillmentContext: hex""
+    //     });
+    //     StandardOrder memory order = StandardOrder({
+    //         user: address(swapper),
+    //         nonce: 0,
+    //         originChainId: block.chainid,
+    //         fillDeadline: type(uint32).max,
+    //         expires: type(uint32).max,
+    //         localOracle: alwaysYesOracle,
+    //         inputs: inputs,
+    //         outputs: outputs
+    //     });
 
-        // Make Compact
-        uint256[2][] memory idsAndAmounts = new uint256[2][](1);
-        idsAndAmounts[0] = [tokenId, amount];
+    //     // Make Compact
+    //     uint256[2][] memory idsAndAmounts = new uint256[2][](1);
+    //     idsAndAmounts[0] = [tokenId, amount];
 
-        bytes memory sponsorSig = getCompactBatchWitnessSignature(
-            swapperPrivateKey, address(compactSettler), swapper, 0, type(uint32).max, idsAndAmounts, witnessHash(order)
-        );
+    //     bytes memory sponsorSig = getCompactBatchWitnessSignature(
+    //         swapperPrivateKey, address(settlerCompact), swapper, 0, type(uint32).max, idsAndAmounts,
+    // witnessHash(order)
+    //     );
 
-        bytes memory signature = abi.encode(sponsorSig, hex"");
+    //     bytes memory signature = abi.encode(sponsorSig, hex"");
 
-        uint32[] memory timestamps = new uint32[](1);
-        timestamps[0] = uint32(block.timestamp);
+    //     uint32[] memory timestamps = new uint32[](1);
+    //     timestamps[0] = uint32(block.timestamp);
 
-        uint256 govFeeAmount = (amount * fee) / 10 ** 18;
-        uint256 amountPostFee = amount - govFeeAmount;
+    //     uint256 govFeeAmount = (amount * fee) / 10 ** 18;
+    //     uint256 amountPostFee = amount - govFeeAmount;
 
-        vm.prank(solver);
-        compactSettler.finaliseSelf(order, signature, timestamps, bytes32(uint256(uint160((solver)))));
-        vm.snapshotGasLastCall("settler", "CompactFinaliseSelfWithFee");
+    //     vm.prank(solver);
+    //     ISettlerCompactHarness(settlerCompact).finaliseSelf(order, signature, timestamps,
+    // bytes32(uint256(uint160((solver)))));
+    //     vm.snapshotGasLastCall("settler", "CompactFinaliseSelfWithFee");
 
-        assertEq(token.balanceOf(solver), amountPostFee);
-        assertEq(theCompact.balanceOf(owner, tokenId), govFeeAmount);
-    }
+    //     assertEq(token.balanceOf(solver), amountPostFee);
+    //     assertEq(theCompact.balanceOf(owner, tokenId), govFeeAmount);
+    // }
 }

@@ -1,7 +1,5 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
-
-import { Settler7683TestBase } from "./Settler7683.base.t.sol";
 
 import { GaslessCrossChainOrder, OnchainCrossChainOrder } from "../../../src/interfaces/IERC7683.sol";
 import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
@@ -9,6 +7,8 @@ import { MandateERC7683 } from "../../../src/settlers/7683/Order7683Type.sol";
 import { Settler7683 } from "../../../src/settlers/7683/Settler7683.sol";
 import { MandateOutput, MandateOutputType } from "../../../src/settlers/types/MandateOutputType.sol";
 import { StandardOrder } from "../../../src/settlers/types/StandardOrderType.sol";
+
+import { ISettler7683Harness, Settler7683TestBase } from "./Settler7683.base.t.sol";
 
 contract Settler7683Test is Settler7683TestBase {
     struct OrderFulfillmentDescription {
@@ -52,16 +52,16 @@ contract Settler7683Test is Settler7683TestBase {
             outputs: mandate.outputs
         });
 
-        bytes32 compactOrderId = settler7683.orderIdentifier(compactOrder);
-        bytes32 badOnChainOrderId = settler7683.orderIdentifier(order);
+        bytes32 compactOrderId = ISettler7683Harness(settler7683).orderIdentifier(compactOrder);
+        bytes32 badOnChainOrderId = ISettler7683Harness(settler7683).orderIdentifier(order);
         vm.prank(swapper);
-        bytes32 goodOnChainOrderId = settler7683.orderIdentifier(order);
+        bytes32 goodOnChainOrderId = ISettler7683Harness(settler7683).orderIdentifier(order);
 
         assertEq(compactOrderId, goodOnChainOrderId);
         assertNotEq(compactOrderId, badOnChainOrderId);
 
         compactOrder.user = address(this);
-        bytes32 thisOnChainOrderId = settler7683.orderIdentifier(order);
+        bytes32 thisOnChainOrderId = ISettler7683Harness(settler7683).orderIdentifier(order);
         assertEq(badOnChainOrderId, thisOnChainOrderId);
         assertNotEq(thisOnChainOrderId, goodOnChainOrderId);
     }
@@ -103,7 +103,7 @@ contract Settler7683Test is Settler7683TestBase {
         _validProofSeries[expectedProofPayload] = true;
 
         vm.prank(callerOfContract);
-        settler7683.validateFills(address(this), orderId, MandateOutputs);
+        ISettler7683Harness(settler7683).validateFills(address(this), orderId, MandateOutputs);
     }
 
     /// forge-config: default.isolate = true
@@ -178,7 +178,7 @@ contract Settler7683Test is Settler7683TestBase {
             outputs: MandateOutputs
         });
 
-        settler7683.validateFills(order, orderId, solverIdentifier, timestamps);
+        ISettler7683Harness(settler7683).validateFills(order, orderId, solverIdentifier, timestamps);
         vm.snapshotGasLastCall("settler", "7683Validate2Fills");
     }
 
@@ -263,7 +263,7 @@ contract Settler7683Test is Settler7683TestBase {
             outputs: MandateOutputs
         });
 
-        settler7683.validateFills(order, orderId, solvers, timestamps);
+        ISettler7683Harness(settler7683).validateFills(order, orderId, solvers, timestamps);
         vm.snapshotGasLastCall("settler", "7683Validate2FillsMultipleSolvers");
     }
 
@@ -275,11 +275,11 @@ contract Settler7683Test is Settler7683TestBase {
     function test_open(uint32 fillDeadline, uint128 amount, address user) public {
         vm.assume(fillDeadline > block.timestamp);
         vm.assume(token.balanceOf(user) == 0);
-        vm.assume(user != address(settler7683));
+        vm.assume(user != settler7683);
 
         token.mint(user, amount);
         vm.prank(user);
-        token.approve(address(settler7683), amount);
+        token.approve(settler7683, amount);
 
         MandateOutput[] memory outputs = new MandateOutput[](0);
 
@@ -298,11 +298,11 @@ contract Settler7683Test is Settler7683TestBase {
         assertEq(token.balanceOf(address(user)), amount);
 
         vm.prank(user);
-        settler7683.open(order);
+        ISettler7683Harness(settler7683).open(order);
         vm.snapshotGasLastCall("settler", "7683open");
 
         assertEq(token.balanceOf(address(user)), 0);
-        assertEq(token.balanceOf(address(settler7683)), amount);
+        assertEq(token.balanceOf(settler7683), amount);
     }
 
     /// forge-config: default.isolate = true
@@ -332,7 +332,7 @@ contract Settler7683Test is Settler7683TestBase {
             MandateERC7683({ expiry: type(uint32).max, localOracle: address(0), inputs: inputs, outputs: outputs });
 
         GaslessCrossChainOrder memory order = GaslessCrossChainOrder({
-            originSettler: address(settler7683),
+            originSettler: settler7683,
             user: swapper,
             nonce: nonce,
             originChainId: originChainId,
@@ -347,11 +347,11 @@ contract Settler7683Test is Settler7683TestBase {
         assertEq(token.balanceOf(address(swapper)), amount);
 
         vm.prank(swapper);
-        settler7683.openFor(order, signature, hex"");
+        ISettler7683Harness(settler7683).openFor(order, signature, hex"");
         vm.snapshotGasLastCall("settler", "7683openFor");
 
         assertEq(token.balanceOf(address(swapper)), 0);
-        assertEq(token.balanceOf(address(settler7683)), amount);
+        assertEq(token.balanceOf(settler7683), amount);
     }
 
     // -- Larger Integration tests -- //
@@ -394,9 +394,9 @@ contract Settler7683Test is Settler7683TestBase {
 
         // Deposit into the escrow
         vm.prank(swapper);
-        token.approve(address(settler7683), amount);
+        token.approve(settler7683, amount);
         vm.prank(swapper);
-        settler7683.open(order);
+        ISettler7683Harness(settler7683).open(order);
 
         uint32[] memory timestamps = new uint32[](1);
         timestamps[0] = uint32(block.timestamp);
@@ -417,11 +417,11 @@ contract Settler7683Test is Settler7683TestBase {
         vm.prank(non_solver);
 
         vm.expectRevert(abi.encodeWithSignature("NotOrderOwner()"));
-        settler7683.finaliseSelf(compactOrder, timestamps, bytes32(uint256(uint160((solver)))));
+        ISettler7683Harness(settler7683).finaliseSelf(compactOrder, timestamps, bytes32(uint256(uint160((solver)))));
 
         assertEq(token.balanceOf(solver), 0);
 
-        bytes32 orderId = settler7683.orderIdentifier(compactOrder);
+        bytes32 orderId = ISettler7683Harness(settler7683).orderIdentifier(compactOrder);
         bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionM(
             bytes32(uint256(uint160((solver)))), orderId, uint32(block.timestamp), outputs[0]
         );
@@ -441,7 +441,7 @@ contract Settler7683Test is Settler7683TestBase {
         );
 
         vm.prank(solver);
-        settler7683.finaliseSelf(compactOrder, timestamps, bytes32(uint256(uint160((solver)))));
+        ISettler7683Harness(settler7683).finaliseSelf(compactOrder, timestamps, bytes32(uint256(uint160((solver)))));
         vm.snapshotGasLastCall("settler", "7683FinaliseSelf");
 
         assertEq(token.balanceOf(solver), amount);
@@ -481,9 +481,9 @@ contract Settler7683Test is Settler7683TestBase {
 
         // Deposit into the escrow
         vm.prank(swapper);
-        token.approve(address(settler7683), amount);
+        token.approve(settler7683, amount);
         vm.prank(swapper);
-        settler7683.open(order);
+        ISettler7683Harness(settler7683).open(order);
 
         uint32[] memory timestamps = new uint32[](1);
         timestamps[0] = filledAt;
@@ -501,7 +501,7 @@ contract Settler7683Test is Settler7683TestBase {
 
         vm.prank(solver);
         vm.expectRevert(abi.encodeWithSignature("FilledTooLate(uint32,uint32)", fillDeadline, filledAt));
-        settler7683.finaliseSelf(compactOrder, timestamps, bytes32(uint256(uint160(solver))));
+        ISettler7683Harness(settler7683).finaliseSelf(compactOrder, timestamps, bytes32(uint256(uint160(solver))));
     }
 
     /// forge-config: default.isolate = true
@@ -542,9 +542,9 @@ contract Settler7683Test is Settler7683TestBase {
 
         // Deposit into the escrow
         vm.prank(swapper);
-        token.approve(address(settler7683), amount);
+        token.approve(settler7683, amount);
         vm.prank(swapper);
-        settler7683.open(order);
+        ISettler7683Harness(settler7683).open(order);
 
         uint32[] memory timestamps = new uint32[](1);
         timestamps[0] = uint32(block.timestamp);
@@ -562,7 +562,7 @@ contract Settler7683Test is Settler7683TestBase {
         });
 
         {
-            bytes32 orderId = settler7683.orderIdentifier(compactOrder);
+            bytes32 orderId = ISettler7683Harness(settler7683).orderIdentifier(compactOrder);
             bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionM(
                 bytes32(uint256(uint160((solver)))), orderId, uint32(block.timestamp), outputs[0]
             );
@@ -582,7 +582,7 @@ contract Settler7683Test is Settler7683TestBase {
             );
         }
         vm.prank(solver);
-        settler7683.finaliseTo(
+        ISettler7683Harness(settler7683).finaliseTo(
             compactOrder,
             timestamps,
             bytes32(uint256(uint160((solver)))),
@@ -633,9 +633,9 @@ contract Settler7683Test is Settler7683TestBase {
 
         // Deposit into the escrow
         vm.prank(swapper);
-        token.approve(address(settler7683), amount);
+        token.approve(settler7683, amount);
         vm.prank(swapper);
-        settler7683.open(order);
+        ISettler7683Harness(settler7683).open(order);
 
         uint32[] memory timestamps = new uint32[](1);
         timestamps[0] = uint32(block.timestamp);
@@ -652,7 +652,7 @@ contract Settler7683Test is Settler7683TestBase {
             outputs: mandate.outputs
         });
 
-        bytes32 orderId = settler7683.orderIdentifier(compactOrder);
+        bytes32 orderId = ISettler7683Harness(settler7683).orderIdentifier(compactOrder);
 
         bytes memory orderOwnerSignature =
             this.getOrderOpenSignature(solverPrivateKey, orderId, bytes32(uint256(uint160(destination))), hex"");
@@ -676,7 +676,7 @@ contract Settler7683Test is Settler7683TestBase {
             );
         }
         vm.prank(caller);
-        settler7683.finaliseFor(
+        ISettler7683Harness(settler7683).finaliseFor(
             compactOrder,
             timestamps,
             bytes32(uint256(uint160((solver)))),
@@ -691,135 +691,135 @@ contract Settler7683Test is Settler7683TestBase {
 
     // --- Fee tests --- //
 
-    function test_invalid_governance_fee() public {
-        vm.prank(owner);
-        settler7683.setGovernanceFee(MAX_GOVERNANCE_FEE);
+    // function test_invalid_governance_fee() public {
+    //     vm.prank(owner);
+    //     settler7683.setGovernanceFee(MAX_GOVERNANCE_FEE);
 
-        vm.prank(owner);
-        vm.expectRevert(abi.encodeWithSignature("GovernanceFeeTooHigh()"));
-        settler7683.setGovernanceFee(MAX_GOVERNANCE_FEE + 1);
+    //     vm.prank(owner);
+    //     vm.expectRevert(abi.encodeWithSignature("GovernanceFeeTooHigh()"));
+    //     settler7683.setGovernanceFee(MAX_GOVERNANCE_FEE + 1);
 
-        vm.prank(owner);
-        vm.expectRevert(abi.encodeWithSignature("GovernanceFeeTooHigh()"));
-        settler7683.setGovernanceFee(MAX_GOVERNANCE_FEE + 123123123);
+    //     vm.prank(owner);
+    //     vm.expectRevert(abi.encodeWithSignature("GovernanceFeeTooHigh()"));
+    //     settler7683.setGovernanceFee(MAX_GOVERNANCE_FEE + 123123123);
 
-        vm.prank(owner);
-        vm.expectRevert(abi.encodeWithSignature("GovernanceFeeTooHigh()"));
-        settler7683.setGovernanceFee(type(uint64).max);
-    }
+    //     vm.prank(owner);
+    //     vm.expectRevert(abi.encodeWithSignature("GovernanceFeeTooHigh()"));
+    //     settler7683.setGovernanceFee(type(uint64).max);
+    // }
 
-    function test_governance_fee_change_not_ready(uint64 fee, uint256 timeDelay) public {
-        vm.assume(fee <= MAX_GOVERNANCE_FEE);
-        vm.assume(timeDelay < uint32(block.timestamp) + GOVERNANCE_FEE_CHANGE_DELAY);
+    // function test_governance_fee_change_not_ready(uint64 fee, uint256 timeDelay) public {
+    //     vm.assume(fee <= MAX_GOVERNANCE_FEE);
+    //     vm.assume(timeDelay < uint32(block.timestamp) + GOVERNANCE_FEE_CHANGE_DELAY);
 
-        vm.prank(owner);
-        vm.expectEmit();
-        emit NextGovernanceFee(fee, uint32(block.timestamp) + GOVERNANCE_FEE_CHANGE_DELAY);
-        settler7683.setGovernanceFee(fee);
+    //     vm.prank(owner);
+    //     vm.expectEmit();
+    //     emit NextGovernanceFee(fee, uint32(block.timestamp) + GOVERNANCE_FEE_CHANGE_DELAY);
+    //     settler7683.setGovernanceFee(fee);
 
-        vm.warp(timeDelay);
-        vm.expectRevert(abi.encodeWithSignature("GovernanceFeeChangeNotReady()"));
-        settler7683.applyGovernanceFee();
+    //     vm.warp(timeDelay);
+    //     vm.expectRevert(abi.encodeWithSignature("GovernanceFeeChangeNotReady()"));
+    //     settler7683.applyGovernanceFee();
 
-        vm.warp(uint32(block.timestamp) + GOVERNANCE_FEE_CHANGE_DELAY + 1);
+    //     vm.warp(uint32(block.timestamp) + GOVERNANCE_FEE_CHANGE_DELAY + 1);
 
-        assertEq(settler7683.governanceFee(), 0);
+    //     assertEq(settler7683.governanceFee(), 0);
 
-        vm.expectEmit();
-        emit GovernanceFeeChanged(0, fee);
-        settler7683.applyGovernanceFee();
+    //     vm.expectEmit();
+    //     emit GovernanceFeeChanged(0, fee);
+    //     settler7683.applyGovernanceFee();
 
-        assertEq(settler7683.governanceFee(), fee);
-    }
+    //     assertEq(settler7683.governanceFee(), fee);
+    // }
 
-    /// forge-config: default.isolate = true
-    function test_finalise_self_with_fee_gas() public {
-        test_finalise_self_with_fee(MAX_GOVERNANCE_FEE / 3);
-    }
+    // /// forge-config: default.isolate = true
+    // function test_finalise_self_with_fee_gas() public {
+    //     test_finalise_self_with_fee(MAX_GOVERNANCE_FEE / 3);
+    // }
 
-    function test_finalise_self_with_fee(
-        uint64 fee
-    ) public {
-        vm.assume(fee <= MAX_GOVERNANCE_FEE);
-        vm.prank(owner);
-        settler7683.setGovernanceFee(fee);
-        vm.warp(uint32(block.timestamp) + GOVERNANCE_FEE_CHANGE_DELAY + 1);
-        settler7683.applyGovernanceFee();
+    // function test_finalise_self_with_fee(
+    //     uint64 fee
+    // ) public {
+    //     vm.assume(fee <= MAX_GOVERNANCE_FEE);
+    //     vm.prank(owner);
+    //     settler7683.setGovernanceFee(fee);
+    //     vm.warp(uint32(block.timestamp) + GOVERNANCE_FEE_CHANGE_DELAY + 1);
+    //     settler7683.applyGovernanceFee();
 
-        uint256 amount = 1e18 / 10;
-        address localOracle = address(alwaysYesOracle);
+    //     uint256 amount = 1e18 / 10;
+    //     address localOracle = address(alwaysYesOracle);
 
-        MandateOutput[] memory outputs = new MandateOutput[](1);
-        outputs[0] = MandateOutput({
-            remoteFiller: bytes32(uint256(uint160(address(coinFiller)))),
-            remoteOracle: bytes32(uint256(uint160(localOracle))),
-            chainId: block.chainid,
-            token: bytes32(uint256(uint160(address(anotherToken)))),
-            amount: amount,
-            recipient: bytes32(uint256(uint160(swapper))),
-            remoteCall: hex"",
-            fulfillmentContext: hex""
-        });
-        uint256[2][] memory inputs = new uint256[2][](1);
-        inputs[0] = [uint256(uint160(address(token))), amount];
+    //     MandateOutput[] memory outputs = new MandateOutput[](1);
+    //     outputs[0] = MandateOutput({
+    //         remoteFiller: bytes32(uint256(uint160(address(coinFiller)))),
+    //         remoteOracle: bytes32(uint256(uint160(localOracle))),
+    //         chainId: block.chainid,
+    //         token: bytes32(uint256(uint160(address(anotherToken)))),
+    //         amount: amount,
+    //         recipient: bytes32(uint256(uint160(swapper))),
+    //         remoteCall: hex"",
+    //         fulfillmentContext: hex""
+    //     });
+    //     uint256[2][] memory inputs = new uint256[2][](1);
+    //     inputs[0] = [uint256(uint160(address(token))), amount];
 
-        MandateERC7683 memory mandate =
-            MandateERC7683({ expiry: type(uint32).max, localOracle: localOracle, inputs: inputs, outputs: outputs });
+    //     MandateERC7683 memory mandate =
+    //         MandateERC7683({ expiry: type(uint32).max, localOracle: localOracle, inputs: inputs, outputs: outputs });
 
-        OnchainCrossChainOrder memory order = OnchainCrossChainOrder({
-            fillDeadline: type(uint32).max,
-            orderDataType: bytes32(0),
-            orderData: abi.encode(mandate)
-        });
+    //     OnchainCrossChainOrder memory order = OnchainCrossChainOrder({
+    //         fillDeadline: type(uint32).max,
+    //         orderDataType: bytes32(0),
+    //         orderData: abi.encode(mandate)
+    //     });
 
-        // Deposit into the escrow
-        vm.prank(swapper);
-        token.approve(address(settler7683), amount);
-        vm.prank(swapper);
-        settler7683.open(order);
+    //     // Deposit into the escrow
+    //     vm.prank(swapper);
+    //     token.approve(address(settler7683), amount);
+    //     vm.prank(swapper);
+    //     settler7683.open(order);
 
-        uint32[] memory timestamps = new uint32[](1);
-        timestamps[0] = uint32(block.timestamp);
+    //     uint32[] memory timestamps = new uint32[](1);
+    //     timestamps[0] = uint32(block.timestamp);
 
-        // Generate the StandardOrder so we can make the finalise call
-        StandardOrder memory compactOrder = StandardOrder({
-            user: swapper,
-            nonce: 0,
-            originChainId: block.chainid,
-            expires: mandate.expiry,
-            fillDeadline: order.fillDeadline,
-            localOracle: mandate.localOracle,
-            inputs: mandate.inputs,
-            outputs: mandate.outputs
-        });
+    //     // Generate the StandardOrder so we can make the finalise call
+    //     StandardOrder memory compactOrder = StandardOrder({
+    //         user: swapper,
+    //         nonce: 0,
+    //         originChainId: block.chainid,
+    //         expires: mandate.expiry,
+    //         fillDeadline: order.fillDeadline,
+    //         localOracle: mandate.localOracle,
+    //         inputs: mandate.inputs,
+    //         outputs: mandate.outputs
+    //     });
 
-        bytes32 orderId = settler7683.orderIdentifier(compactOrder);
-        bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionM(
-            bytes32(uint256(uint160((solver)))), orderId, uint32(block.timestamp), outputs[0]
-        );
-        bytes32 payloadHash = keccak256(payload);
+    //     bytes32 orderId = settler7683.orderIdentifier(compactOrder);
+    //     bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionM(
+    //         bytes32(uint256(uint160((solver)))), orderId, uint32(block.timestamp), outputs[0]
+    //     );
+    //     bytes32 payloadHash = keccak256(payload);
 
-        vm.expectCall(
-            address(alwaysYesOracle),
-            abi.encodeWithSignature(
-                "efficientRequireProven(bytes)",
-                abi.encodePacked(
-                    mandate.outputs[0].chainId,
-                    mandate.outputs[0].remoteOracle,
-                    mandate.outputs[0].remoteFiller,
-                    payloadHash
-                )
-            )
-        );
+    //     vm.expectCall(
+    //         address(alwaysYesOracle),
+    //         abi.encodeWithSignature(
+    //             "efficientRequireProven(bytes)",
+    //             abi.encodePacked(
+    //                 mandate.outputs[0].chainId,
+    //                 mandate.outputs[0].remoteOracle,
+    //                 mandate.outputs[0].remoteFiller,
+    //                 payloadHash
+    //             )
+    //         )
+    //     );
 
-        vm.prank(solver);
-        settler7683.finaliseSelf(compactOrder, timestamps, bytes32(uint256(uint160((solver)))));
-        vm.snapshotGasLastCall("settler", "7683FinaliseSelfWithFee");
+    //     vm.prank(solver);
+    //     settler7683.finaliseSelf(compactOrder, timestamps, bytes32(uint256(uint160((solver)))));
+    //     vm.snapshotGasLastCall("settler", "7683FinaliseSelfWithFee");
 
-        uint256 govFeeAmount = (amount * fee) / 10 ** 18;
-        uint256 amountPostFee = amount - govFeeAmount;
+    //     uint256 govFeeAmount = (amount * fee) / 10 ** 18;
+    //     uint256 amountPostFee = amount - govFeeAmount;
 
-        assertEq(token.balanceOf(solver), amountPostFee);
-        assertEq(token.balanceOf(settler7683.owner()), govFeeAmount);
-    }
+    //     assertEq(token.balanceOf(solver), amountPostFee);
+    //     assertEq(token.balanceOf(settler7683.owner()), govFeeAmount);
+    // }
 }

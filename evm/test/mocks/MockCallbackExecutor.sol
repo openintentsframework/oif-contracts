@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
 import { ICatalystCallback } from "../../src/interfaces/ICatalystCallback.sol";
@@ -11,7 +11,11 @@ contract MockCallbackExecutor is ICatalystCallback {
         emit ExecutorOutputFilled(token, amount, executionData);
     }
 
-    function inputsFilled(uint256[2][] calldata, /* inputs */ bytes calldata executionData) external override {
+    function inputsFilled(
+        uint256[2][] calldata,
+        /* inputs */
+        bytes calldata executionData
+    ) external override {
         emit InputsFilled(executionData);
     }
 }
