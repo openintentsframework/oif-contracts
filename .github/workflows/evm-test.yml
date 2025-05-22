@@ -1,12 +1,8 @@
-name: Foundry EVM implementation test
+name: Foundry Smart Contract Test
 
 on:
   push:
-    paths:
-      - 'evm/**'
   pull_request:
-    paths:
-      - 'evm/**'
 
 env:
   FOUNDRY_PROFILE: ci
@@ -30,27 +26,22 @@ jobs:
 
       - name: Run Forge version
         run: forge --version
-        working-directory: evm
         id: version
 
       - name: Run Forge fmt
         run: forge fmt --check
-        working-directory: evm
         id: fmt
 
       - name: Run Forge build
         run: forge build
-        working-directory: evm
         id: build
 
       - name: Run Forge tests
         run: forge test -vvv
-        working-directory: evm
         id: test
 
       - name: Run Forge Snapshots
         run: FOUNDRY_FUZZ_RUNS=10 forge test --gas-snapshot-check true
-        working-directory: evm
         id: snapshot
 
       - name: Run Forge Coverage
@@ -58,12 +49,11 @@ jobs:
           FOUNDRY_FUZZ_RUNS=256 forge coverage \
             --no-match-coverage "(script|test|wormhole/external/wormhole|wormhole/external/callworm/GettersGetter)" \
             --report lcov
-        working-directory: evm
         id: coverage
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./evm/lcov.info
+          files: ./lcov.info
           fail_ci_if_error: true
