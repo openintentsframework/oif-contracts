@@ -306,38 +306,6 @@ contract Settler7683 is BaseSettler, ISettler7683 {
      * if someone filled one of the outputs.
      */
     function _validateFills(
-        address localOracle,
-        bytes32 orderId,
-        MandateOutput[] memory MandateOutputs
-    ) internal view {
-        uint256 numOutputs = MandateOutputs.length;
-
-        bytes memory proofSeries = new bytes(32 * 4 * numOutputs);
-        for (uint256 i; i < numOutputs; ++i) {
-            MandateOutput memory output = MandateOutputs[i];
-            uint256 chainId = output.chainId;
-            bytes32 remoteOracle = output.remoteOracle;
-            bytes32 remoteFiller = output.remoteFiller;
-            bytes32 payloadHash =
-                _proofPayloadHashM(orderId, bytes32(uint256(uint160(msg.sender))), uint32(block.timestamp), output);
-
-            assembly ("memory-safe") {
-                let offset := add(add(proofSeries, 0x20), mul(i, 0x80))
-                mstore(offset, chainId)
-                mstore(add(offset, 0x20), remoteOracle)
-                mstore(add(offset, 0x40), remoteFiller)
-                mstore(add(offset, 0x60), payloadHash)
-            }
-        }
-        IOracle(localOracle).efficientRequireProven(proofSeries);
-    }
-
-    /**
-     * @notice Check if a series of outputs has been proven.
-     * @dev Can take a list of solvers. Should be used as a secure alternative to _validateFills
-     * if someone filled one of the outputs.
-     */
-    function _validateFills(
         StandardOrder calldata order,
         bytes32 orderId,
         bytes32[] calldata solvers,

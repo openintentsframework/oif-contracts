@@ -12,6 +12,8 @@ import { ResetPeriod } from "the-compact/src/types/ResetPeriod.sol";
 import { Scope } from "the-compact/src/types/Scope.sol";
 
 import { CoinFiller } from "../../src/fillers/coin/CoinFiller.sol";
+
+import { ISettlerCompact } from "../../src/interfaces/ISettlerCompact.sol";
 import { MandateOutputEncodingLib } from "../../src/libs/MandateOutputEncodingLib.sol";
 import { MessageEncodingLib } from "../../src/libs/MessageEncodingLib.sol";
 import { WormholeOracle } from "../../src/oracles/wormhole/WormholeOracle.sol";
@@ -55,7 +57,7 @@ contract ExportedMessages is Messages, Setters {
 }
 
 contract SettlerCompactTestCrossChain is Test {
-    SettlerCompact settlerCompact;
+    address settlerCompact;
     CoinFiller coinFiller;
 
     // Oracles
@@ -96,7 +98,7 @@ contract SettlerCompactTestCrossChain is Test {
 
         DOMAIN_SEPARATOR = EIP712(address(theCompact)).DOMAIN_SEPARATOR();
 
-        settlerCompact = new SettlerCompact(address(theCompact));
+        settlerCompact = address(new SettlerCompact(address(theCompact)));
         coinFiller = new CoinFiller();
         alwaysYesOracle = address(new AlwaysYesOracle());
 
@@ -226,7 +228,7 @@ contract SettlerCompactTestCrossChain is Test {
         bytes32 destination,
         bytes calldata call
     ) external view returns (bytes memory sig) {
-        bytes32 domainSeparator = settlerCompact.DOMAIN_SEPARATOR();
+        bytes32 domainSeparator = EIP712(settlerCompact).DOMAIN_SEPARATOR();
         bytes32 msgHash = keccak256(
             abi.encodePacked("\x19\x01", domainSeparator, AllowOpenType.hashAllowOpen(orderId, destination, call))
         );
@@ -274,7 +276,7 @@ contract SettlerCompactTestCrossChain is Test {
         idsAndAmounts[0] = [tokenId, amount];
 
         bytes memory sponsorSig = getCompactBatchWitnessSignature(
-            swapperPrivateKey, address(settlerCompact), swapper, 0, type(uint32).max, idsAndAmounts, witnessHash(order)
+            swapperPrivateKey, settlerCompact, swapper, 0, type(uint32).max, idsAndAmounts, witnessHash(order)
         );
         bytes memory allocatorSig = hex"";
 
@@ -283,7 +285,7 @@ contract SettlerCompactTestCrossChain is Test {
         uint32[] memory timestamps = new uint32[](1);
 
         vm.prank(solver);
-        settlerCompact.finaliseSelf(order, signature, timestamps, bytes32(uint256(uint160((solver)))));
+        ISettlerCompact(settlerCompact).finaliseSelf(order, signature, timestamps, bytes32(uint256(uint160((solver)))));
     }
 
     function _buildPreMessage(
@@ -343,16 +345,10 @@ contract SettlerCompactTestCrossChain is Test {
         idsAndAmounts[0] = [tokenId, amount];
 
         bytes memory sponsorSig = getCompactBatchWitnessSignature(
-            swapperPrivateKey, address(settlerCompact), swapper, 0, type(uint32).max, idsAndAmounts, witnessHash(order)
+            swapperPrivateKey, settlerCompact, swapper, 0, type(uint32).max, idsAndAmounts, witnessHash(order)
         );
         bytes memory allocatorSig = getCompactBatchWitnessSignature(
-            allocatorPrivateKey,
-            address(settlerCompact),
-            swapper,
-            0,
-            type(uint32).max,
-            idsAndAmounts,
-            witnessHash(order)
+            allocatorPrivateKey, settlerCompact, swapper, 0, type(uint32).max, idsAndAmounts, witnessHash(order)
         );
 
         bytes memory signature = abi.encode(sponsorSig, allocatorSig);
@@ -361,7 +357,7 @@ contract SettlerCompactTestCrossChain is Test {
 
         bytes32 solverIdentifier = bytes32(uint256(uint160((solver))));
 
-        bytes32 orderId = settlerCompact.orderIdentifier(order);
+        bytes32 orderId = ISettlerCompact(settlerCompact).orderIdentifier(order);
 
         vm.prank(solver);
         coinFiller.fill(type(uint32).max, orderId, outputs[0], solverIdentifier);
@@ -390,7 +386,7 @@ contract SettlerCompactTestCrossChain is Test {
         timestamps[0] = uint32(block.timestamp);
 
         vm.prank(solver);
-        settlerCompact.finaliseSelf(order, signature, timestamps, solverIdentifier);
+        ISettlerCompact(settlerCompact).finaliseSelf(order, signature, timestamps, solverIdentifier);
         vm.snapshotGasLastCall("settler", "IntegrationCompactFinaliseSelf");
     }
 
@@ -446,13 +442,7 @@ contract SettlerCompactTestCrossChain is Test {
             idsAndAmounts[0] = [tokenId, amount];
 
             bytes memory sponsorSig = getCompactBatchWitnessSignature(
-                swapperPrivateKey,
-                address(settlerCompact),
-                swapper,
-                0,
-                type(uint32).max,
-                idsAndAmounts,
-                witnessHash(order)
+                swapperPrivateKey, settlerCompact, swapper, 0, type(uint32).max, idsAndAmounts, witnessHash(order)
             );
 
             signature = abi.encode(sponsorSig, hex"");
@@ -460,7 +450,7 @@ contract SettlerCompactTestCrossChain is Test {
         // Initiation is over. We need to fill the order.
 
         {
-            bytes32 orderId = settlerCompact.orderIdentifier(order);
+            bytes32 orderId = ISettlerCompact(settlerCompact).orderIdentifier(order);
 
             vm.prank(solver);
             coinFiller.fill(type(uint32).max, orderId, outputs[0], solverIdentifier);
@@ -494,7 +484,9 @@ contract SettlerCompactTestCrossChain is Test {
 
         vm.expectRevert(abi.encodeWithSignature("NotProven()"));
         vm.prank(solver);
-        settlerCompact.finaliseTo(order, signature, timestamps, solverIdentifier, solverIdentifier, hex"");
+        ISettlerCompact(settlerCompact).finaliseTo(
+            order, signature, timestamps, solverIdentifier, solverIdentifier, hex""
+        );
 
         bytes32[] memory solverIdentifierList = new bytes32[](2);
         solverIdentifierList[0] = solverIdentifier;
@@ -503,15 +495,18 @@ contract SettlerCompactTestCrossChain is Test {
             uint256 snapshotId = vm.snapshot();
 
             vm.prank(solver);
-            settlerCompact.finaliseTo(order, signature, timestamps, solverIdentifierList, solverIdentifier, hex"");
+            ISettlerCompact(settlerCompact).finaliseTo(
+                order, signature, timestamps, solverIdentifierList, solverIdentifier, hex""
+            );
 
             vm.revertTo(snapshotId);
         }
-        bytes memory solverSignature =
-            this.getOrderOpenSignature(solverPrivateKey, settlerCompact.orderIdentifier(order), solverIdentifier, hex"");
+        bytes memory solverSignature = this.getOrderOpenSignature(
+            solverPrivateKey, ISettlerCompact(settlerCompact).orderIdentifier(order), solverIdentifier, hex""
+        );
 
         vm.prank(solver);
-        settlerCompact.finaliseFor(
+        ISettlerCompact(settlerCompact).finaliseFor(
             order, signature, timestamps, solverIdentifierList, solverIdentifier, hex"", solverSignature
         );
     }

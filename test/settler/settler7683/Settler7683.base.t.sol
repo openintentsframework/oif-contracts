@@ -35,8 +35,6 @@ interface ISettler7683Harness is ISettler7683 {
         bytes32 solver,
         uint32[] calldata timestamps
     ) external view;
-
-    function validateFills(address localOracle, bytes32 orderId, MandateOutput[] memory MandateOutputs) external view;
 }
 
 contract Settler7683Harness is Settler7683, ISettler7683Harness {
@@ -56,10 +54,6 @@ contract Settler7683Harness is Settler7683, ISettler7683Harness {
         uint32[] calldata timestamps
     ) external view {
         _validateFills(order, orderId, solver, timestamps);
-    }
-
-    function validateFills(address localOracle, bytes32 orderId, MandateOutput[] memory MandateOutputs) external view {
-        _validateFills(localOracle, orderId, MandateOutputs);
     }
 }
 
