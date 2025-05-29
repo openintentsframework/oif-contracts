@@ -59,14 +59,14 @@ contract CoinFiller7683 is BaseFiller, IDestinationSettler {
         bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHashMemory(output);
 
         // Get the proof state of the fulfillment.
-        bytes32 existingSolver = _filledOutputs[orderId][outputHash];
+        bytes32 existingSolver = filledOutputs[orderId][outputHash];
 
         // Early return if we have already seen proof.
         if (existingSolver != bytes32(0)) return existingSolver;
 
         // The fill status is set before the transfer.
         // This allows the above code-chunk to act as a local re-entry check.
-        _filledOutputs[orderId][outputHash] = proposedSolver;
+        filledOutputs[orderId][outputHash] = proposedSolver;
 
         // Set the associated attestation as true. This allows the filler to act as an oracle and check whether payload
         // hashes have been filled. Note that within the payload we set the current timestamp. This
