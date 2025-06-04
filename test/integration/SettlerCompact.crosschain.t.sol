@@ -285,7 +285,9 @@ contract SettlerCompactTestCrossChain is Test {
         uint32[] memory timestamps = new uint32[](1);
 
         vm.prank(solver);
-        ISettlerCompact(settlerCompact).finaliseSelf(order, signature, timestamps, bytes32(uint256(uint160((solver)))));
+        bytes32[] memory solvers = new bytes32[](1);
+        solvers[0] = bytes32(uint256(uint160((solver))));
+        ISettlerCompact(settlerCompact).finalise(order, signature, timestamps, solvers, solvers[0], hex"");
     }
 
     function _buildPreMessage(
@@ -386,7 +388,9 @@ contract SettlerCompactTestCrossChain is Test {
         timestamps[0] = uint32(block.timestamp);
 
         vm.prank(solver);
-        ISettlerCompact(settlerCompact).finaliseSelf(order, signature, timestamps, solverIdentifier);
+        bytes32[] memory solvers = new bytes32[](1);
+        solvers[0] = bytes32(uint256(uint160((solver))));
+        ISettlerCompact(settlerCompact).finalise(order, signature, timestamps, solvers, solvers[0], hex"");
         vm.snapshotGasLastCall("settler", "IntegrationCompactFinaliseSelf");
     }
 
@@ -484,9 +488,9 @@ contract SettlerCompactTestCrossChain is Test {
 
         vm.expectRevert(abi.encodeWithSignature("NotProven()"));
         vm.prank(solver);
-        ISettlerCompact(settlerCompact).finaliseTo(
-            order, signature, timestamps, solverIdentifier, solverIdentifier, hex""
-        );
+        bytes32[] memory solvers = new bytes32[](1);
+        solvers[0] = solverIdentifier;
+        ISettlerCompact(settlerCompact).finalise(order, signature, timestamps, solvers, solverIdentifier, hex"");
 
         bytes32[] memory solverIdentifierList = new bytes32[](2);
         solverIdentifierList[0] = solverIdentifier;
@@ -495,7 +499,7 @@ contract SettlerCompactTestCrossChain is Test {
             uint256 snapshotId = vm.snapshot();
 
             vm.prank(solver);
-            ISettlerCompact(settlerCompact).finaliseTo(
+            ISettlerCompact(settlerCompact).finalise(
                 order, signature, timestamps, solverIdentifierList, solverIdentifier, hex""
             );
 
@@ -506,7 +510,7 @@ contract SettlerCompactTestCrossChain is Test {
         );
 
         vm.prank(solver);
-        ISettlerCompact(settlerCompact).finaliseFor(
+        ISettlerCompact(settlerCompact).finaliseWithSignature(
             order, signature, timestamps, solverIdentifierList, solverIdentifier, hex"", solverSignature
         );
     }

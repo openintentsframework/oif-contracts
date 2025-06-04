@@ -175,12 +175,12 @@ contract SettlerCompactTest is SettlerCompactTestBase {
         inputs[0] = [tokenId, amount];
         MandateOutput[] memory outputs = new MandateOutput[](1);
         outputs[0] = MandateOutput({
-            remoteFiller: bytes32(uint256(uint160(address(coinFiller)))),
-            remoteOracle: bytes32(uint256(uint160(address(alwaysYesOracle)))),
+            remoteFiller: addressToIdentifier(address(coinFiller)),
+            remoteOracle: addressToIdentifier(address(alwaysYesOracle)),
             chainId: block.chainid,
-            token: bytes32(uint256(uint160(address(anotherToken)))),
+            token: addressToIdentifier(address(anotherToken)),
             amount: amount,
-            recipient: bytes32(uint256(uint160(swapper))),
+            recipient: addressToIdentifier(swapper),
             remoteCall: hex"",
             fulfillmentContext: hex""
         });
@@ -205,7 +205,7 @@ contract SettlerCompactTest is SettlerCompactTestBase {
 
         bytes memory signature = abi.encode(sponsorSig, hex"");
 
-        bytes32 solverIdentifier = bytes32(uint256(uint160((solver))));
+        bytes32 solverIdentifier = addressToIdentifier(solver);
 
         uint32[] memory timestamps = new uint32[](1);
         timestamps[0] = uint32(block.timestamp);
@@ -213,35 +213,32 @@ contract SettlerCompactTest is SettlerCompactTestBase {
         // Other callers are disallowed:
         vm.prank(non_solver);
         vm.expectRevert(abi.encodeWithSignature("NotOrderOwner()"));
-        ISettlerCompactHarness(settlerCompact).finaliseSelf(order, signature, timestamps, solverIdentifier);
+        bytes32[] memory solvers = new bytes32[](1);
+        solvers[0] = solverIdentifier;
+        ISettlerCompactHarness(settlerCompact).finalise(order, signature, timestamps, solvers, solverIdentifier, hex"");
 
         assertEq(token.balanceOf(solver), 0);
 
-        {
-            bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionM(
-                solverIdentifier,
-                ISettlerCompactHarness(settlerCompact).orderIdentifier(order),
-                uint32(block.timestamp),
-                outputs[0]
-            );
-            bytes32 payloadHash = keccak256(payload);
+        bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionM(
+            solverIdentifier,
+            ISettlerCompactHarness(settlerCompact).orderIdentifier(order),
+            uint32(block.timestamp),
+            outputs[0]
+        );
+        bytes32 payloadHash = keccak256(payload);
 
-            vm.expectCall(
-                address(alwaysYesOracle),
-                abi.encodeWithSignature(
-                    "efficientRequireProven(bytes)",
-                    abi.encodePacked(
-                        order.outputs[0].chainId,
-                        order.outputs[0].remoteOracle,
-                        order.outputs[0].remoteFiller,
-                        payloadHash
-                    )
+        vm.expectCall(
+            address(alwaysYesOracle),
+            abi.encodeWithSignature(
+                "efficientRequireProven(bytes)",
+                abi.encodePacked(
+                    order.outputs[0].chainId, order.outputs[0].remoteOracle, order.outputs[0].remoteFiller, payloadHash
                 )
-            );
-        }
+            )
+        );
 
         vm.prank(solver);
-        ISettlerCompactHarness(settlerCompact).finaliseSelf(order, signature, timestamps, solverIdentifier);
+        ISettlerCompactHarness(settlerCompact).finalise(order, signature, timestamps, solvers, solverIdentifier, hex"");
         vm.snapshotGasLastCall("settler", "CompactFinaliseSelf");
 
         assertEq(token.balanceOf(solver), amount);
@@ -266,12 +263,12 @@ contract SettlerCompactTest is SettlerCompactTestBase {
         inputs[0] = [tokenId, amount];
         MandateOutput[] memory outputs = new MandateOutput[](1);
         outputs[0] = MandateOutput({
-            remoteFiller: bytes32(uint256(uint160(address(coinFiller)))),
-            remoteOracle: bytes32(uint256(uint160(localOracle))),
+            remoteFiller: addressToIdentifier(address(coinFiller)),
+            remoteOracle: addressToIdentifier(localOracle),
             chainId: block.chainid,
-            token: bytes32(uint256(uint160(address(anotherToken)))),
+            token: addressToIdentifier(address(anotherToken)),
             amount: amount,
-            recipient: bytes32(uint256(uint160(swapper))),
+            recipient: addressToIdentifier(swapper),
             remoteCall: hex"",
             fulfillmentContext: hex""
         });
@@ -297,14 +294,16 @@ contract SettlerCompactTest is SettlerCompactTestBase {
 
         bytes memory signature = abi.encode(sponsorSig, allocatorSig);
 
-        bytes32 solverIdentifier = bytes32(uint256(uint160((solver))));
+        bytes32 solverIdentifier = addressToIdentifier(solver);
 
         uint32[] memory timestamps = new uint32[](1);
         timestamps[0] = filledAt;
 
         vm.prank(solver);
         vm.expectRevert(abi.encodeWithSignature("FilledTooLate(uint32,uint32)", fillDeadline, filledAt));
-        ISettlerCompactHarness(settlerCompact).finaliseSelf(order, signature, timestamps, solverIdentifier);
+        bytes32[] memory solvers = new bytes32[](1);
+        solvers[0] = solverIdentifier;
+        ISettlerCompactHarness(settlerCompact).finalise(order, signature, timestamps, solvers, solverIdentifier, hex"");
     }
 
     /// forge-config: default.isolate = true
@@ -316,6 +315,7 @@ contract SettlerCompactTest is SettlerCompactTestBase {
         vm.assume(destination != settlerCompact);
         vm.assume(destination != address(theCompact));
         vm.assume(destination != swapper);
+        vm.assume(destination != address(0));
         vm.assume(token.balanceOf(destination) == 0);
         vm.assume(non_solver != solver);
 
@@ -331,12 +331,12 @@ contract SettlerCompactTest is SettlerCompactTestBase {
         inputs[0] = [tokenId, amount];
         MandateOutput[] memory outputs = new MandateOutput[](1);
         outputs[0] = MandateOutput({
-            remoteFiller: bytes32(uint256(uint160(address(coinFiller)))),
-            remoteOracle: bytes32(uint256(uint160(address(alwaysYesOracle)))),
+            remoteFiller: addressToIdentifier(address(coinFiller)),
+            remoteOracle: addressToIdentifier(address(alwaysYesOracle)),
             chainId: block.chainid,
-            token: bytes32(uint256(uint160(address(anotherToken)))),
+            token: addressToIdentifier(address(anotherToken)),
             amount: amount,
-            recipient: bytes32(uint256(uint160(swapper))),
+            recipient: addressToIdentifier(swapper),
             remoteCall: hex"",
             fulfillmentContext: hex""
         });
@@ -369,25 +369,19 @@ contract SettlerCompactTest is SettlerCompactTestBase {
         vm.prank(non_solver);
 
         vm.expectRevert(abi.encodeWithSignature("NotOrderOwner()"));
-        ISettlerCompactHarness(settlerCompact).finaliseTo(
-            order,
-            signature,
-            timestamps,
-            bytes32(uint256(uint160((solver)))),
-            bytes32(uint256(uint160(destination))),
-            hex""
+        bytes32 solverIdentifier = addressToIdentifier(solver);
+        bytes32 destinationIdentifier = addressToIdentifier(destination);
+        bytes32[] memory solvers = new bytes32[](1);
+        solvers[0] = solverIdentifier;
+        ISettlerCompactHarness(settlerCompact).finalise(
+            order, signature, timestamps, solvers, destinationIdentifier, hex""
         );
 
         assertEq(token.balanceOf(destination), 0);
 
         vm.prank(solver);
-        ISettlerCompactHarness(settlerCompact).finaliseTo(
-            order,
-            signature,
-            timestamps,
-            bytes32(uint256(uint160((solver)))),
-            bytes32(uint256(uint160(destination))),
-            hex""
+        ISettlerCompactHarness(settlerCompact).finalise(
+            order, signature, timestamps, solvers, destinationIdentifier, hex""
         );
         vm.snapshotGasLastCall("settler", "CompactFinaliseTo");
 
@@ -404,6 +398,7 @@ contract SettlerCompactTest is SettlerCompactTestBase {
         vm.assume(destination != address(theCompact));
         vm.assume(destination != address(swapper));
         vm.assume(destination != address(solver));
+        vm.assume(destination != address(0));
         vm.assume(non_solver != solver);
 
         token.mint(swapper, 1e18);
@@ -418,12 +413,12 @@ contract SettlerCompactTest is SettlerCompactTestBase {
         inputs[0] = [tokenId, amount];
         MandateOutput[] memory outputs = new MandateOutput[](1);
         outputs[0] = MandateOutput({
-            remoteFiller: bytes32(uint256(uint160(address(coinFiller)))),
-            remoteOracle: bytes32(uint256(uint160(address(alwaysYesOracle)))),
+            remoteFiller: addressToIdentifier(address(coinFiller)),
+            remoteOracle: addressToIdentifier(address(alwaysYesOracle)),
             chainId: block.chainid,
-            token: bytes32(uint256(uint160(address(anotherToken)))),
+            token: addressToIdentifier(address(anotherToken)),
             amount: amount,
-            recipient: bytes32(uint256(uint160(swapper))),
+            recipient: addressToIdentifier(swapper),
             remoteCall: hex"",
             fulfillmentContext: hex""
         });
@@ -458,14 +453,10 @@ contract SettlerCompactTest is SettlerCompactTestBase {
 
         vm.prank(non_solver);
         vm.expectRevert(abi.encodeWithSignature("InvalidSigner()"));
-        ISettlerCompactHarness(settlerCompact).finaliseFor(
-            order,
-            signature,
-            timestamps,
-            bytes32(uint256(uint160((solver)))),
-            bytes32(uint256(uint160(destination))),
-            hex"",
-            orderOwnerSignature
+        bytes32[] memory solvers = new bytes32[](1);
+        solvers[0] = addressToIdentifier(solver);
+        ISettlerCompactHarness(settlerCompact).finaliseWithSignature(
+            order, signature, timestamps, solvers, addressToIdentifier(destination), hex"", orderOwnerSignature
         );
 
         assertEq(token.balanceOf(destination), 0);
@@ -473,23 +464,23 @@ contract SettlerCompactTest is SettlerCompactTestBase {
         orderOwnerSignature = this.getOrderOpenSignature(
             solverPrivateKey,
             ISettlerCompactHarness(settlerCompact).orderIdentifier(order),
-            bytes32(uint256(uint160(destination))),
+            addressToIdentifier(destination),
             hex""
         );
 
         vm.prank(non_solver);
-        ISettlerCompactHarness(settlerCompact).finaliseFor(
-            order,
-            signature,
-            timestamps,
-            bytes32(uint256(uint160((solver)))),
-            bytes32(uint256(uint160(destination))),
-            hex"",
-            orderOwnerSignature
+        ISettlerCompactHarness(settlerCompact).finaliseWithSignature(
+            order, signature, timestamps, solvers, addressToIdentifier(destination), hex"", orderOwnerSignature
         );
         vm.snapshotGasLastCall("settler", "CompactFinaliseFor");
 
         assertEq(token.balanceOf(destination), amount);
+    }
+
+    function addressToIdentifier(
+        address addr
+    ) internal pure returns (bytes32) {
+        return bytes32(uint256(uint160(addr)));
     }
 
     // --- Fee tests --- //
