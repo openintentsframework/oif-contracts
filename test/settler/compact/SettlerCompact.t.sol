@@ -413,29 +413,32 @@ contract SettlerCompactTest is SettlerCompactTestBase {
         uint256 amount = 1e18 / 10;
         uint256 tokenId = theCompact.depositERC20(address(token), alwaysOkAllocatorLockTag, amount, swapper);
 
-        uint256[2][] memory inputs = new uint256[2][](1);
-        inputs[0] = [tokenId, amount];
-        MandateOutput[] memory outputs = new MandateOutput[](1);
-        outputs[0] = MandateOutput({
-            remoteFiller: address(coinFiller).toIdentifier(),
-            remoteOracle: address(alwaysYesOracle).toIdentifier(),
-            chainId: block.chainid,
-            token: address(anotherToken).toIdentifier(),
-            amount: amount,
-            recipient: swapper.toIdentifier(),
-            remoteCall: hex"",
-            fulfillmentContext: hex""
-        });
-        StandardOrder memory order = StandardOrder({
-            user: address(swapper),
-            nonce: 0,
-            originChainId: block.chainid,
-            fillDeadline: type(uint32).max,
-            expires: type(uint32).max,
-            localOracle: alwaysYesOracle,
-            inputs: inputs,
-            outputs: outputs
-        });
+        StandardOrder memory order;
+        {
+            uint256[2][] memory inputs = new uint256[2][](1);
+            inputs[0] = [tokenId, amount];
+            MandateOutput[] memory outputs = new MandateOutput[](1);
+            outputs[0] = MandateOutput({
+                remoteFiller: address(coinFiller).toIdentifier(),
+                remoteOracle: address(alwaysYesOracle).toIdentifier(),
+                chainId: block.chainid,
+                token: address(anotherToken).toIdentifier(),
+                amount: amount,
+                recipient: swapper.toIdentifier(),
+                remoteCall: hex"",
+                fulfillmentContext: hex""
+            });
+            order = StandardOrder({
+                user: address(swapper),
+                nonce: 0,
+                originChainId: block.chainid,
+                fillDeadline: type(uint32).max,
+                expires: type(uint32).max,
+                localOracle: alwaysYesOracle,
+                inputs: inputs,
+                outputs: outputs
+            });
+        }
 
         bytes memory signature;
         {
@@ -453,29 +456,33 @@ contract SettlerCompactTest is SettlerCompactTestBase {
 
         // Other callers are disallowed:
 
-        bytes memory orderOwnerSignature = hex"";
-
-        vm.prank(non_solver);
-        vm.expectRevert(abi.encodeWithSignature("InvalidSigner()"));
-        bytes32[] memory solvers = new bytes32[](1);
-        solvers[0] = solver.toIdentifier();
-        ISettlerCompactHarness(settlerCompact).finaliseWithSignature(
-            order, signature, timestamps, solvers, destination.toIdentifier(), hex"", orderOwnerSignature
-        );
-
+        {
+            bytes memory orderOwnerSignature = hex"";
+            vm.prank(non_solver);
+            vm.expectRevert(abi.encodeWithSignature("InvalidSigner()"));
+            bytes32[] memory solvers = new bytes32[](1);
+            solvers[0] = solver.toIdentifier();
+            ISettlerCompactHarness(settlerCompact).finaliseWithSignature(
+                order, signature, timestamps, solvers, destination.toIdentifier(), hex"", orderOwnerSignature
+            );
+        }
         assertEq(token.balanceOf(destination), 0);
 
-        orderOwnerSignature = this.getOrderOpenSignature(
+        bytes memory orderOwnerSignature = this.getOrderOpenSignature(
             solverPrivateKey,
             ISettlerCompactHarness(settlerCompact).orderIdentifier(order),
             destination.toIdentifier(),
             hex""
         );
+        {
+            bytes32[] memory solvers = new bytes32[](1);
+            solvers[0] = solver.toIdentifier();
+            vm.prank(non_solver);
+            ISettlerCompactHarness(settlerCompact).finaliseWithSignature(
+                order, signature, timestamps, solvers, destination.toIdentifier(), hex"", orderOwnerSignature
+            );
+        }
 
-        vm.prank(non_solver);
-        ISettlerCompactHarness(settlerCompact).finaliseWithSignature(
-            order, signature, timestamps, solvers, destination.toIdentifier(), hex"", orderOwnerSignature
-        );
         vm.snapshotGasLastCall("settler", "CompactFinaliseFor");
 
         assertEq(token.balanceOf(destination), amount);
