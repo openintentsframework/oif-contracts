@@ -192,94 +192,20 @@ contract SettlerCompact is BaseSettler, ISettlerCompact {
         emit Finalised(orderId, solver, destination);
     }
 
-    function finaliseSelf(
-        StandardOrder calldata order,
-        bytes calldata signatures,
-        uint32[] calldata timestamps,
-        bytes32 solver
-    ) external virtual {
-        bytes32 orderId = _orderIdentifier(order);
-
-        bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solver, timestamps);
-        _validateOrderOwner(orderOwner);
-
-        // Check if the outputs have been proven according to the oracles.
-        // This call will revert if not.
-        _validateFills(order, orderId, solver, timestamps);
-
-        // Deliver outputs before the order has been finalised.
-        _finalise(order, signatures, orderId, solver, orderOwner);
-    }
-
-    function finaliseTo(
-        StandardOrder calldata order,
-        bytes calldata signatures,
-        uint32[] calldata timestamps,
-        bytes32 solver,
-        bytes32 destination,
-        bytes calldata call
-    ) external virtual {
-        bytes32 orderId = _orderIdentifier(order);
-
-        bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solver, timestamps);
-        _validateOrderOwner(orderOwner);
-
-        // Check if the outputs have been proven according to the oracles.
-        // This call will revert if not.
-        _validateFills(order, orderId, solver, timestamps);
-
-        // Deliver outputs before the order has been finalised.
-        _finalise(order, signatures, orderId, solver, destination);
-        if (call.length > 0) {
-            ICatalystCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).inputsFilled(order.inputs, call);
-        }
-    }
-
     /**
-     * @notice Finalises a cross-chain order on behalf of someone else
-     * @dev This function serves to finalise intents on the origin chain. It has been assumed that assets have been
-     * locked inside The Compact and will be available to collect. To properly collect the order details and proofs,
-     * the settler needs the solver identifier and the timestamps of the fills.
-     * @param order StandardOrder signed in conjunction with a Compact to form an order.
+     * @notice Finalises an order when called directly by the solver
+     * @dev The caller must be the address corresponding to the first solver in the solvers array.
+     * If destination is bytes32(0), the order owner will be used as the destination.
+     * @param order StandardOrder signed in conjunction with a Compact to form an order
      * @param signatures A signature for the sponsor and the allocator. abi.encode(bytes(sponsorSignature),
      * bytes(allocatorData))
+     * @param timestamps Array of timestamps when each output was filled
+     * @param solvers Array of solvers who filled each output (in order). For single solver, pass array with one element
+     * @param destination Where to send the inputs. If the solver wants to send the inputs to themselves, they should
+     * pass their address to this parameter.
+     * @param call Optional callback data. If non-empty, will call inputsFilled on the destination
      */
-    function finaliseFor(
-        StandardOrder calldata order,
-        bytes calldata signatures,
-        uint32[] calldata timestamps,
-        bytes32 solver,
-        bytes32 destination,
-        bytes calldata call,
-        bytes calldata orderOwnerSignature
-    ) external virtual {
-        bytes32 orderId = _orderIdentifier(order);
-
-        bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solver, timestamps);
-        _allowExternalClaimant(
-            orderId, EfficiencyLib.asSanitizedAddress(uint256(orderOwner)), destination, call, orderOwnerSignature
-        );
-
-        // Check if the outputs have been proven according to the oracles.
-        // This call will revert if not.
-        _validateFills(order, orderId, solver, timestamps);
-
-        // Deliver outputs before the order has been finalised.'
-        _finalise(order, signatures, orderId, solver, destination);
-        if (call.length > 0) {
-            ICatalystCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).inputsFilled(order.inputs, call);
-        }
-    }
-
-    // -- Fallback Finalise Functions -- //
-    // These functions are supposed to be used whenever someone else has filled 1 of the outputs of the order.
-    // It allows the proper solver to still resolve the outputs correctly.
-    // It does increase the gas cost :(
-    // In all cases, the solvers needs to be provided in order of the outputs in order.
-    // Important, this output generally matters in regards to the orderId. The solver of the first output is determined
-    // to be the "orderOwner".
-
-    function finaliseTo(
+    function finalise(
         StandardOrder calldata order,
         bytes calldata signatures,
         uint32[] calldata timestamps,
@@ -287,32 +213,36 @@ contract SettlerCompact is BaseSettler, ISettlerCompact {
         bytes32 destination,
         bytes calldata call
     ) external virtual {
-        bytes32 orderId = _orderIdentifier(order);
+        require(destination != bytes32(0), "Must provide a destination");
 
+        bytes32 orderId = _orderIdentifier(order);
         bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
         _validateOrderOwner(orderOwner);
 
-        // Check if the outputs have been proven according to the oracles.
-        // This call will revert if not.
-        _validateFills(order, orderId, solvers, timestamps);
+        //TODO: Is it worth having two separate `_validateFills` functions that just differ on the list of solvers?
+        if (solvers.length == 1) _validateFills(order, orderId, solvers[0], timestamps);
+        else _validateFills(order, orderId, solvers, timestamps);
 
-        // Deliver outputs before the order has been finalised.
         _finalise(order, signatures, orderId, solvers[0], destination);
+
         if (call.length > 0) {
             ICatalystCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).inputsFilled(order.inputs, call);
         }
     }
 
     /**
-     * @notice Finalises a cross-chain order on behalf of someone else
-     * @dev This function serves to finalise intents on the origin chain. It has been assumed that assets have been
-     * locked inside The Compact and will be available to collect. To properly collect the order details and proofs,
-     * the settler needs the solver identifier and the timestamps of the fills.
-     * @param order StandardOrder signed in conjunction with a Compact to form an order.
-     * @param signatures A signature for the sponsor and the allocator.
-     *  abi.encode(bytes(sponsorSignature), bytes(allocatorData))
+     * @notice Finalises a cross-chain order on behalf of someone else using their signature
+     * @dev This function serves to finalise intents on the origin chain with proper authorization from the order owner.
+     * @param order StandardOrder signed in conjunction with a Compact to form an order
+     * @param signatures A signature for the sponsor and the allocator. abi.encode(bytes(sponsorSignature),
+     * bytes(allocatorData))
+     * @param timestamps Array of timestamps when each output was filled
+     * @param solvers Array of solvers who filled each output (in order). For single solver, pass array with one element
+     * @param destination Where to send the inputs
+     * @param call Optional callback data. If non-empty, will call inputsFilled on the destination
+     * @param orderOwnerSignature Signature from the order owner authorizing this external call
      */
-    function finaliseFor(
+    function finaliseWithSignature(
         StandardOrder calldata order,
         bytes calldata signatures,
         uint32[] calldata timestamps,
@@ -321,19 +251,21 @@ contract SettlerCompact is BaseSettler, ISettlerCompact {
         bytes calldata call,
         bytes calldata orderOwnerSignature
     ) external virtual {
+        require(destination != bytes32(0), "Must provide a destination");
+
         bytes32 orderId = _orderIdentifier(order);
-
-        // Check if the outputs have been proven according to the oracles.
-        // This call will revert if not.
-        _validateFills(order, orderId, solvers, timestamps);
-
         bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
+
+        // Validate the external claimant with signature
         _allowExternalClaimant(
             orderId, EfficiencyLib.asSanitizedAddress(uint256(orderOwner)), destination, call, orderOwnerSignature
         );
 
-        // Deliver outputs before the order has been finalised.
+        if (solvers.length == 1) _validateFills(order, orderId, solvers[0], timestamps);
+        else _validateFills(order, orderId, solvers, timestamps);
+
         _finalise(order, signatures, orderId, solvers[0], destination);
+
         if (call.length > 0) {
             ICatalystCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).inputsFilled(order.inputs, call);
         }
