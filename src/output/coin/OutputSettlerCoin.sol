@@ -53,7 +53,7 @@ contract OutputSettlerCoin is BaseOutputSettler {
      * 0xe0: exclusive limit order   : B1:orderType | B32:exclusiveFor | B4:startTime
      * 0xe1: exclusive dutch auction : B1:orderType | B32:exclusiveFor | B4:startTime | B4:stopTime | B32:slope
      * For exclusive orders, if before startTime will revert if solver is not exclusiveFor.
-     * @param output Output to evalute.
+     * @param output Output to evaluate.
      * @param solver Solver identifier to be compared against exclusiveFor for exclusive orders.
      * @param amount The tokens the output requires.
      */

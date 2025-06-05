@@ -105,7 +105,7 @@ library MandateOutputEncodingLib {
     }
 
     /**
-     * @notice Hash of an MandateOutput intented for output identification.
+     * @notice Hash of an MandateOutput intended for output identification.
      * @dev This identifier is purely intended for the remote chain. It should never be ferried cross-chain.
      * Chains or VMs may hash data differently.
      */

@@ -46,7 +46,7 @@ library MessageEncodingLib {
     }
 
     /**
-     * @notice Decodes a bytearray consiting of encoded payloads.
+     * @notice Decodes a bytearray consisting of encoded payloads.
      * @dev Hashes payloads to reduce memory expansion costs.
      * @return application Source of the messages on the payload.
      * @return payloadHashes A hash of every payload.
