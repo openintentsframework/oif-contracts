@@ -43,12 +43,12 @@ contract DeployWormholeOracle is Script {
         for (uint256 i; i < numMaps; ++i) {
             uint256[2] memory selectMap = map[i];
             uint256 chainId = selectMap[0];
-            if (wormholeOracle.getBlockChainIdToChainIdentifier(chainId) != 0) continue;
+            if (wormholeOracle.reverseChainIdMap(chainId) != 0) continue;
             uint16 messagingProtocolChainIdentifier = uint16(selectMap[1]);
-            if (wormholeOracle.getChainIdentifierToBlockChainId(messagingProtocolChainIdentifier) != 0) continue;
+            if (wormholeOracle.chainIdMap(uint256(messagingProtocolChainIdentifier)) != 0) continue;
 
             vm.broadcast();
-            WormholeOracle(wormholeOracle).setChainMap(messagingProtocolChainIdentifier, chainId);
+            WormholeOracle(wormholeOracle).setChainMap(uint256(messagingProtocolChainIdentifier), chainId);
         }
     }
 }
