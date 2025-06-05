@@ -41,7 +41,7 @@ contract BitcoinOracle is BaseOracle {
     error ZeroValue(); // 0x7c946ed7
 
     /**
-     * @dev WARNING! Don't read output.remoteOracle nor output.chainId when emitted by this oracle.
+     * @dev WARNING! Don't read output.oracle nor output.chainId when emitted by this oracle.
      */
     event OutputFilled(bytes32 indexed orderId, bytes32 solver, uint32 timestamp, MandateOutput output);
     event OutputVerified(bytes32 verificationContext);
@@ -409,9 +409,8 @@ contract BitcoinOracle is BaseOracle {
         bytes32 token = output.token;
         bytes memory outputScript = _bitcoinScript(token, output.recipient);
         uint256 numConfirmations = _getNumConfirmations(token);
-        uint256 sats = _validateUnderlyingPayment(
-            numConfirmations, blockNum, inclusionProof, txOutIx, outputScript, output.remoteCall
-        );
+        uint256 sats =
+            _validateUnderlyingPayment(numConfirmations, blockNum, inclusionProof, txOutIx, outputScript, output.call);
 
         // Check that the amount matches exactly. This is important since if the assertion
         // was looser it will be much harder to protect against "double spends".
@@ -582,7 +581,7 @@ contract BitcoinOracle is BaseOracle {
         // Check that this order hasn't been claimed before.
         ClaimedOrder storage claimedOrder = _claimedOrder[orderId][outputId];
         if (claimedOrder.solver != bytes32(0)) revert AlreadyClaimed(claimedOrder.solver);
-        uint256 multiplier = _readMultiplier(output.fulfillmentContext);
+        uint256 multiplier = _readMultiplier(output.context);
 
         claimedOrder.solver = solver;
         claimedOrder.claimTimestamp = uint32(block.timestamp);

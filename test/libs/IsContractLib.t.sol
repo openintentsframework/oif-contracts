@@ -3,9 +3,9 @@ pragma solidity ^0.8.22;
 
 import { Test } from "forge-std/Test.sol";
 
-import { CoinFiller } from "../../src/fillers/coin/CoinFiller.sol";
+import { InputSettlerCompact } from "../../src/input/compact/InputSettlerCompact.sol";
 import { IsContractLib } from "../../src/libs/IsContractLib.sol";
-import { SettlerCompact } from "../../src/settlers/compact/SettlerCompact.sol";
+import { OutputSettlerCoin } from "../../src/output/coin/OutputSettlerCoin.sol";
 
 import { MockERC20 } from "../mocks/MockERC20.sol";
 
@@ -19,30 +19,30 @@ contract IsContractLibHarness {
 }
 
 contract IsContractLibTest is Test {
-    address coinFiller;
+    address outputSettlerCoin;
     address outputToken;
-    address settlerCompact;
+    address inputSettlerCompact;
 
     IsContractLibHarness isContractLib;
 
     function setUp() public {
         isContractLib = new IsContractLibHarness();
-        coinFiller = address(new CoinFiller());
+        outputSettlerCoin = address(new OutputSettlerCoin());
         outputToken = address(new MockERC20("TEST", "TEST", 18));
-        settlerCompact = address(new SettlerCompact(address(0)));
+        inputSettlerCompact = address(new InputSettlerCompact(address(0)));
     }
 
     function test_checkCodeSize_known_addresses() external {
-        isContractLib.checkCodeSize(coinFiller);
+        isContractLib.checkCodeSize(outputSettlerCoin);
 
         vm.expectRevert(abi.encodeWithSignature("CodeSize0()"));
-        isContractLib.checkCodeSize(makeAddr("coinFiller"));
+        isContractLib.checkCodeSize(makeAddr("outputSettlerCoin"));
 
         vm.expectRevert(abi.encodeWithSignature("CodeSize0()"));
         isContractLib.checkCodeSize(address(0));
 
         isContractLib.checkCodeSize(outputToken);
-        isContractLib.checkCodeSize(settlerCompact);
+        isContractLib.checkCodeSize(inputSettlerCompact);
 
         vm.expectRevert(abi.encodeWithSignature("CodeSize0()"));
         isContractLib.checkCodeSize(makeAddr("random"));

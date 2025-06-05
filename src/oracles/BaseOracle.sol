@@ -40,9 +40,10 @@ abstract contract BaseOracle is IOracle {
     }
 
     /**
-     * @notice Check if a remote oracle has attested to some data
-     * @param remoteChainId Origin chain of the supposed data.
-     * @param remoteOracle Identifier for the remote attestation.
+     * @notice Check if some data has been attested to on some chain.
+     * @param remoteChainId ChainId of data origin.
+     * @param remoteOracle Attestor on the data origin chain.
+     * @param application Application that the data originated from.
      * @param dataHash Hash of data.
      */
     function isProven(
@@ -58,7 +59,7 @@ abstract contract BaseOracle is IOracle {
      * @notice Check if a series of data has been attested to.
      * @dev More efficient implementation of isProven. Does not return a boolean, instead reverts if false.
      * This function returns true if proofSeries is empty.
-     * @param proofSeries remoteOracle, remoteChainId, application, and dataHash encoded in chucks of 32*4=128 bytes.
+     * @param proofSeries remoteChainId, remoteOracle, application, and dataHash encoded in chucks of 32*4=128 bytes.
      */
     function efficientRequireProven(
         bytes calldata proofSeries
