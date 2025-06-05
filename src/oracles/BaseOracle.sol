@@ -4,8 +4,8 @@ pragma solidity ^0.8.26;
 import { IOracle } from "../interfaces/IOracle.sol";
 
 /**
- * @notice Foundation for oracles. Exposes attesation logic for consumers.
- * @dev Ideally the contract has a 16 bytes address, that is 4 bytes have been mined for 0s.
+ * @notice Base implementation for storing and exposting attesations for consumers. Maintains a storage slot which is
+ * exposed through 'xProven' interfaces.
  */
 abstract contract BaseOracle is IOracle {
     error NotDivisible(uint256 value, uint256 divisor);
@@ -14,7 +14,9 @@ abstract contract BaseOracle is IOracle {
     event OutputProven(uint256 chainid, bytes32 remoteIdentifier, bytes32 application, bytes32 payloadHash);
 
     /**
-     * @notice Stores payload attestations. Payloads are not stored, instead their hashes are.
+     * @notice Stores payload attestations.
+     * @dev For gas efficiency, payloads are not stored but instead the hash of the payloads are.
+     * To recover a payload, provide the payload (or memory) in calldata then hash it and check.
      */
     mapping(
         uint256 remoteChainId
@@ -24,18 +26,19 @@ abstract contract BaseOracle is IOracle {
     //--- Data Attestation Validation ---//
 
     /**
-     * @notice Check if a remote oracle has attested to some data
-     * @dev Helper function for accessing _attestations.
-     * @param remoteChainId Origin chain of the supposed data.
-     * @param remoteOracle Identifier for the remote attestation.
+     * @notice Check if some data has been attested to on some chain.
+     * @param remoteChainId ChainId of data origin.
+     * @param remoteOracle Attestor on the data origin chain.
+     * @param application Application that the data originated from.
      * @param dataHash Hash of data.
+     * @return bool Whether the hashed data has been attested to.
      */
     function _isProven(
         uint256 remoteChainId,
         bytes32 remoteOracle,
         bytes32 application,
         bytes32 dataHash
-    ) internal view returns (bool) {
+    ) internal view virtual returns (bool) {
         return _attestations[remoteChainId][remoteOracle][application][dataHash];
     }
 
@@ -45,6 +48,7 @@ abstract contract BaseOracle is IOracle {
      * @param remoteOracle Attestor on the data origin chain.
      * @param application Application that the data originated from.
      * @param dataHash Hash of data.
+     * @return bool Whether the hashed data has been attested to.
      */
     function isProven(
         uint256 remoteChainId,
@@ -65,28 +69,24 @@ abstract contract BaseOracle is IOracle {
         bytes calldata proofSeries
     ) external view {
         unchecked {
-            // Get the number of proof series.
             uint256 proofBytes = proofSeries.length;
             uint256 series = proofBytes / (32 * 4);
-            if (series * (32 * 4) != proofBytes) revert NotDivisible(proofBytes, 32 * 4);
+            if (series * (32 * 4) != proofBytes) revert NotDivisible(proofBytes, 32 * 4); // unchecked: trivial
 
             uint256 offset;
             uint256 end;
             assembly ("memory-safe") {
                 offset := proofSeries.offset
-                // overflow: proofSeries.offset + proofBytes indicates a point
-                // in calldata. Calldata is bounded.
+                // unchecked: proofSeries.offset + proofBytes indicates a point in calldata.
                 end := add(proofSeries.offset, proofBytes)
             }
             bool state = true;
-            // Go over the data. We will use a for loop iterating over the offset.
             for (; offset < end;) {
                 // Load the proof description.
                 uint256 remoteChainId;
                 bytes32 remoteOracle;
                 bytes32 application;
                 bytes32 dataHash;
-                // Load variables from calldata to save gas compared to slices.
                 assembly ("memory-safe") {
                     remoteChainId := calldataload(offset)
                     offset := add(offset, 0x20)

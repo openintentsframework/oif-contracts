@@ -1,21 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-struct MandateOutput {
-    /// @dev Oracle implementation responsible for collecting the proof from settler on output chain.
-    bytes32 oracle;
-    /// @dev Output Settler on the output chain responsible for settling the output payment.
-    bytes32 settler;
-    uint256 chainId;
-    bytes32 token;
-    uint256 amount;
-    bytes32 recipient;
-    /// @dev Data that will be delivered to recipient through the settlement callback on the output chain. Can be used
-    /// to schedule additional actions.
-    bytes call;
-    /// @dev Additional output context for the output settlement, encoding order types or other information.
-    bytes context;
-}
+import { MandateOutput } from "../input/types/MandateOutputType.sol";
 
 /**
  * @notice Converts MandateOutputs to and from byte payloads.

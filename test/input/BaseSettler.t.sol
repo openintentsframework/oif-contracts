@@ -5,14 +5,14 @@ import { Test } from "forge-std/Test.sol";
 
 import { MockERC20 } from "../mocks/MockERC20.sol";
 
-import { BaseSettler } from "../../src/input/BaseSettler.sol";
+import { BaseInputSettler } from "../../src/input/BaseInputSettler.sol";
 import { OrderPurchase, OrderPurchaseType } from "../../src/input/types/OrderPurchaseType.sol";
 
 interface EIP712 {
     function DOMAIN_SEPARATOR() external view returns (bytes32);
 }
 
-contract MockSettler is BaseSettler {
+contract MockSettler is BaseInputSettler {
     function _domainNameAndVersion()
         internal
         pure
@@ -44,7 +44,7 @@ contract MockSettler is BaseSettler {
     }
 }
 
-contract BaseSettlerTest is Test {
+contract BaseInputSettlerTest is Test {
     MockSettler settler;
     bytes32 DOMAIN_SEPARATOR;
 

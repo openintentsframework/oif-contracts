@@ -23,7 +23,7 @@ import { IsContractLib } from "../../libs/IsContractLib.sol";
 import { MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 import { MandateOutput } from "../types/MandateOutputType.sol";
 
-import { BaseSettler } from "../BaseSettler.sol";
+import { BaseInputSettler } from "../BaseInputSettler.sol";
 
 import { MandateERC7683, Order7683Type, StandardOrder } from "./Order7683Type.sol";
 
@@ -38,7 +38,7 @@ import { MandateERC7683, Order7683Type, StandardOrder } from "./Order7683Type.so
  *
  * This contract does not support fee on transfer tokens.
  */
-contract InputSettler7683 is BaseSettler, IInputSettler7683 {
+contract InputSettler7683 is BaseInputSettler, IInputSettler7683 {
     error NotImplemented();
     error NotOrderOwner();
     error DeadlinePassed();

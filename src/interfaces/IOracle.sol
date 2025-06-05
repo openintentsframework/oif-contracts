@@ -6,13 +6,13 @@ interface IOracle {
      * @notice Check if some data has been attested to on some chain.
      * @param remoteChainId ChainId of data origin.
      * @param remoteOracle Attestor on the data origin chain.
-     * @param remoteApplication Application that the data originated from.
+     * @param application Application that the data originated from.
      * @param dataHash Hash of data.
      */
     function isProven(
         uint256 remoteChainId,
         bytes32 remoteOracle,
-        bytes32 remoteApplication,
+        bytes32 application,
         bytes32 dataHash
     ) external view returns (bool);
 

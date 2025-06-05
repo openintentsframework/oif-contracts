@@ -3,9 +3,9 @@ pragma solidity ^0.8.22;
 
 import { Test } from "forge-std/Test.sol";
 
-import { BaseSettler } from "../../src/input/BaseSettler.sol";
+import { BaseInputSettler } from "../../src/input/BaseInputSettler.sol";
 
-contract MockSettler is BaseSettler {
+contract MockSettler is BaseInputSettler {
     function _domainNameAndVersion()
         internal
         pure
@@ -30,7 +30,7 @@ contract MockSettler is BaseSettler {
     }
 }
 
-contract BaseSettlerTestTimestamps is Test {
+contract BaseInputSettlerTestTimestamps is Test {
     MockSettler settler;
 
     function setUp() public virtual {

@@ -6,6 +6,7 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { IOpenIntentCallback } from "../interfaces/IOpenIntentCallback.sol";
 import { IPayloadCreator } from "../interfaces/IPayloadCreator.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../libs/MandateOutputEncodingLib.sol";
+import { OutputVerificationLib } from "../libs/OutputVerificationLib.sol";
 
 import { BaseOracle } from "../oracles/BaseOracle.sol";
 
@@ -17,8 +18,6 @@ import { BaseOracle } from "../oracles/BaseOracle.sol";
 abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
     error FillDeadline();
     error FilledBySomeoneElse(bytes32 solver);
-    error WrongChain(uint256 expected, uint256 actual);
-    error WrongOutputSettler(bytes32 addressThis, bytes32 expected);
     error ZeroValue();
 
     /**
@@ -70,8 +69,8 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
         bytes32 proposedSolver
     ) internal virtual returns (bytes32) {
         if (proposedSolver == bytes32(0)) revert ZeroValue();
-        _isThisChain(output.chainId);
-        _isThisOutputSettler(output.settler);
+        OutputVerificationLib._isThisChain(output.chainId);
+        OutputVerificationLib._isThisOutputSettler(output.settler);
 
         bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHash(output);
         bytes32 existingSolver = filledOutputs[orderId][outputHash];
@@ -171,28 +170,7 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
         );
     }
 
-    //-- Helpers --//
-
-    /**
-     * @param chainId Expected chain id. Validated to match block.chainId.
-     * @dev The canonical chain id is used for outputs.
-     */
-    function _isThisChain(
-        uint256 chainId
-    ) internal view {
-        if (chainId != block.chainid) revert WrongChain(uint256(chainId), block.chainid);
-    }
-
-    /**
-     * @notice Validate the remote oracle address is this contract.
-     */
-    function _isThisOutputSettler(
-        bytes32 remoteFiller
-    ) internal view virtual {
-        if (bytes32(uint256(uint160(address(this)))) != remoteFiller) {
-            revert WrongOutputSettler(bytes32(uint256(uint160(address(this)))), remoteFiller);
-        }
-    }
+    // --- IPayloadCreator --- //
 
     /**
      * @notice Helper function to check whether a payload hash is valid.

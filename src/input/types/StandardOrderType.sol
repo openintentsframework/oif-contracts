@@ -15,13 +15,12 @@ struct StandardOrder {
 }
 
 /**
- * @notice This is the signed Catalyst witness structure. This allows us to more easily collect the order hash.
+ * @notice This is the signed Compact witness structure. This allows us to more easily collect the order hash.
  * Notice that this is different to both the order data and the ERC7683 order.
  */
 struct Mandate {
     uint32 fillDeadline;
     address localOracle;
-    // MandateOutput is called MandateOutput
     MandateOutput[] outputs;
 }
 
@@ -55,12 +54,17 @@ library StandardOrderType {
         "uint32 fillDeadline,address localOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 filler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context"
     );
 
-    // For hashing of our subtypes, we need proper types.
+    /// @dev For hashing of our subtypes, we need proper types.
     bytes constant CATALYST_WITNESS_TYPE = abi.encodePacked(
         "Mandate(uint32 fillDeadline,address localOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 filler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
     );
     bytes32 constant CATALYST_WITNESS_TYPE_HASH = keccak256(CATALYST_WITNESS_TYPE);
 
+    /**
+     * @notice Computes the Compact witness of derived from a StandardOrder
+     * @param order StandardOrder to derived the witness from.
+     * @return witness hash.
+     */
     function witnessHash(
         StandardOrder calldata order
     ) internal pure returns (bytes32) {
@@ -73,6 +77,8 @@ library StandardOrderType {
             )
         );
     }
+
+    // --- Compact Hash --- //
 
     bytes constant BATCH_COMPACT_TYPE_STUB = bytes(
         "BatchCompact(address arbiter,address sponsor,uint256 nonce,uint256 expires,uint256[2][] idsAndAmounts,Mandate mandate)"

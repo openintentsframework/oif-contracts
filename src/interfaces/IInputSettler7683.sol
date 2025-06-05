@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0;
 
+import { MandateOutput } from "../input/types/MandateOutputType.sol";
 import { OrderPurchase } from "../input/types/OrderPurchaseType.sol";
 import { StandardOrder } from "../input/types/StandardOrderType.sol";
-import { MandateOutput } from "../libs/MandateOutputEncodingLib.sol";
 import { GaslessCrossChainOrder, OnchainCrossChainOrder, ResolvedCrossChainOrder } from "./IERC7683.sol";
 
 interface IInputSettler7683 {

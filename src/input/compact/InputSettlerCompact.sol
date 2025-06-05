@@ -15,30 +15,27 @@ import { IInputSettlerCompact } from "../../interfaces/IInputSettlerCompact.sol"
 import { BytesLib } from "../../libs/BytesLib.sol";
 import { MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 
-import { BaseSettler } from "../BaseSettler.sol";
+import { BaseInputSettler } from "../BaseInputSettler.sol";
 import { MandateOutput } from "../types/MandateOutputType.sol";
 import { OrderPurchase } from "../types/OrderPurchaseType.sol";
 import { StandardOrder, StandardOrderType } from "../types/StandardOrderType.sol";
 
 /**
- * @title Catalyst Settler supporting The Compact
- * @notice This Catalyst Settler implementation uses The Compact as the deposit scheme.
- * It is a delivery first, inputs second scheme that allows users with a deposit inside The Compact.
+ * @title Input Settler supporting The Compact
+ * @notice This Input Settler implementation uses The Compact as the deposit scheme. It is a delivery first scheme that
+ * allows users with a deposit inside The Compact to execute transactions that will be paid AFTER the output has been
+ * proven. This has the advantage that failed orders can be quickly retried.
  *
- * Users are expected to have an existing deposit inside the Compact or purposefully deposit for the intent.
- * They then need to either register or sign a supported claim with the intent outputs as the witness.
- * Without the deposit extension, this contract does not have a way to emit on-chain orders.
+ * Users are expected to have an existing deposit inside the Compact or purposefully deposit for the intent. Then either
+ * register or sign a supported claim with the intent outputs as the witness.
  *
- * The ownable component of the smart contract is only used for fees.
+ * The contract is intended to be entirely ownerless, permissionlessly deployable, and unstoppable.
  */
-contract InputSettlerCompact is BaseSettler, IInputSettlerCompact {
-    error NotImplemented();
+contract InputSettlerCompact is BaseInputSettler, IInputSettlerCompact {
     error NotOrderOwner();
-    error InitiateDeadlinePassed();
     error InvalidTimestampLength();
     error OrderIdMismatch(bytes32 provided, bytes32 computed);
     error FilledTooLate(uint32 expected, uint32 actual);
-    error WrongChain(uint256 expected, uint256 actual);
 
     TheCompact public immutable COMPACT;
 
@@ -48,9 +45,7 @@ contract InputSettlerCompact is BaseSettler, IInputSettlerCompact {
         COMPACT = TheCompact(compact);
     }
 
-    /**
-     * @notice EIP712
-     */
+    /// @notice EIP712
     function _domainNameAndVersion()
         internal
         pure
@@ -62,7 +57,7 @@ contract InputSettlerCompact is BaseSettler, IInputSettlerCompact {
         version = "Compact1";
     }
 
-    // Generic order identifier
+    // --- Generic order identifier --- //
 
     function _orderIdentifier(
         StandardOrder calldata order
@@ -76,7 +71,7 @@ contract InputSettlerCompact is BaseSettler, IInputSettlerCompact {
         return _orderIdentifier(order);
     }
 
-    //--- Output Proofs ---//
+    // --- Output Proofs --- //
 
     function _proofPayloadHash(
         bytes32 orderId,
@@ -88,7 +83,7 @@ contract InputSettlerCompact is BaseSettler, IInputSettlerCompact {
     }
 
     /**
-     * @notice Check if a series of outputs has been proven.
+     * @notice Check if a series of outputs have been proven.
      * @dev Can take a list of solvers. Should be used as a secure alternative to _validateFills
      * if someone filled one of the outputs.
      */
@@ -169,14 +164,25 @@ contract InputSettlerCompact is BaseSettler, IInputSettlerCompact {
 
     // --- Finalise Orders --- //
 
-    function _validateOrderOwner(
+    /**
+     * @notice Enforces that the caller is the order owner.
+     * @dev Only reads the rightmost 20 bytes to allow solvers to opt-in to Compact transfers instead of withdrawals.
+     * @param orderOwner The order owner. The leftmost 12 bytes are not read.
+     */
+    function _orderOwnerIsCaller(
         bytes32 orderOwner
     ) internal view {
-        // We need to cast orderOwner down. This is important to ensure that
-        // the solver can opt-in to an compact transfer instead of withdrawal.
         if (EfficiencyLib.asSanitizedAddress(uint256(orderOwner)) != msg.sender) revert NotOrderOwner();
     }
 
+    /**
+     * @notice Finalise an order, paying the inputs to the solver.
+     * @param order that has been filled.
+     * @param signatures For the signed intent. Is packed: abi.encode(sponsorSignature, allocatorData).
+     * @param orderId A unique identifier for the order.
+     * @param solver Solver of the outputs.
+     * @param destination Destination of the inputs funds signed for by the user.
+     */
     function _finalise(
         StandardOrder calldata order,
         bytes calldata signatures,
@@ -186,9 +192,7 @@ contract InputSettlerCompact is BaseSettler, IInputSettlerCompact {
     ) internal virtual {
         bytes calldata sponsorSignature = BytesLib.toBytes(signatures, 0x00);
         bytes calldata allocatorData = BytesLib.toBytes(signatures, 0x20);
-        // Payout inputs. (This also protects against re-entry calls.)
         _resolveLock(order, sponsorSignature, allocatorData, destination);
-
         emit Finalised(orderId, solver, destination);
     }
 
@@ -201,7 +205,7 @@ contract InputSettlerCompact is BaseSettler, IInputSettlerCompact {
         bytes32 orderId = _orderIdentifier(order);
 
         bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solver, timestamps);
-        _validateOrderOwner(orderOwner);
+        _orderOwnerIsCaller(orderOwner);
 
         // Check if the outputs have been proven according to the oracles.
         // This call will revert if not.
@@ -222,7 +226,7 @@ contract InputSettlerCompact is BaseSettler, IInputSettlerCompact {
         bytes32 orderId = _orderIdentifier(order);
 
         bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solver, timestamps);
-        _validateOrderOwner(orderOwner);
+        _orderOwnerIsCaller(orderOwner);
 
         // Check if the outputs have been proven according to the oracles.
         // This call will revert if not.
@@ -290,7 +294,7 @@ contract InputSettlerCompact is BaseSettler, IInputSettlerCompact {
         bytes32 orderId = _orderIdentifier(order);
 
         bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
-        _validateOrderOwner(orderOwner);
+        _orderOwnerIsCaller(orderOwner);
 
         // Check if the outputs have been proven according to the oracles.
         // This call will revert if not.
@@ -341,6 +345,13 @@ contract InputSettlerCompact is BaseSettler, IInputSettlerCompact {
 
     //--- The Compact & Resource Locks ---//
 
+    /**
+     * @notice Resolves a Compact Claim for a Stnadard Order.
+     * @param order that should be converted into a Comapct Claim.
+     * @param sponsorSignature The user's signature for the Compact Claim.
+     * @param allocatorData The allocator's signature for the Compact Claim.
+     * @param claimant Destination of the inputs funds signed for by the user.
+     */
     function _resolveLock(
         StandardOrder calldata order,
         bytes calldata sponsorSignature,
@@ -386,17 +397,19 @@ contract InputSettlerCompact is BaseSettler, IInputSettlerCompact {
     // --- Purchase Order --- //
 
     /**
-     * @notice This function is called by whoever wants to buy an order from a filler.
-     * If the order was purchased in time, then when the order is settled, the inputs will
-     * go to the purchaser instead of the original solver.
-     * @dev If you are buying a challenged order, ensure that you have sufficient time to prove the order or
-     * your funds may be at risk and that you purchase it within the allocated time.
-     * To purchase an order, it is required that you can produce a proper signature
-     * from the solver that signs the purchase details.
-     * @param orderSolvedByIdentifier Solver of the order. Is not validated, need to be correct otherwise
-     * the purchase will be wasted.
-     * @param expiryTimestamp Set to ensure if your transaction isn't mine quickly, you don't end
-     * up purchasing an order that you cannot prove OR is not within the timeToBuy window.
+     * @notice This function is called to buy an order from a solver.
+     * If the order was purchased in time, then when the order is settled, the inputs will go to the purchaser instead
+     * of the original solver.
+     * @dev If you are buying a challenged order, ensure that you have sufficient time to prove the order or your funds
+     * may be at risk and that you purchase it within the allocated time. To purchase an order, it is required that you
+     * can produce a proper signature from the solver that signs the purchase details.
+     * @param orderPurchase Order purchase description signed by solver.
+     * @param order Order to purchase.
+     * @param orderSolvedByIdentifier Solver of the order. Is not validated, if wrong the purchase will be skipped.
+     * @param purchaser The new order owner.
+     * @param expiryTimestamp Set to ensure if your transaction does not mine quickly, you don't end up purchasing an
+     * order that you can not prove OR is outside the timeToBuy window.
+     * @param solverSignature EIP712 Signature of OrderPurchase by orderOwner.
      */
     function purchaseOrder(
         OrderPurchase calldata orderPurchase,
@@ -406,11 +419,12 @@ contract InputSettlerCompact is BaseSettler, IInputSettlerCompact {
         uint256 expiryTimestamp,
         bytes calldata solverSignature
     ) external virtual {
-        // Sanity check that the user thinks they are buying the right order.
         bytes32 computedOrderId = _orderIdentifier(order);
+        // Sanity check to ensure the user thinks they are buying the right order.
         if (computedOrderId != orderPurchase.orderId) revert OrderIdMismatch(orderPurchase.orderId, computedOrderId);
 
-        uint256[2][] calldata inputs = order.inputs;
-        _purchaseOrder(orderPurchase, inputs, orderSolvedByIdentifier, purchaser, expiryTimestamp, solverSignature);
+        _purchaseOrder(
+            orderPurchase, order.inputs, orderSolvedByIdentifier, purchaser, expiryTimestamp, solverSignature
+        );
     }
 }

@@ -10,7 +10,8 @@ import { BaseOracle } from "../BaseOracle.sol";
 import { ICrossL2Prover } from "./ICrossL2Prover.sol";
 
 /**
- * @notice Polymer Oracle that uses the fill event to reconstruct the payload for verification.
+ * @notice Polymer Oracle.
+ * Polymer uses the fill event to reconstruct the payload for verification instead of sending messages cross-chain.
  */
 contract PolymerOracle is BaseOracle, Ownable {
     error AlreadySet();
@@ -19,9 +20,6 @@ contract PolymerOracle is BaseOracle, Ownable {
     event MapMessagingProtocolIdentifierToChainId(uint32 messagingProtocolIdentifier, uint256 chainId);
 
     mapping(uint32 messagingProtocolChainIdentifier => uint256 blockChainId) _chainIdentifierToBlockChainId;
-    /**
-     * @dev The map is bi-directional.
-     */
     mapping(uint256 blockChainId => uint32 messagingProtocolChainIdentifier) _blockChainIdToChainIdentifier;
 
     ICrossL2Prover CROSS_L2_PROVER;
@@ -37,15 +35,12 @@ contract PolymerOracle is BaseOracle, Ownable {
      * @notice Sets an immutable map of the identifier messaging protocols use to chain ids.
      * @dev Can only be called once for every chain.
      * @param messagingProtocolChainIdentifier Messaging provider identifier for a chain.
-     * @param chainId Most common identifier for a chain. For EVM, it can often be accessed through block.chainid.
+     * @param chainId Most common identifier for a chain. For EVM, it can be accessed through block.chainid.
      */
     function setChainMap(uint32 messagingProtocolChainIdentifier, uint256 chainId) external onlyOwner {
-        // Check that the inputs haven't been mistakenly called with 0 values.
         if (messagingProtocolChainIdentifier == 0) revert ZeroValue();
         if (chainId == 0) revert ZeroValue();
 
-        // This call only allows setting either value once, then they are done for.
-        // We need to check if they are currently unset.
         if (_chainIdentifierToBlockChainId[messagingProtocolChainIdentifier] != 0) revert AlreadySet();
         if (_blockChainIdToChainIdentifier[chainId] != 0) revert AlreadySet();
 

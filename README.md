@@ -60,7 +60,7 @@ The OIF supports underwriting. Within the contracts, this is described as order 
 1. To speed up solver capital rotation by borrowing assets from less risk adverse solvers.
 2. In case of the user acting as the solver, the 
 
-When implementing a new Settler, you may inherit `src/input/BaseSettler.sol` to core features to facilitate order purchasing.
+When implementing a new Settler, you may inherit `src/input/BaseInputSettler.sol` to core features to facilitate order purchasing.
 
 ### Inputs vs Outputs
 

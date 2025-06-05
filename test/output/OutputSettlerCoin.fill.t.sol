@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 
 import { Test } from "forge-std/Test.sol";
 
-import { MandateOutput } from "../../src/libs/MandateOutputEncodingLib.sol";
+import { MandateOutput } from "../../src/input/types/MandateOutputType.sol";
 import { OutputSettlerCoin } from "../../src/output/coin/OutputSettlerCoin.sol";
 
 import { MockCallbackExecutor } from "../mocks/MockCallbackExecutor.sol";

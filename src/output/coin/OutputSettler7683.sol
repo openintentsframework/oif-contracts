@@ -6,6 +6,7 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { IDestinationSettler } from "../../interfaces/IERC7683.sol";
 import { IOpenIntentCallback } from "../../interfaces/IOpenIntentCallback.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
+import { OutputVerificationLib } from "../../libs/OutputVerificationLib.sol";
 
 import { BaseOutputSettler } from "../BaseOutputSettler.sol";
 
@@ -58,8 +59,8 @@ contract OutputInputSettler7683 is BaseOutputSettler, IDestinationSettler {
     ) internal returns (bytes32) {
         if (proposedSolver == bytes32(0)) revert ZeroValue();
         // Validate order context. This lets us ensure that this filler is the correct filler for the output.
-        _isThisChain(output.chainId);
-        _isThisOutputSettler(output.settler);
+        OutputVerificationLib._isThisChain(output.chainId);
+        OutputVerificationLib._isThisOutputSettler(output.settler);
 
         // Get hash of output.
         bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHashMemory(output);

@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-/**
- * @notice Signed struct
- */
+/// @notice Signed struct
 struct OrderPurchase {
     bytes32 orderId;
     /// @dev unlike other destinations, this needs to be an external address
     address destination;
     bytes call;
     uint64 discount;
+    /// @dev The purchaser has timeToBuy to buy the order after the order has been filled.
     uint32 timeToBuy;
 }
 
@@ -25,6 +24,12 @@ library OrderPurchaseType {
 
     bytes32 constant ORDER_PURCHASE_TYPE_HASH = keccak256(ORDER_PURCHASE_TYPE_STUB);
 
+    /**
+     * w
+     * @notice Hashes an AllowOpen struct.
+     * @param orderPurchase Description of the conditions for purchasing an order.
+     * @return digest of OrderPurchase.
+     */
     function hashOrderPurchase(
         OrderPurchase calldata orderPurchase
     ) internal pure returns (bytes32) {
