@@ -11,7 +11,8 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { MandateOutput, MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 
-import { BaseOracle } from "../BaseOracle.sol";
+import { IPayloadValidator } from "../../interfaces/IPayloadValidator.sol";
+import { BaseLocalOracle } from "../BaseLocalOracle.sol";
 
 /**
  * @dev Bitcoin oracle can operate in 2 modes:
@@ -25,7 +26,7 @@ import { BaseOracle } from "../BaseOracle.sol";
  * This filler can work as both an oracle
  * 0xB17C012
  */
-contract BitcoinOracle is BaseOracle {
+contract BitcoinOracle is BaseLocalOracle, IPayloadValidator {
     error AlreadyClaimed(bytes32 claimer);
     error AlreadyDisputed(address disputer);
     error AmountTooLarge();

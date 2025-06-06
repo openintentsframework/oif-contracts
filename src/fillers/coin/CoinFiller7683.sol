@@ -74,8 +74,7 @@ contract CoinFiller7683 is BaseFiller, IDestinationSettler {
         bytes32 dataHash = keccak256(
             MandateOutputEncodingLib.encodeFillDescriptionM(proposedSolver, orderId, uint32(block.timestamp), output)
         );
-        _attestations[block.chainid][bytes32(uint256(uint160(address(this))))][bytes32(uint256(uint160(address(this))))][dataHash]
-        = true;
+        _fillAttestations[dataHash] = true;
 
         // Load order description.
         address recipient = address(uint160(uint256(output.recipient)));

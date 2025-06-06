@@ -4,10 +4,11 @@ pragma solidity ^0.8.26;
 import { Ownable } from "solady/auth/Ownable.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
-import { IPayloadCreator } from "../../interfaces/IPayloadCreator.sol";
+import { IPayloadValidator } from "../../interfaces/IPayloadValidator.sol";
+import { IRemoteOracle } from "../../interfaces/IRemoteOracle.sol";
 import { MessageEncodingLib } from "../../libs/MessageEncodingLib.sol";
 
-import { BaseOracle } from "../BaseOracle.sol";
+import { BaseLocalOracle } from "../BaseLocalOracle.sol";
 
 import { WormholeVerifier } from "./external/callworm/WormholeVerifier.sol";
 import { IWormhole } from "./interfaces/IWormhole.sol";
@@ -19,7 +20,7 @@ import { IWormhole } from "./interfaces/IWormhole.sol";
  * @dev The contract is mostly trustless but requires someone to translate Wormhole chainIds into
  * proper chainIds. These maps once set are immutable and trustless.
  */
-contract WormholeOracle is BaseOracle, WormholeVerifier, Ownable {
+contract WormholeOracle is BaseLocalOracle, IRemoteOracle, WormholeVerifier, Ownable {
     error AlreadySet();
     error NotAllPayloadsValid();
     error ZeroValue();
@@ -108,7 +109,7 @@ contract WormholeOracle is BaseOracle, WormholeVerifier, Ownable {
         for (uint256 i; i < numPayloads; ++i) {
             payloadHashes[i] = keccak256(payloads[i]);
         }
-        if (!IPayloadCreator(proofSource).arePayloadsValid(payloadHashes)) revert NotAllPayloadsValid();
+        if (!IPayloadValidator(proofSource).arePayloadsValid(payloadHashes)) revert NotAllPayloadsValid();
 
         // Payloads are good. We can submit them on behalf of proofSource.
         return _submit(proofSource, payloads);

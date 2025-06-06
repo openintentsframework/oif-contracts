@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.27;
 
-import { IOracle } from "../../src/interfaces/IOracle.sol";
+import { ILocalOracle } from "../../src/interfaces/ILocalOracle.sol";
 
-contract AlwaysYesOracle is IOracle {
+contract AlwaysYesOracle is ILocalOracle {
     function isProven(
         uint256, /* remoteChainId */
         bytes32, /* remoteOracle */

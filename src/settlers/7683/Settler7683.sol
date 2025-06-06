@@ -15,7 +15,7 @@ import {
     Output,
     ResolvedCrossChainOrder
 } from "../../interfaces/IERC7683.sol";
-import { IOracle } from "../../interfaces/IOracle.sol";
+import { ILocalOracle } from "../../interfaces/ILocalOracle.sol";
 import { ISettler7683 } from "../../interfaces/ISettler7683.sol";
 import { BytesLib } from "../../libs/BytesLib.sol";
 import { IsContractLib } from "../../libs/IsContractLib.sol";
@@ -335,7 +335,7 @@ contract Settler7683 is BaseSettler, ISettler7683 {
                 mstore(add(offset, 0x60), payloadHash)
             }
         }
-        IOracle(order.localOracle).efficientRequireProven(proofSeries);
+        ILocalOracle(order.localOracle).efficientRequireProven(proofSeries);
     }
 
     /**
@@ -374,7 +374,7 @@ contract Settler7683 is BaseSettler, ISettler7683 {
                 mstore(add(offset, 0x60), payloadHash)
             }
         }
-        IOracle(order.localOracle).efficientRequireProven(proofSeries);
+        ILocalOracle(order.localOracle).efficientRequireProven(proofSeries);
     }
 
     // --- Finalise Orders --- //

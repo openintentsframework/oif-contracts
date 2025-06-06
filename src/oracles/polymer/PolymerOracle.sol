@@ -6,13 +6,13 @@ import { LibBytes } from "solady/utils/LibBytes.sol";
 
 import { MandateOutput, MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 
-import { BaseOracle } from "../BaseOracle.sol";
+import { BaseLocalOracle } from "../BaseLocalOracle.sol";
 import { ICrossL2Prover } from "./ICrossL2Prover.sol";
 
 /**
  * @notice Polymer Oracle that uses the fill event to reconstruct the payload for verification.
  */
-contract PolymerOracle is BaseOracle, Ownable {
+contract PolymerOracle is BaseLocalOracle, Ownable {
     error AlreadySet();
     error ZeroValue();
 

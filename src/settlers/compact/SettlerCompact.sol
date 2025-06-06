@@ -9,7 +9,7 @@ import { BatchClaim } from "the-compact/src/types/BatchClaims.sol";
 import { BatchClaimComponent, Component } from "the-compact/src/types/Components.sol";
 
 import { ICatalystCallback } from "../../interfaces/ICatalystCallback.sol";
-import { IOracle } from "../../interfaces/IOracle.sol";
+import { ILocalOracle } from "../../interfaces/ILocalOracle.sol";
 
 import { ISettlerCompact } from "../../interfaces/ISettlerCompact.sol";
 import { BytesLib } from "../../libs/BytesLib.sol";
@@ -125,7 +125,7 @@ contract SettlerCompact is BaseSettler, ISettlerCompact {
                 mstore(add(offset, 0x60), payloadHash)
             }
         }
-        IOracle(order.localOracle).efficientRequireProven(proofSeries);
+        ILocalOracle(order.localOracle).efficientRequireProven(proofSeries);
     }
 
     // --- Finalise Orders --- //

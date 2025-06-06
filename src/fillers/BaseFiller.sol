@@ -4,15 +4,13 @@ pragma solidity ^0.8.26;
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { ICatalystCallback } from "../interfaces/ICatalystCallback.sol";
-import { IPayloadCreator } from "../interfaces/IPayloadCreator.sol";
+import { IPayloadValidator } from "../interfaces/IPayloadValidator.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../libs/MandateOutputEncodingLib.sol";
-
-import { BaseOracle } from "../oracles/BaseOracle.sol";
 
 /**
  * @notice Base Filler implementation that implements common and shared logic between filler implementations.
  */
-abstract contract BaseFiller is IPayloadCreator, BaseOracle {
+abstract contract BaseFiller is IPayloadValidator {
     error FillDeadline();
     error FilledBySomeoneElse(bytes32 solver);
     error WrongChain(uint256 expected, uint256 actual);
@@ -23,6 +21,9 @@ abstract contract BaseFiller is IPayloadCreator, BaseOracle {
      * @dev Stores filled outputs with their associated solver, such that outputs won't be filled twice.
      */
     mapping(bytes32 orderId => mapping(bytes32 outputHash => bytes32 solver)) public filledOutputs;
+
+    /// @notice Tracks fill attestations for oracle verification
+    mapping(bytes32 payloadHash => bool) internal _fillAttestations;
 
     event OutputFilled(bytes32 indexed orderId, bytes32 solver, uint32 timestamp, MandateOutput output);
 
@@ -87,8 +88,7 @@ abstract contract BaseFiller is IPayloadCreator, BaseOracle {
         bytes32 dataHash = keccak256(
             MandateOutputEncodingLib.encodeFillDescription(proposedSolver, orderId, uint32(block.timestamp), output)
         );
-        _attestations[block.chainid][bytes32(uint256(uint160(address(this))))][bytes32(uint256(uint160(address(this))))][dataHash]
-        = true;
+        _fillAttestations[dataHash] = true;
 
         // Load order description.
         address recipient = address(uint160(uint256(output.recipient)));
@@ -216,9 +216,7 @@ abstract contract BaseFiller is IPayloadCreator, BaseOracle {
     function _isPayloadValid(
         bytes32 payloadHash
     ) internal view virtual returns (bool) {
-        return _attestations[block.chainid][bytes32(uint256(uint160(address(this))))][bytes32(
-            uint256(uint160(address(this)))
-        )][payloadHash];
+        return _fillAttestations[payloadHash];
     }
 
     function arePayloadsValid(

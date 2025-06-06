@@ -1,21 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { IOracle } from "../interfaces/IOracle.sol";
+import { ILocalOracle } from "../interfaces/ILocalOracle.sol";
 
-/**
- * @notice Foundation for oracles. Exposes attesation logic for consumers.
- * @dev Ideally the contract has a 16 bytes address, that is 4 bytes have been mined for 0s.
- */
-abstract contract BaseOracle is IOracle {
+/// @notice Foundation for local oracles. Exposes attestation logic for consumers.
+/// @dev Ideally the contract has a 16 bytes address, that is 4 bytes have been mined for 0s.
+abstract contract BaseLocalOracle is ILocalOracle {
     error NotDivisible(uint256 value, uint256 divisor);
     error NotProven();
 
     event OutputProven(uint256 chainid, bytes32 remoteIdentifier, bytes32 application, bytes32 payloadHash);
 
-    /**
-     * @notice Stores payload attestations. Payloads are not stored, instead their hashes are.
-     */
+    /// @notice Stores payload attestations. Payloads are not stored, instead their hashes are.
     mapping(
         uint256 remoteChainId
             => mapping(bytes32 senderIdentifier => mapping(bytes32 application => mapping(bytes32 dataHash => bool)))
@@ -23,13 +19,11 @@ abstract contract BaseOracle is IOracle {
 
     //--- Data Attestation Validation ---//
 
-    /**
-     * @notice Check if a remote oracle has attested to some data
-     * @dev Helper function for accessing _attestations.
-     * @param remoteChainId Origin chain of the supposed data.
-     * @param remoteOracle Identifier for the remote attestation.
-     * @param dataHash Hash of data.
-     */
+    /// @notice Check if a remote oracle has attested to some data
+    /// @dev Helper function for accessing _attestations.
+    /// @param remoteChainId Origin chain of the supposed data.
+    /// @param remoteOracle Identifier for the remote attestation.
+    /// @param dataHash Hash of data.
     function _isProven(
         uint256 remoteChainId,
         bytes32 remoteOracle,
@@ -39,12 +33,10 @@ abstract contract BaseOracle is IOracle {
         return _attestations[remoteChainId][remoteOracle][application][dataHash];
     }
 
-    /**
-     * @notice Check if a remote oracle has attested to some data
-     * @param remoteChainId Origin chain of the supposed data.
-     * @param remoteOracle Identifier for the remote attestation.
-     * @param dataHash Hash of data.
-     */
+    /// @notice Check if a remote oracle has attested to some data
+    /// @param remoteChainId Origin chain of the supposed data.
+    /// @param remoteOracle Identifier for the remote attestation.
+    /// @param dataHash Hash of data.
     function isProven(
         uint256 remoteChainId,
         bytes32 remoteOracle,
@@ -54,12 +46,10 @@ abstract contract BaseOracle is IOracle {
         return _isProven(remoteChainId, remoteOracle, application, dataHash);
     }
 
-    /**
-     * @notice Check if a series of data has been attested to.
-     * @dev More efficient implementation of isProven. Does not return a boolean, instead reverts if false.
-     * This function returns true if proofSeries is empty.
-     * @param proofSeries remoteOracle, remoteChainId, application, and dataHash encoded in chucks of 32*4=128 bytes.
-     */
+    /// @notice Check if a series of data has been attested to.
+    /// @dev More efficient implementation of isProven. Does not return a boolean, instead reverts if false.
+    /// This function returns true if proofSeries is empty.
+    /// @param proofSeries remoteOracle, remoteChainId, application, and dataHash encoded in chucks of 32*4=128 bytes.
     function efficientRequireProven(
         bytes calldata proofSeries
     ) external view {
