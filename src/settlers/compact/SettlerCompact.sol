@@ -96,7 +96,7 @@ contract SettlerCompact is BaseSettler, ISettlerCompact {
     function _validateFills(
         StandardOrder calldata order,
         bytes32 orderId,
-        bytes32[] calldata solvers,
+        bytes32[] memory solvers,
         uint32[] calldata timestamps
     ) internal view {
         MandateOutput[] calldata MandateOutputs = order.outputs;
@@ -171,7 +171,7 @@ contract SettlerCompact is BaseSettler, ISettlerCompact {
         StandardOrder calldata order,
         bytes calldata signatures,
         uint32[] calldata timestamps,
-        bytes32[] calldata solvers,
+        bytes32[] memory solvers,
         bytes32 destination,
         bytes calldata call
     ) external virtual {
@@ -207,7 +207,7 @@ contract SettlerCompact is BaseSettler, ISettlerCompact {
         StandardOrder calldata order,
         bytes calldata signatures,
         uint32[] calldata timestamps,
-        bytes32[] calldata solvers,
+        bytes32[] memory solvers,
         bytes32 destination,
         bytes calldata call,
         bytes calldata orderOwnerSignature
