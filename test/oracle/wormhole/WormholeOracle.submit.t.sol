@@ -5,6 +5,7 @@ pragma solidity ^0.8.22;
 import { Test } from "forge-std/Test.sol";
 
 import { CoinFiller } from "../../../src/fillers/coin/CoinFiller.sol";
+import { IPayloadValidator } from "../../../src/interfaces/IPayloadValidator.sol";
 import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
 import { MessageEncodingLib } from "../../../src/libs/MessageEncodingLib.sol";
 import { WormholeOracle } from "../../../src/oracles/wormhole/WormholeOracle.sol";
@@ -127,7 +128,7 @@ contract WormholeOracleTestSubmit is Test {
     }
 
     function arePayloadsValid(
-        bytes32[] calldata
+        IPayloadValidator.FillRecord[] calldata
     ) external pure returns (bool) {
         return true;
     }

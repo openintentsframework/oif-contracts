@@ -6,6 +6,8 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { IPayloadValidator } from "../../interfaces/IPayloadValidator.sol";
 import { IRemoteOracle } from "../../interfaces/IRemoteOracle.sol";
+
+import { MandateOutput, MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 import { MessageEncodingLib } from "../../libs/MessageEncodingLib.sol";
 
 import { BaseLocalOracle } from "../BaseLocalOracle.sol";
@@ -105,11 +107,21 @@ contract WormholeOracle is BaseLocalOracle, IRemoteOracle, WormholeVerifier, Own
     function submit(address proofSource, bytes[] calldata payloads) public payable returns (uint256 refund) {
         // Check if the payloads are valid.
         uint256 numPayloads = payloads.length;
-        bytes32[] memory payloadHashes = new bytes32[](numPayloads);
+        IPayloadValidator.FillRecord[] memory records = new IPayloadValidator.FillRecord[](numPayloads);
+
         for (uint256 i; i < numPayloads; ++i) {
-            payloadHashes[i] = keccak256(payloads[i]);
+            bytes calldata payload = payloads[i];
+            bytes32 payloadHash = keccak256(payload);
+
+            // Decode fill description to extract orderId and output
+            (, bytes32 orderId,, MandateOutput memory output) = MandateOutputEncodingLib.decodeFillDescription(payload);
+
+            bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHashMemory(output);
+            records[i] =
+                IPayloadValidator.FillRecord({ orderId: orderId, outputHash: outputHash, payloadHash: payloadHash });
         }
-        if (!IPayloadValidator(proofSource).arePayloadsValid(payloadHashes)) revert NotAllPayloadsValid();
+
+        if (!IPayloadValidator(proofSource).arePayloadsValid(records)) revert NotAllPayloadsValid();
 
         // Payloads are good. We can submit them on behalf of proofSource.
         return _submit(proofSource, payloads);

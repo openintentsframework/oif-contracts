@@ -4,12 +4,12 @@ pragma solidity ^0.8.22;
 import { Test } from "forge-std/Test.sol";
 
 import { CoinFiller } from "../../src/fillers/coin/CoinFiller.sol";
-import { MandateOutput } from "../../src/libs/MandateOutputEncodingLib.sol";
+import { MandateOutput, MandateOutputEncodingLib } from "../../src/libs/MandateOutputEncodingLib.sol";
 
 import { MockERC20 } from "../mocks/MockERC20.sol";
 
 contract CoinFillerTestFillBatch is Test {
-    error FilledBySomeoneElse(bytes32 solver);
+    error AlreadyFilled(bytes32 orderId, bytes32 outputHash);
 
     event OutputFilled(bytes32 indexed orderId, bytes32 solver, uint32 timestamp, MandateOutput output);
 
@@ -109,16 +109,19 @@ contract CoinFillerTestFillBatch is Test {
         vm.prank(sender);
         coinFiller.fill(type(uint32).max, orderId, outputs[0], nextFiller);
 
-        vm.expectRevert(abi.encodeWithSignature("FilledBySomeoneElse(bytes32)", (nextFiller)));
+        bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHashMemory(outputs[0]);
+        vm.expectRevert(abi.encodeWithSignature("AlreadyFilled(bytes32,bytes32)", orderId, outputHash));
         vm.prank(sender);
         coinFiller.fillBatch(type(uint32).max, orderId, outputs, filler);
 
         vm.revertTo(prefillSnapshot);
-        // Fill the second output by someone else. The first output will be filled.
+        // Fill the second output by someone else. The fillBatch should fail on the second output.
 
         vm.prank(sender);
         coinFiller.fill(type(uint32).max, orderId, outputs[1], nextFiller);
 
+        bytes32 outputHash2 = MandateOutputEncodingLib.getMandateOutputHashMemory(outputs[1]);
+        vm.expectRevert(abi.encodeWithSignature("AlreadyFilled(bytes32,bytes32)", orderId, outputHash2));
         vm.prank(sender);
         coinFiller.fillBatch(type(uint32).max, orderId, outputs, filler);
     }

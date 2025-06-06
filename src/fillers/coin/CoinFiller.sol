@@ -88,12 +88,8 @@ contract CoinFiller is BaseFiller {
         revert NotImplemented();
     }
 
-    function _fill(
-        bytes32 orderId,
-        MandateOutput calldata output,
-        bytes32 proposedSolver
-    ) internal override returns (bytes32) {
+    function _fill(bytes32 orderId, MandateOutput calldata output, bytes32 proposedSolver) internal override {
         uint256 amount = _getAmount(output, proposedSolver);
-        return _fill(orderId, output, amount, proposedSolver);
+        _fill(orderId, output, amount, proposedSolver);
     }
 }

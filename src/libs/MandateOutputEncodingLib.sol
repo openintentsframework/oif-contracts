@@ -221,4 +221,53 @@ library MandateOutputEncodingLib {
             mandateOutput.fulfillmentContext
         );
     }
+
+    // --- FillDescription Decoding --- //
+
+    /**
+     * @notice Decodes a fill description payload back into its components.
+     * @param payload The encoded fill description payload
+     * @return solver The solver identifier
+     * @return orderId The order identifier
+     * @return timestamp The fill timestamp
+     * @return output The mandate output structure
+     */
+    function decodeFillDescription(
+        bytes calldata payload
+    ) internal pure returns (bytes32 solver, bytes32 orderId, uint32 timestamp, MandateOutput memory output) {
+        require(payload.length >= 68, "Payload too short");
+
+        // Extract fixed-size fields
+        solver = bytes32(payload[0:32]);
+        orderId = bytes32(payload[32:64]);
+        timestamp = uint32(bytes4(payload[64:68]));
+
+        // Extract variable-size fields starting at offset 68
+        uint256 offset = 68;
+
+        // Extract token, amount, recipient (32 bytes each)
+        output.token = bytes32(payload[offset:offset + 32]);
+        offset += 32;
+        output.amount = uint256(bytes32(payload[offset:offset + 32]));
+        offset += 32;
+        output.recipient = bytes32(payload[offset:offset + 32]);
+        offset += 32;
+
+        // Extract remoteCall length and data
+        uint16 remoteCallLength = uint16(bytes2(payload[offset:offset + 2]));
+        offset += 2;
+        output.remoteCall = payload[offset:offset + remoteCallLength];
+        offset += remoteCallLength;
+
+        // Extract fulfillmentContext length and data
+        uint16 fulfillmentContextLength = uint16(bytes2(payload[offset:offset + 2]));
+        offset += 2;
+        output.fulfillmentContext = payload[offset:offset + fulfillmentContextLength];
+
+        // Note: remoteOracle, remoteFiller, and chainId are not part of fill description
+        // They are provided as context in the oracle's attestation mapping
+        output.remoteOracle = bytes32(0);
+        output.remoteFiller = bytes32(0);
+        output.chainId = 0;
+    }
 }

@@ -315,14 +315,13 @@ contract BitcoinOracle is BaseLocalOracle, IPayloadValidator {
      * @dev Allows oracles to verify we have confirmed payloads.
      */
     function arePayloadsValid(
-        bytes32[] calldata payloadHashes
+        IPayloadValidator.FillRecord[] calldata fills
     ) external view returns (bool) {
-        uint256 numPayloads = payloadHashes.length;
-        bool accumulator = true;
-        for (uint256 i; i < numPayloads; ++i) {
-            accumulator = accumulator && _isPayloadValid(payloadHashes[i]);
+        uint256 numFills = fills.length;
+        for (uint256 i; i < numFills; ++i) {
+            if (!_isPayloadValid(fills[i].payloadHash)) return false;
         }
-        return accumulator;
+        return true;
     }
 
     // --- Validation --- //

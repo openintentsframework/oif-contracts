@@ -9,6 +9,7 @@ import { IBtcPrism } from "bitcoinprism-evm/src/interfaces/IBtcPrism.sol";
 import { BtcProof, BtcTxProof, ScriptMismatch } from "bitcoinprism-evm/src/library/BtcProof.sol";
 import { BtcScript } from "bitcoinprism-evm/src/library/BtcScript.sol";
 
+import { IPayloadValidator } from "../../../src/interfaces/IPayloadValidator.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
 import { BitcoinOracle } from "../../../src/oracles/bitcoin/BitcoinOracle.sol";
 import { WormholeOracle } from "../../../src/oracles/wormhole/WormholeOracle.sol";
@@ -901,9 +902,9 @@ contract BitcoinOracleTest is Test {
         // Remote oracle (as filler)
         bytes memory payload =
             MandateOutputEncodingLib.encodeFillDescriptionM(solver, orderId, uint32(BLOCK_TIME), output);
-        bytes32[] memory payloadHashes = new bytes32[](1);
-        payloadHashes[0] = keccak256(payload);
-        bool fillerValid = bitcoinOracle.arePayloadsValid(payloadHashes);
+        IPayloadValidator.FillRecord[] memory records = new IPayloadValidator.FillRecord[](1);
+        records[0] = IPayloadValidator.FillRecord({ orderId: bytes32(0), outputHash: bytes32(0), payloadHash: keccak256(payload) });
+        bool fillerValid = bitcoinOracle.arePayloadsValid(records);
         assertEq(fillerValid, true);
 
         // Local oracle (as oracle)
@@ -990,9 +991,9 @@ contract BitcoinOracleTest is Test {
         // Remote oracle (as filler)
         bytes memory payload =
             MandateOutputEncodingLib.encodeFillDescriptionM(solver, orderId, uint32(BLOCK_TIME), output);
-        bytes32[] memory payloadHashes = new bytes32[](1);
-        payloadHashes[0] = keccak256(payload);
-        bool fillerValid = bitcoinOracle.arePayloadsValid(payloadHashes);
+        IPayloadValidator.FillRecord[] memory records = new IPayloadValidator.FillRecord[](1);
+        records[0] = IPayloadValidator.FillRecord({ orderId: bytes32(0), outputHash: bytes32(0), payloadHash: keccak256(payload) });
+        bool fillerValid = bitcoinOracle.arePayloadsValid(records);
         assertEq(fillerValid, true);
 
         // Local oracle (as oracle)
@@ -1139,9 +1140,9 @@ contract BitcoinOracleTest is Test {
         // Remote oracle (as filler)
         bytes memory payload =
             MandateOutputEncodingLib.encodeFillDescriptionM(solver, orderId, uint32(BLOCK_TIME), output);
-        bytes32[] memory payloadHashes = new bytes32[](1);
-        payloadHashes[0] = keccak256(payload);
-        bool fillerValid = bitcoinOracle.arePayloadsValid(payloadHashes);
+        IPayloadValidator.FillRecord[] memory records = new IPayloadValidator.FillRecord[](1);
+        records[0] = IPayloadValidator.FillRecord({ orderId: bytes32(0), outputHash: bytes32(0), payloadHash: keccak256(payload) });
+        bool fillerValid = bitcoinOracle.arePayloadsValid(records);
         assertEq(fillerValid, true);
 
         // Local oracle (as oracle)
@@ -1293,9 +1294,9 @@ contract BitcoinOracleTest is Test {
         // Remote oracle (as filler)
         bytes memory payload =
             MandateOutputEncodingLib.encodeFillDescriptionM(solver, orderId, uint32(PREV_BLOCK_TIME), output);
-        bytes32[] memory payloadHashes = new bytes32[](1);
-        payloadHashes[0] = keccak256(payload);
-        bool fillerValid = bitcoinOracle.arePayloadsValid(payloadHashes);
+        IPayloadValidator.FillRecord[] memory records = new IPayloadValidator.FillRecord[](1);
+        records[0] = IPayloadValidator.FillRecord({ orderId: bytes32(0), outputHash: bytes32(0), payloadHash: keccak256(payload) });
+        bool fillerValid = bitcoinOracle.arePayloadsValid(records);
         assertEq(fillerValid, true);
     }
 
@@ -1391,9 +1392,9 @@ contract BitcoinOracleTest is Test {
         // Remote oracle (as filler)
         bytes memory payload =
             MandateOutputEncodingLib.encodeFillDescriptionM(solver, orderId, uint32(BLOCK_TIME), output);
-        bytes32[] memory payloadHashes = new bytes32[](1);
-        payloadHashes[0] = keccak256(payload);
-        bool fillerValid = bitcoinOracle.arePayloadsValid(payloadHashes);
+        IPayloadValidator.FillRecord[] memory records = new IPayloadValidator.FillRecord[](1);
+        records[0] = IPayloadValidator.FillRecord({ orderId: bytes32(0), outputHash: bytes32(0), payloadHash: keccak256(payload) });
+        bool fillerValid = bitcoinOracle.arePayloadsValid(records);
         assertEq(fillerValid, true);
     }
 

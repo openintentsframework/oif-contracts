@@ -4,7 +4,7 @@ pragma solidity ^0.8.22;
 import { Test } from "forge-std/Test.sol";
 
 import { CoinFiller } from "../../src/fillers/coin/CoinFiller.sol";
-import { MandateOutput } from "../../src/libs/MandateOutputEncodingLib.sol";
+import { MandateOutput, MandateOutputEncodingLib } from "../../src/libs/MandateOutputEncodingLib.sol";
 
 import { MockCallbackExecutor } from "../mocks/MockCallbackExecutor.sol";
 import { MockERC20 } from "../mocks/MockERC20.sol";
@@ -499,11 +499,12 @@ contract CoinFillerTestFill is Test {
 
         vm.prank(sender);
         coinFiller.fill(type(uint32).max, orderId, output, filler);
-        vm.prank(sender);
-        bytes32 alreadyFilledBy = coinFiller.fill(type(uint32).max, orderId, output, differentFiller);
 
-        assertNotEq(alreadyFilledBy, differentFiller);
-        assertEq(alreadyFilledBy, filler);
+        // Try to fill again with a different filler - should revert with AlreadyFilled
+        bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHashMemory(output);
+        vm.expectRevert(abi.encodeWithSignature("AlreadyFilled(bytes32,bytes32)", orderId, outputHash));
+        vm.prank(sender);
+        coinFiller.fill(type(uint32).max, orderId, output, differentFiller);
     }
 
     function test_invalid_fulfillment_context(

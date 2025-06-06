@@ -12,18 +12,13 @@ import { MandateOutput, MandateOutputEncodingLib } from "../libs/MandateOutputEn
  */
 abstract contract BaseFiller is IPayloadValidator {
     error FillDeadline();
-    error FilledBySomeoneElse(bytes32 solver);
+    error AlreadyFilled(bytes32 orderId, bytes32 outputHash);
     error WrongChain(uint256 expected, uint256 actual);
     error WrongRemoteFiller(bytes32 addressThis, bytes32 expected);
     error ZeroValue();
 
-    /**
-     * @dev Stores filled outputs with their associated solver, such that outputs won't be filled twice.
-     */
-    mapping(bytes32 orderId => mapping(bytes32 outputHash => bytes32 solver)) public filledOutputs;
-
-    /// @notice Tracks fill attestations for oracle verification
-    mapping(bytes32 payloadHash => bool) internal _fillAttestations;
+    /// @notice Maps an output to the hash of its fill-description
+    mapping(bytes32 orderId => mapping(bytes32 outputHash => bytes32 payloadHash)) internal _fillRecords;
 
     event OutputFilled(bytes32 indexed orderId, bytes32 solver, uint32 timestamp, MandateOutput output);
 
@@ -33,13 +28,8 @@ abstract contract BaseFiller is IPayloadValidator {
      * @param orderId Global identifier for the filled order. Is used as is, not checked for validity.
      * @param output The given output to fill. Is expected to belong to a greater order identified by orderId
      * @param proposedSolver Solver identifier set as the filler if the order has not already been filled.
-     * @return bytes32 Solver identifier that filled the order. Tokens are only collected if equal to proposedSolver.
      */
-    function _fill(
-        bytes32 orderId,
-        MandateOutput calldata output,
-        bytes32 proposedSolver
-    ) internal virtual returns (bytes32);
+    function _fill(bytes32 orderId, MandateOutput calldata output, bytes32 proposedSolver) internal virtual;
 
     /**
      * @notice Verifies & Fills an order.
@@ -56,14 +46,13 @@ abstract contract BaseFiller is IPayloadValidator {
      * @param output Given output to fill. Is expected to belong to a greater order identified by orderId
      * @param outputAmount True amount to fill after order evaluation. Will be instead of output.amount.
      * @param proposedSolver Solver identifier set as the filler if the order has not already been filled.
-     * @return bytes32 Solver identifier that filled the order. Tokens are only collected if equal to proposedSolver.
      */
     function _fill(
         bytes32 orderId,
         MandateOutput calldata output,
         uint256 outputAmount,
         bytes32 proposedSolver
-    ) internal virtual returns (bytes32) {
+    ) internal virtual {
         if (proposedSolver == bytes32(0)) revert ZeroValue();
         // Validate order context. This lets us ensure that this filler is the correct filler for the output.
         _validateChain(output.chainId);
@@ -72,23 +61,18 @@ abstract contract BaseFiller is IPayloadValidator {
         // Get hash of output.
         bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHash(output);
 
-        // Get the proof state of the fulfillment.
-        bytes32 existingSolver = filledOutputs[orderId][outputHash];
+        // Check if already filled
+        bytes32 existing = _fillRecords[orderId][outputHash];
+        // TODO: Before we didn't revert. Maybe we shouldn't now.
+        if (existing != bytes32(0)) revert AlreadyFilled(orderId, outputHash);
 
-        // Early return if we have already seen proof.
-        if (existingSolver != bytes32(0)) return existingSolver;
-
-        // The fill status is set before the transfer.
-        // This allows the above code-chunk to act as a local re-entry check.
-        filledOutputs[orderId][outputHash] = proposedSolver;
-
-        // Set the associated attestation as true. This allows the filler to act as an oracle and check whether payload
-        // hashes have been filled. Note that within the payload we set the current timestamp. This
-        // timestamp needs to be collected from the event (or tx) to be able to reproduce the payload(hash)
-        bytes32 dataHash = keccak256(
+        // Build payload hash for attestation
+        bytes32 payloadHash = keccak256(
             MandateOutputEncodingLib.encodeFillDescription(proposedSolver, orderId, uint32(block.timestamp), output)
         );
-        _fillAttestations[dataHash] = true;
+
+        // Store the fill record
+        _fillRecords[orderId][outputHash] = payloadHash;
 
         // Load order description.
         address recipient = address(uint160(uint256(output.recipient)));
@@ -105,8 +89,6 @@ abstract contract BaseFiller is IPayloadValidator {
         }
 
         emit OutputFilled(orderId, proposedSolver, uint32(block.timestamp), output);
-
-        return proposedSolver;
     }
 
     // --- Solver Interface --- //
@@ -119,17 +101,16 @@ abstract contract BaseFiller is IPayloadValidator {
      * @param orderId Global identifier for the filled order. Is used as is, not checked for validity.
      * @param output The given output to fill. Is expected to belong to a greater order identified by orderId.
      * @param proposedSolver Solver identifier set as the filler if the order has not already been filled.
-     * @return bytes32 Solver identifier that filled the order. Tokens are only collected if equal to proposedSolver.
      */
     function fill(
         uint32 fillDeadline,
         bytes32 orderId,
         MandateOutput calldata output,
         bytes32 proposedSolver
-    ) external returns (bytes32) {
+    ) external {
         if (fillDeadline < block.timestamp) revert FillDeadline();
 
-        return _fill(orderId, output, proposedSolver);
+        _fill(orderId, output, proposedSolver);
     }
 
     // --- Batch Solving --- //
@@ -157,8 +138,8 @@ abstract contract BaseFiller is IPayloadValidator {
     ) external {
         if (fillDeadline < block.timestamp) revert FillDeadline();
 
-        bytes32 actualSolver = _fill(orderId, outputs[0], proposedSolver);
-        if (actualSolver != proposedSolver) revert FilledBySomeoneElse(actualSolver);
+        // TODO: The check for the solver does seem important.
+        _fill(orderId, outputs[0], proposedSolver);
 
         uint256 numOutputs = outputs.length;
         for (uint256 i = 1; i < numOutputs; ++i) {
@@ -209,24 +190,18 @@ abstract contract BaseFiller is IPayloadValidator {
     }
 
     /**
-     * @notice Helper function to check whether a payload hash is valid.
-     * @param payloadHash keccak256 hash of the relevant payload.
-     * @return bool Whether or not the payload has been recorded as filled.
+     * @notice Check if a series of fill records are valid.
+     * @param fills Array of fill records to validate
+     * @return bool Whether all fill records are valid
      */
-    function _isPayloadValid(
-        bytes32 payloadHash
-    ) internal view virtual returns (bool) {
-        return _fillAttestations[payloadHash];
-    }
-
     function arePayloadsValid(
-        bytes32[] calldata payloadHashes
-    ) external view returns (bool) {
-        uint256 numPayloads = payloadHashes.length;
-        bool accumulator = true;
-        for (uint256 i; i < numPayloads; ++i) {
-            accumulator = accumulator && _isPayloadValid(payloadHashes[i]);
+        FillRecord[] calldata fills
+    ) external view override returns (bool) {
+        uint256 numFills = fills.length;
+        for (uint256 i; i < numFills; ++i) {
+            FillRecord calldata fillRecord = fills[i];
+            if (_fillRecords[fillRecord.orderId][fillRecord.outputHash] != fillRecord.payloadHash) return false;
         }
-        return accumulator;
+        return true;
     }
 }
