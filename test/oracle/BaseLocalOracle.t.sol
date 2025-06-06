@@ -4,9 +4,9 @@ pragma solidity ^0.8.22;
 
 import { Test } from "forge-std/Test.sol";
 
-import { BaseOracle } from "../../src/oracles/BaseOracle.sol";
+import { BaseLocalOracle } from "../../src/oracles/BaseLocalOracle.sol";
 
-contract MockBaseOracle is BaseOracle {
+contract MockBaseOracle is BaseLocalOracle {
     function setAttestation(
         uint256 remoteChainId,
         bytes32 senderIdentifier,
@@ -17,7 +17,7 @@ contract MockBaseOracle is BaseOracle {
     }
 }
 
-contract BaseOracleTest is Test {
+contract BaseLocalOracleTest is Test {
     MockBaseOracle baseOracle;
 
     function setUp() external {
