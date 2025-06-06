@@ -67,7 +67,9 @@ contract SettlerCompactTest is SettlerCompactTestBase {
         bytes memory expectedProofPayload = hex"";
         uint32[] memory timestamps = new uint32[](orderFulfillmentDescription.length);
         MandateOutput[] memory MandateOutputs = new MandateOutput[](orderFulfillmentDescription.length);
+        bytes32[] memory solvers = new bytes32[](orderFulfillmentDescription.length);
         for (uint256 i; i < orderFulfillmentDescription.length; ++i) {
+            solvers[i] = solverIdentifier;
             timestamps[i] = orderFulfillmentDescription[i].timestamp;
             MandateOutputs[i] = orderFulfillmentDescription[i].MandateOutput;
 
@@ -85,6 +87,7 @@ contract SettlerCompactTest is SettlerCompactTestBase {
         }
         _validProofSeries[expectedProofPayload] = true;
 
+
         ISettlerCompactHarness(settlerCompact).validateFills(
             StandardOrder({
                 user: address(0),
@@ -97,7 +100,7 @@ contract SettlerCompactTest is SettlerCompactTestBase {
                 outputs: MandateOutputs
             }),
             orderId,
-            solverIdentifier,
+            solvers,
             timestamps
         );
     }
@@ -457,13 +460,12 @@ contract SettlerCompactTest is SettlerCompactTestBase {
         // Other callers are disallowed:
 
         {
-            bytes memory orderOwnerSignature = hex"";
             vm.prank(non_solver);
             vm.expectRevert(abi.encodeWithSignature("InvalidSigner()"));
             bytes32[] memory solvers = new bytes32[](1);
             solvers[0] = solver.toIdentifier();
             ISettlerCompactHarness(settlerCompact).finaliseWithSignature(
-                order, signature, timestamps, solvers, destination.toIdentifier(), hex"", orderOwnerSignature
+                order, signature, timestamps, solvers, destination.toIdentifier(), hex"", hex""
             );
         }
         assertEq(token.balanceOf(destination), 0);

@@ -40,13 +40,6 @@ interface ISettlerCompactHarness is ISettlerCompact {
         bytes32[] calldata solvers,
         uint32[] calldata timestamps
     ) external view;
-
-    function validateFills(
-        StandardOrder calldata order,
-        bytes32 orderId,
-        bytes32 solver,
-        uint32[] calldata timestamps
-    ) external view;
 }
 
 contract SettlerCompactHarness is SettlerCompact, ISettlerCompactHarness {
@@ -61,15 +54,6 @@ contract SettlerCompactHarness is SettlerCompact, ISettlerCompactHarness {
         uint32[] calldata timestamps
     ) external view {
         _validateFills(order, orderId, solvers, timestamps);
-    }
-
-    function validateFills(
-        StandardOrder calldata order,
-        bytes32 orderId,
-        bytes32 solver,
-        uint32[] calldata timestamps
-    ) external view {
-        _validateFills(order, orderId, solver, timestamps);
     }
 }
 

@@ -490,8 +490,9 @@ contract SettlerCompactTestCrossChain is Test {
         vm.expectRevert(abi.encodeWithSignature("NotProven()"));
         vm.prank(solver);
         {
-            bytes32[] memory solvers = new bytes32[](1);
+            bytes32[] memory solvers = new bytes32[](2);
             solvers[0] = solverIdentifier;
+            solvers[1] = solverIdentifier;
             ISettlerCompact(settlerCompact).finalise(order, signature, timestamps, solvers, solverIdentifier, hex"");
         }
 

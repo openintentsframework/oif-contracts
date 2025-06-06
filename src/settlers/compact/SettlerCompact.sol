@@ -89,8 +89,8 @@ contract SettlerCompact is BaseSettler, ISettlerCompact {
 
     /**
      * @notice Check if a series of outputs has been proven.
-     * @dev Can take a list of solvers. Should be used as a secure alternative to _validateFills
-     * if someone filled one of the outputs.
+     * @dev This function returns true if the order contains no outputs.
+     * That means any order that has no outputs specified can be claimed.
      */
     function _validateFills(
         StandardOrder calldata order,
@@ -112,46 +112,6 @@ contract SettlerCompact is BaseSettler, ISettlerCompact {
 
             MandateOutput calldata output = MandateOutputs[i];
             bytes32 payloadHash = _proofPayloadHash(orderId, solvers[i], outputFilledAt, output);
-
-            uint256 chainId = output.chainId;
-            bytes32 remoteOracle = output.remoteOracle;
-            bytes32 remoteFiller = output.remoteFiller;
-            assembly ("memory-safe") {
-                let offset := add(add(proofSeries, 0x20), mul(i, 0x80))
-                mstore(offset, chainId)
-                mstore(add(offset, 0x20), remoteOracle)
-                mstore(add(offset, 0x40), remoteFiller)
-                mstore(add(offset, 0x60), payloadHash)
-            }
-        }
-        IOracle(order.localOracle).efficientRequireProven(proofSeries);
-    }
-
-    /**
-     * @notice Check if a series of outputs has been proven.
-     * @dev Notice that the solver of the first provided output is reported as the entire intent solver.
-     * This function returns true if the order contains no outputs.
-     * That means any order that has no outputs specified can be claimed with no issues.
-     */
-    function _validateFills(
-        StandardOrder calldata order,
-        bytes32 orderId,
-        bytes32 solver,
-        uint32[] calldata timestamps
-    ) internal view {
-        MandateOutput[] calldata MandateOutputs = order.outputs;
-        uint256 numOutputs = MandateOutputs.length;
-        uint256 numTimestamps = timestamps.length;
-        if (numTimestamps != numOutputs) revert InvalidTimestampLength();
-
-        uint32 fillDeadline = order.fillDeadline;
-        bytes memory proofSeries = new bytes(32 * 4 * numOutputs);
-        for (uint256 i; i < numOutputs; ++i) {
-            uint32 outputFilledAt = timestamps[i];
-            if (fillDeadline < outputFilledAt) revert FilledTooLate(fillDeadline, outputFilledAt);
-
-            MandateOutput calldata output = MandateOutputs[i];
-            bytes32 payloadHash = _proofPayloadHash(orderId, solver, outputFilledAt, output);
 
             uint256 chainId = output.chainId;
             bytes32 remoteOracle = output.remoteOracle;
@@ -220,9 +180,7 @@ contract SettlerCompact is BaseSettler, ISettlerCompact {
         bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
         _validateOrderOwner(orderOwner);
 
-        //TODO: Is it worth having two separate `_validateFills` functions that just differ on the list of solvers?
-        if (solvers.length == 1) _validateFills(order, orderId, solvers[0], timestamps);
-        else _validateFills(order, orderId, solvers, timestamps);
+        _validateFills(order, orderId, solvers, timestamps);
 
         _finalise(order, signatures, orderId, solvers[0], destination);
 
@@ -263,8 +221,7 @@ contract SettlerCompact is BaseSettler, ISettlerCompact {
             orderId, EfficiencyLib.asSanitizedAddress(uint256(orderOwner)), destination, call, orderOwnerSignature
         );
 
-        if (solvers.length == 1) _validateFills(order, orderId, solvers[0], timestamps);
-        else _validateFills(order, orderId, solvers, timestamps);
+        _validateFills(order, orderId, solvers, timestamps);
 
         _finalise(order, signatures, orderId, solvers[0], destination);
 
