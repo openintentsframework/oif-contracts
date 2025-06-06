@@ -12,7 +12,7 @@ contract PolymerOracleMapped is ChainMap, PolymerOracle {
 
     function _getChainId(
         uint256 protocolId
-    ) internal view override(ChainMap, PolymerOracle) returns (uint256 chainId) {
-        chainId = ChainMap._getChainId(protocolId);
+    ) internal view override returns (uint256 chainId) {
+        return _getMappedChainId(protocolId);
     }
 }

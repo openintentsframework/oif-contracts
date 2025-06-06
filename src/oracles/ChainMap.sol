@@ -31,7 +31,7 @@ abstract contract ChainMap is Ownable {
      * @param protocolId ChainId of a message.
      * @return chainId "Canonical" chain id.
      */
-    function _getChainId(
+    function _getMappedChainId(
         uint256 protocolId
     ) internal view virtual returns (uint256 chainId) {
         chainId = chainIdMap[protocolId];
