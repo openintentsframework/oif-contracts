@@ -35,6 +35,7 @@ contract SettlerCompact is BaseSettler, ISettlerCompact {
     error NotImplemented();
     error NotOrderOwner();
     error InitiateDeadlinePassed();
+    error NoDestination();
     error InvalidTimestampLength();
     error OrderIdMismatch(bytes32 provided, bytes32 computed);
     error FilledTooLate(uint32 expected, uint32 actual);
@@ -174,7 +175,7 @@ contract SettlerCompact is BaseSettler, ISettlerCompact {
         bytes32 destination,
         bytes calldata call
     ) external virtual {
-        require(destination != bytes32(0), "Must provide a destination");
+        if (destination == bytes32(0)) revert NoDestination();
 
         bytes32 orderId = _orderIdentifier(order);
         bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
@@ -211,7 +212,7 @@ contract SettlerCompact is BaseSettler, ISettlerCompact {
         bytes calldata call,
         bytes calldata orderOwnerSignature
     ) external virtual {
-        require(destination != bytes32(0), "Must provide a destination");
+        if (destination == bytes32(0)) revert NoDestination();
 
         bytes32 orderId = _orderIdentifier(order);
         bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);

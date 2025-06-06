@@ -87,7 +87,6 @@ contract SettlerCompactTest is SettlerCompactTestBase {
         }
         _validProofSeries[expectedProofPayload] = true;
 
-
         ISettlerCompactHarness(settlerCompact).validateFills(
             StandardOrder({
                 user: address(0),
