@@ -6,7 +6,16 @@ import { OrderPurchase } from "../settlers/types/OrderPurchaseType.sol";
 import { StandardOrder } from "../settlers/types/StandardOrderType.sol";
 
 interface ISettlerCompact {
-    function finaliseFor(
+    function finalise(
+        StandardOrder memory order,
+        bytes memory signatures,
+        uint32[] memory timestamps,
+        bytes32[] memory solvers,
+        bytes32 destination,
+        bytes memory call
+    ) external;
+
+    function finaliseWithSignature(
         StandardOrder memory order,
         bytes memory signatures,
         uint32[] memory timestamps,
@@ -15,40 +24,11 @@ interface ISettlerCompact {
         bytes memory call,
         bytes memory orderOwnerSignature
     ) external;
-    function finaliseFor(
-        StandardOrder memory order,
-        bytes memory signatures,
-        uint32[] memory timestamps,
-        bytes32 solver,
-        bytes32 destination,
-        bytes memory call,
-        bytes memory orderOwnerSignature
-    ) external;
-    function finaliseSelf(
-        StandardOrder memory order,
-        bytes memory signatures,
-        uint32[] memory timestamps,
-        bytes32 solver
-    ) external;
-    function finaliseTo(
-        StandardOrder memory order,
-        bytes memory signatures,
-        uint32[] memory timestamps,
-        bytes32 solver,
-        bytes32 destination,
-        bytes memory call
-    ) external;
-    function finaliseTo(
-        StandardOrder memory order,
-        bytes memory signatures,
-        uint32[] memory timestamps,
-        bytes32[] memory solvers,
-        bytes32 destination,
-        bytes memory call
-    ) external;
+
     function orderIdentifier(
         StandardOrder memory order
     ) external view returns (bytes32);
+
     function purchaseOrder(
         OrderPurchase memory orderPurchase,
         StandardOrder memory order,
