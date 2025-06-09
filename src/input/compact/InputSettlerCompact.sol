@@ -22,9 +22,10 @@ import { StandardOrder, StandardOrderType } from "../types/StandardOrderType.sol
 
 /**
  * @title Input Settler supporting The Compact
- * @notice This Input Settler implementation uses The Compact as the deposit scheme. It is a delivery first scheme that
- * allows users with a deposit inside The Compact to execute transactions that will be paid AFTER the output has been
- * proven. This has the advantage that failed orders can be quickly retried.
+ * @notice This Input Settler implementation uses The Compact as the deposit scheme. It is a Output first scheme that
+ * allows users with a deposit inside The Compact to execute transactions that will be paid **after** the outputs have
+ * been proven. This has the advantage that failed orders can be quickly retried. These orders are also entirely gasless
+ * since neither valid nor failed transactions does not require any transactions to redeem.
  *
  * Users are expected to have an existing deposit inside the Compact or purposefully deposit for the intent. Then either
  * register or sign a supported claim with the intent outputs as the witness.
@@ -238,8 +239,8 @@ contract InputSettlerCompact is BaseInputSettler, IInputSettlerCompact {
     //--- The Compact & Resource Locks ---//
 
     /**
-     * @notice Resolves a Compact Claim for a Stnadard Order.
-     * @param order that should be converted into a Comapct Claim.
+     * @notice Resolves a Compact Claim for a Standard Order.
+     * @param order that should be converted into a Compact Claim.
      * @param sponsorSignature The user's signature for the Compact Claim.
      * @param allocatorData The allocator's signature for the Compact Claim.
      * @param claimant Destination of the inputs funds signed for by the user.
@@ -292,9 +293,6 @@ contract InputSettlerCompact is BaseInputSettler, IInputSettlerCompact {
      * @notice This function is called to buy an order from a solver.
      * If the order was purchased in time, then when the order is settled, the inputs will go to the purchaser instead
      * of the original solver.
-     * @dev If you are buying a challenged order, ensure that you have sufficient time to prove the order or your funds
-     * may be at risk and that you purchase it within the allocated time. To purchase an order, it is required that you
-     * can produce a proper signature from the solver that signs the purchase details.
      * @param orderPurchase Order purchase description signed by solver.
      * @param order Order to purchase.
      * @param orderSolvedByIdentifier Solver of the order. Is not validated, if wrong the purchase will be skipped.
