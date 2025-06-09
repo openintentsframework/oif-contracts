@@ -27,6 +27,7 @@ import { Structs } from "../../src/oracles/wormhole/external/wormhole/Structs.so
 
 import { AlwaysYesOracle } from "../mocks/AlwaysYesOracle.sol";
 import { MockERC20 } from "../mocks/MockERC20.sol";
+import { LibAddress } from "../utils/LibAddress.sol";
 
 interface EIP712 {
     function DOMAIN_SEPARATOR() external view returns (bytes32);
@@ -57,6 +58,8 @@ contract ExportedMessages is Messages, Setters {
 }
 
 contract InputSettlerCompactTestCrossChain is Test {
+    using LibAddress for address;
+
     address inputSettlerCompact;
     OutputSettlerCoin outputSettlerCoin;
 
@@ -252,11 +255,11 @@ contract InputSettlerCompactTestCrossChain is Test {
         MandateOutput[] memory outputs = new MandateOutput[](1);
         outputs[0] = MandateOutput({
             settler: bytes32(0),
-            oracle: bytes32(uint256(uint160(alwaysYesOracle))),
+            oracle: alwaysYesOracle.toIdentifier(),
             chainId: block.chainid,
             token: bytes32(tokenId),
             amount: amount,
-            recipient: bytes32(uint256(uint160(swapper))),
+            recipient: swapper.toIdentifier(),
             call: hex"",
             context: hex""
         });
@@ -285,9 +288,9 @@ contract InputSettlerCompactTestCrossChain is Test {
         uint32[] memory timestamps = new uint32[](1);
 
         vm.prank(solver);
-        IInputSettlerCompact(inputSettlerCompact).finaliseSelf(
-            order, signature, timestamps, bytes32(uint256(uint160((solver))))
-        );
+        bytes32[] memory solvers = new bytes32[](1);
+        solvers[0] = solver.toIdentifier();
+        IInputSettlerCompact(inputSettlerCompact).finalise(order, signature, timestamps, solvers, solvers[0], hex"");
     }
 
     function _buildPreMessage(
@@ -322,12 +325,12 @@ contract InputSettlerCompactTestCrossChain is Test {
         inputs[0] = [tokenId, amount];
         MandateOutput[] memory outputs = new MandateOutput[](1);
         outputs[0] = MandateOutput({
-            settler: bytes32(uint256(uint160(address(outputSettlerCoin)))),
-            oracle: bytes32(uint256(uint160(localOracle))),
+            settler: address(outputSettlerCoin).toIdentifier(),
+            oracle: localOracle.toIdentifier(),
             chainId: block.chainid,
-            token: bytes32(uint256(uint160(address(anotherToken)))),
+            token: address(anotherToken).toIdentifier(),
             amount: amount,
-            recipient: bytes32(uint256(uint160(swapper))),
+            recipient: swapper.toIdentifier(),
             call: hex"",
             context: hex""
         });
@@ -357,7 +360,7 @@ contract InputSettlerCompactTestCrossChain is Test {
 
         // Initiation is over. We need to fill the order.
 
-        bytes32 solverIdentifier = bytes32(uint256(uint160((solver))));
+        bytes32 solverIdentifier = solver.toIdentifier();
 
         bytes32 orderId = IInputSettlerCompact(inputSettlerCompact).orderIdentifier(order);
 
@@ -377,9 +380,8 @@ contract InputSettlerCompactTestCrossChain is Test {
         wormholeOracle.submit(address(outputSettlerCoin), payloads);
         vm.snapshotGasLastCall("inputSettler", "IntegrationWormholeSubmit");
 
-        bytes memory vaa = makeValidVAA(
-            uint16(block.chainid), bytes32(uint256(uint160(address(wormholeOracle)))), expectedMessageEmitted
-        );
+        bytes memory vaa =
+            makeValidVAA(uint16(block.chainid), address(wormholeOracle).toIdentifier(), expectedMessageEmitted);
 
         wormholeOracle.receiveMessage(vaa);
         vm.snapshotGasLastCall("inputSettler", "IntegrationWormholeReceiveMessage");
@@ -388,14 +390,16 @@ contract InputSettlerCompactTestCrossChain is Test {
         timestamps[0] = uint32(block.timestamp);
 
         vm.prank(solver);
-        IInputSettlerCompact(inputSettlerCompact).finaliseSelf(order, signature, timestamps, solverIdentifier);
+        bytes32[] memory solvers = new bytes32[](1);
+        solvers[0] = solver.toIdentifier();
+        IInputSettlerCompact(inputSettlerCompact).finalise(order, signature, timestamps, solvers, solvers[0], hex"");
         vm.snapshotGasLastCall("inputSettler", "IntegrationCompactFinaliseSelf");
     }
 
     function test_entire_flow_different_solvers(
         bytes32 solverIdentifier2
     ) external {
-        bytes32 solverIdentifier = bytes32(uint256(uint160((solver))));
+        bytes32 solverIdentifier = solver.toIdentifier();
         vm.assume(solverIdentifier != solverIdentifier2);
         vm.assume(bytes32(0) != solverIdentifier2);
 
@@ -407,22 +411,22 @@ contract InputSettlerCompactTestCrossChain is Test {
         inputs[0] = [tokenId, amount];
         MandateOutput[] memory outputs = new MandateOutput[](2);
         outputs[0] = MandateOutput({
-            settler: bytes32(uint256(uint160(address(outputSettlerCoin)))),
-            oracle: bytes32(uint256(uint160(address(wormholeOracle)))),
+            settler: address(outputSettlerCoin).toIdentifier(),
+            oracle: address(wormholeOracle).toIdentifier(),
             chainId: block.chainid,
-            token: bytes32(uint256(uint160(address(anotherToken)))),
+            token: address(anotherToken).toIdentifier(),
             amount: amount,
-            recipient: bytes32(uint256(uint160(swapper))),
+            recipient: swapper.toIdentifier(),
             call: hex"",
             context: hex""
         });
         outputs[1] = MandateOutput({
-            settler: bytes32(uint256(uint160(address(outputSettlerCoin)))),
-            oracle: bytes32(uint256(uint160(address(wormholeOracle)))),
+            settler: address(outputSettlerCoin).toIdentifier(),
+            oracle: address(wormholeOracle).toIdentifier(),
             chainId: block.chainid,
-            token: bytes32(uint256(uint160(address(token)))),
+            token: address(token).toIdentifier(),
             amount: amount,
-            recipient: bytes32(uint256(uint160(swapper))),
+            recipient: swapper.toIdentifier(),
             call: hex"",
             context: hex""
         });
@@ -474,9 +478,8 @@ contract InputSettlerCompactTestCrossChain is Test {
             emit PackagePublished(0, expectedMessageEmitted, 15);
             wormholeOracle.submit(address(outputSettlerCoin), payloads);
 
-            bytes memory vaa = makeValidVAA(
-                uint16(block.chainid), bytes32(uint256(uint160(address(wormholeOracle)))), expectedMessageEmitted
-            );
+            bytes memory vaa =
+                makeValidVAA(uint16(block.chainid), address(wormholeOracle).toIdentifier(), expectedMessageEmitted);
 
             wormholeOracle.receiveMessage(vaa);
         }
@@ -486,9 +489,14 @@ contract InputSettlerCompactTestCrossChain is Test {
 
         vm.expectRevert(abi.encodeWithSignature("NotProven()"));
         vm.prank(solver);
-        IInputSettlerCompact(inputSettlerCompact).finaliseTo(
-            order, signature, timestamps, solverIdentifier, solverIdentifier, hex""
-        );
+        {
+            bytes32[] memory solvers = new bytes32[](2);
+            solvers[0] = solverIdentifier;
+            solvers[1] = solverIdentifier;
+            IInputSettlerCompact(inputSettlerCompact).finalise(
+                order, signature, timestamps, solvers, solverIdentifier, hex""
+            );
+        }
 
         bytes32[] memory solverIdentifierList = new bytes32[](2);
         solverIdentifierList[0] = solverIdentifier;
@@ -497,7 +505,7 @@ contract InputSettlerCompactTestCrossChain is Test {
             uint256 snapshotId = vm.snapshot();
 
             vm.prank(solver);
-            IInputSettlerCompact(inputSettlerCompact).finaliseTo(
+            IInputSettlerCompact(inputSettlerCompact).finalise(
                 order, signature, timestamps, solverIdentifierList, solverIdentifier, hex""
             );
 
@@ -508,7 +516,7 @@ contract InputSettlerCompactTestCrossChain is Test {
         );
 
         vm.prank(solver);
-        IInputSettlerCompact(inputSettlerCompact).finaliseFor(
+        IInputSettlerCompact(inputSettlerCompact).finaliseWithSignature(
             order, signature, timestamps, solverIdentifierList, solverIdentifier, hex"", solverSignature
         );
     }

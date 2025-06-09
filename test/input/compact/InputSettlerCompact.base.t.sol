@@ -40,13 +40,6 @@ interface IInputSettlerCompactHarness is IInputSettlerCompact {
         bytes32[] calldata solvers,
         uint32[] calldata timestamps
     ) external view;
-
-    function validateFills(
-        StandardOrder calldata order,
-        bytes32 orderId,
-        bytes32 solver,
-        uint32[] calldata timestamps
-    ) external view;
 }
 
 contract InputSettlerCompactHarness is InputSettlerCompact, IInputSettlerCompactHarness {
@@ -61,15 +54,6 @@ contract InputSettlerCompactHarness is InputSettlerCompact, IInputSettlerCompact
         uint32[] calldata timestamps
     ) external view {
         _validateFills(order, orderId, solvers, timestamps);
-    }
-
-    function validateFills(
-        StandardOrder calldata order,
-        bytes32 orderId,
-        bytes32 solver,
-        uint32[] calldata timestamps
-    ) external view {
-        _validateFills(order, orderId, solver, timestamps);
     }
 }
 
