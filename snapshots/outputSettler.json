@@ -2,5 +2,6 @@
   "outputSettlerCoinFill": "105379",
   "outputSettlerCoinFillBatch": "164383",
   "outputSettlerCoinFillDutchAuction": "107012",
-  "outputSettlerCoinFillExclusive": "107205"
+  "outputSettlerCoinFillExclusive": "107205",
+  "outputSettlerCoinFillExclusiveDutchAuction": "107952"
 }

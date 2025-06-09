@@ -317,7 +317,7 @@ contract OutputSettlerCoinTestFill is Test {
         );
 
         outputSettlerCoin.fill(type(uint32).max, orderId, outputs[0], exclusiveFor);
-        vm.snapshotGasLastCall("filler", "outputSettlerCoinFillExclusiveDutchAuction");
+        vm.snapshotGasLastCall("outputSettler", "outputSettlerCoinFillExclusiveDutchAuction");
 
         assertEq(outputToken.balanceOf(swapper), finalAmount);
         assertEq(outputToken.balanceOf(sender), 0);
