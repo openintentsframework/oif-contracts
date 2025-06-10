@@ -22,12 +22,12 @@ Refer to the SVG diagram chart.
 - Intent: A description of a desired state change. Within the OIF, the state change is likely to be an asset swap (input for output) but could also be some logic execution (gas sponsoring).
 - Inputs: The assets to be released from a lock after the Outputs have been proven delivered. Will be paid by the sponsor of an order.
 - Input Chain: The chain where the input assets originate from. There may be multiple input chains.
-- Destination Chain: The chain where the output assets are paid on. There may be multiple output chains.
+- Output Chain: The chain where the output assets are paid on. There may be multiple output chains.
 - User: The end user of the protocol. Is the sponsor in most cases.
 - Outputs: The assets that have to be paid to be able to collect inputs from an order. 
 - Solver: An external entity that facilitates swaps for users. Is the filler in most cases.
 - Sponsor: The provider of the input assets on the input chain. Will receive their desired assets (output) first, and pay (inputs) second.
-- Filler (Actor): The provider of assets on the destination chain and executors of swaps. Will pay (outputs) first, and get their assets (inputs) second.
+- Filler (Actor): The provider of assets on the output chain and executors of swaps. Will pay (outputs) first, and get their assets (inputs) second.
 
 ## InputSettler
 
