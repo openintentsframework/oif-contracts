@@ -21,7 +21,7 @@ import { OrderPurchase } from "../types/OrderPurchaseType.sol";
 import { StandardOrder, StandardOrderType } from "../types/StandardOrderType.sol";
 
 /**
- * @title Input Settler supporting The Compact
+ * @title Input Settler supporting `The Compact` and `StandardOrder` orders. For `ERC-7683` orders refer to `InputSettler7683` 
  * @notice This Input Settler implementation uses The Compact as the deposit scheme. It is a Output first scheme that
  * allows users with a deposit inside The Compact to execute transactions that will be paid **after** the outputs have
  * been proven. This has the advantage that failed orders can be quickly retried. These orders are also entirely gasless

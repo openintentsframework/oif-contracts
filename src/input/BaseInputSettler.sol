@@ -118,7 +118,7 @@ abstract contract BaseInputSettler is EIP712 {
         bytes32 purchaser = purchaseDetails.purchaser;
 
         if (purchaser != bytes32(0)) {
-            // We use the last fill (oldest) to gauge the if it was purchased in time.
+            // We use the last fill (oldest) to gauge if the order was purchased in time.
             uint256 orderTimestamp = _maxTimestamp(timestamps);
             delete purchaseDetails.lastOrderTimestamp;
             delete purchaseDetails.purchaser;

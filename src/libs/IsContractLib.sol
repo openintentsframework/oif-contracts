@@ -5,7 +5,7 @@ library IsContractLib {
     error CodeSize0();
     /**
      * @notice Checks if an address has contract code. Reverts with custom error CodeSize0() if size == 0.
-     * @dev The intended use of this function is in combination with contracts that does not have code size checks
+     * @dev The intended use of this function is in combination with contracts that do not have code size checks
      * before making transfers.
      * @param addr is the token contract address needs to be checked against.
      */

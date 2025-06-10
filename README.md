@@ -8,7 +8,7 @@ The goal of the OIF is to provide a base implementation that can be permissionle
 OIF is built with output-input separation. The goal is to fully separate the various system components and support different mechanisms of asset collection. Specifically, both Output First and Input Second flows are facilitated by resource locks and traditional escrows in a single system. 
 
 To achieve this, the system has been designed to be componentized and modular.
-- **InputSettler**: Input collection contract on the input chain. Serves multiple roles but the main role is to facilitate the translation of proofs to the unlock call for a lock.
+- **InputSettler**: Input collection contract on the input chain. Serves multiple proposes, but the main one is to finalise intents. This contracts is responsible for validating that the intents was filled on the validation chain(using the oracle) and unlocking input contracts to the filler.
 - **OutputSettler**: Output delivery contract on the output chain. Allows solvers to fill outputs of orders.
 - **Oracle**: Proof layer. Generally a messaging protocol but can be anything: Optimistic proofs, light clients, storage proofs, off-chain agent, etc. Generates proof of filled outputs.
 
@@ -76,11 +76,11 @@ This scheme allows The OIF to scale to any chain where only one of the chains ha
 
 #### ChainIds
 
-ChainIds should typically follow the "canonical" chain id: `block.chainid`. While the remote chainId is defined by the localOracle, it is good practice to implement it as the remote chain's `block.chainid` or equivalent.
+ChainIds should typically follow the "canonical" chain id: `block.chainid`. While the output chainId is defined by the localOracle, it is good practice to implement it as the remote chain's `block.chainid` or equivalent.
 
 ## Output Settler
 
-The Output Settler contract sits on the output chain and allows filling outputs. It is expected that Output Settler implementations expose whether a payload is valid via the `.arePayloadsValid()` view function. Notice that the requirement that the Output Settler asserts payloads means that the Output Settler and Input Settler need to form the same payloads to properly validate that outputs have been filled.
+The Output Settler contract sits on the output chain and allows filling outputs. It is expected that Output Settler implementations expose whether a payload is valid by implementing the `IPayloadValidator` interface and exposing the `.arePayloadsValid()` view function. Notice that the requirement that the Output Settler asserts payloads means that the Output Settler and Input Settler need to form the same payloads to properly validate that outputs have been filled.
 
 Otherwise, the fill interface is left undefined. It is generally expected that the filler takes outputs as `MandateOutput`.
 

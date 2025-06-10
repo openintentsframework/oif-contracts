@@ -25,7 +25,6 @@ library OrderPurchaseType {
     bytes32 constant ORDER_PURCHASE_TYPE_HASH = keccak256(ORDER_PURCHASE_TYPE_STUB);
 
     /**
-     * w
      * @notice Hashes an AllowOpen struct.
      * @param orderPurchase Description of the conditions for purchasing an order.
      * @return digest of OrderPurchase.

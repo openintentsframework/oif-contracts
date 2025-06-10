@@ -2,7 +2,7 @@
 pragma solidity >=0.8.0;
 
 /**
- * @notice Callback handling for OF payouts, both outputs and inputs.
+ * @notice Callback handling for OIF payouts, both outputs and inputs.
  */
 interface IOpenIntentCallback {
     /**
