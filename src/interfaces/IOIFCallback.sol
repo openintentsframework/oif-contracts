@@ -4,7 +4,7 @@ pragma solidity >=0.8.0;
 /**
  * @notice Callback handling for OIF payouts, both outputs and inputs.
  */
-interface IOpenIntentCallback {
+interface IOIFCallback {
     /**
      * @notice If configured, is called when the output is filled on the output chain.
      */

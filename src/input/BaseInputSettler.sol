@@ -7,7 +7,7 @@ import { SignatureCheckerLib } from "solady/utils/SignatureCheckerLib.sol";
 import { SignatureCheckerLib } from "solady/utils/SignatureCheckerLib.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
-import { IOpenIntentCallback } from "../interfaces/IOpenIntentCallback.sol";
+import { IOIFCallback } from "../interfaces/IOIFCallback.sol";
 import { IOracle } from "../interfaces/IOracle.sol";
 
 import { AllowOpenType } from "./types/AllowOpenType.sol";
@@ -192,7 +192,7 @@ abstract contract BaseInputSettler is EIP712 {
         }
         {
             bytes calldata call = orderPurchase.call;
-            if (call.length > 0) IOpenIntentCallback(newDestination).inputsFilled(inputs, call);
+            if (call.length > 0) IOIFCallback(newDestination).inputsFilled(inputs, call);
         }
     }
 }

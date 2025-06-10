@@ -3,7 +3,7 @@ pragma solidity ^0.8.26;
 
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
-import { IOpenIntentCallback } from "../interfaces/IOpenIntentCallback.sol";
+import { IOIFCallback } from "../interfaces/IOIFCallback.sol";
 import { IPayloadCreator } from "../interfaces/IPayloadCreator.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../libs/MandateOutputEncodingLib.sol";
 import { OutputVerificationLib } from "../libs/OutputVerificationLib.sol";
@@ -90,9 +90,7 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
         // Storage has been set. Fill the output.
         address recipient = address(uint160(uint256(output.recipient)));
         SafeTransferLib.safeTransferFrom(address(uint160(uint256(output.token))), msg.sender, recipient, outputAmount);
-        if (output.call.length > 0) {
-            IOpenIntentCallback(recipient).outputFilled(output.token, outputAmount, output.call);
-        }
+        if (output.call.length > 0) IOIFCallback(recipient).outputFilled(output.token, outputAmount, output.call);
 
         emit OutputFilled(orderId, proposedSolver, uint32(block.timestamp), output);
         return proposedSolver;
@@ -165,9 +163,7 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
         // Disallow calling on-chain.
         require(msg.sender == address(0));
 
-        IOpenIntentCallback(address(uint160(uint256(output.recipient)))).outputFilled(
-            output.token, trueAmount, output.call
-        );
+        IOIFCallback(address(uint160(uint256(output.recipient)))).outputFilled(output.token, trueAmount, output.call);
     }
 
     // --- IPayloadCreator --- //

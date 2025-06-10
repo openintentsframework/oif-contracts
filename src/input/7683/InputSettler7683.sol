@@ -16,7 +16,7 @@ import {
 } from "../../interfaces/IERC7683.sol";
 
 import { IInputSettler7683 } from "../../interfaces/IInputSettler7683.sol";
-import { IOpenIntentCallback } from "../../interfaces/IOpenIntentCallback.sol";
+import { IOIFCallback } from "../../interfaces/IOIFCallback.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
 import { BytesLib } from "../../libs/BytesLib.sol";
 import { IsContractLib } from "../../libs/IsContractLib.sol";
@@ -431,7 +431,7 @@ contract InputSettler7683 is BaseInputSettler, IInputSettler7683 {
 
         _finalise(order, orderId, solver, destination);
         if (call.length > 0) {
-            IOpenIntentCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).inputsFilled(order.inputs, call);
+            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).inputsFilled(order.inputs, call);
         }
     }
 
@@ -465,7 +465,7 @@ contract InputSettler7683 is BaseInputSettler, IInputSettler7683 {
 
         _finalise(order, orderId, solver, destination);
         if (call.length > 0) {
-            IOpenIntentCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).inputsFilled(order.inputs, call);
+            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).inputsFilled(order.inputs, call);
         }
     }
 
@@ -495,7 +495,7 @@ contract InputSettler7683 is BaseInputSettler, IInputSettler7683 {
 
         _finalise(order, orderId, solvers[0], destination);
         if (call.length > 0) {
-            IOpenIntentCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).inputsFilled(order.inputs, call);
+            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).inputsFilled(order.inputs, call);
         }
     }
 
@@ -528,7 +528,7 @@ contract InputSettler7683 is BaseInputSettler, IInputSettler7683 {
 
         _finalise(order, orderId, solvers[0], destination);
         if (call.length > 0) {
-            IOpenIntentCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).inputsFilled(order.inputs, call);
+            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).inputsFilled(order.inputs, call);
         }
     }
 

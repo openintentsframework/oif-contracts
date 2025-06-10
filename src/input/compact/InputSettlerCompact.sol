@@ -8,7 +8,7 @@ import { IdLib } from "the-compact/src/lib/IdLib.sol";
 import { BatchClaim } from "the-compact/src/types/BatchClaims.sol";
 import { BatchClaimComponent, Component } from "the-compact/src/types/Components.sol";
 
-import { IOpenIntentCallback } from "../../interfaces/IOpenIntentCallback.sol";
+import { IOIFCallback } from "../../interfaces/IOIFCallback.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
 
 import { IInputSettlerCompact } from "../../interfaces/IInputSettlerCompact.sol";
@@ -21,7 +21,8 @@ import { OrderPurchase } from "../types/OrderPurchaseType.sol";
 import { StandardOrder, StandardOrderType } from "../types/StandardOrderType.sol";
 
 /**
- * @title Input Settler supporting `The Compact` and `StandardOrder` orders. For `ERC-7683` orders refer to `InputSettler7683` 
+ * @title Input Settler supporting `The Compact` and `StandardOrder` orders. For `ERC-7683` orders refer to
+ * `InputSettler7683`
  * @notice This Input Settler implementation uses The Compact as the deposit scheme. It is a Output first scheme that
  * allows users with a deposit inside The Compact to execute transactions that will be paid **after** the outputs have
  * been proven. This has the advantage that failed orders can be quickly retried. These orders are also entirely gasless
@@ -191,7 +192,7 @@ contract InputSettlerCompact is BaseInputSettler, IInputSettlerCompact {
         _finalise(order, signatures, orderId, solvers[0], destination);
 
         if (call.length > 0) {
-            IOpenIntentCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).inputsFilled(order.inputs, call);
+            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).inputsFilled(order.inputs, call);
         }
     }
 
@@ -232,7 +233,7 @@ contract InputSettlerCompact is BaseInputSettler, IInputSettlerCompact {
         _finalise(order, signatures, orderId, solvers[0], destination);
 
         if (call.length > 0) {
-            IOpenIntentCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).inputsFilled(order.inputs, call);
+            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).inputsFilled(order.inputs, call);
         }
     }
 

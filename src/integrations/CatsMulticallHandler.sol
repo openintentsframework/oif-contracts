@@ -6,7 +6,7 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
-import { IOpenIntentCallback } from "../interfaces/IOpenIntentCallback.sol";
+import { IOIFCallback } from "../interfaces/IOIFCallback.sol";
 
 /**
  * @title Allows a user to specify a series of calls that should be made by the handler
@@ -16,7 +16,7 @@ import { IOpenIntentCallback } from "../interfaces/IOpenIntentCallback.sol";
  * The caller should ensure that the tokens received by the handler are completely consumed
  * otherwise they will be left in the contract free to take for next the next caller.
  */
-contract CatsMulticallHandler is IOpenIntentCallback, ReentrancyGuard {
+contract CatsMulticallHandler is IOIFCallback, ReentrancyGuard {
     struct Call {
         address target;
         bytes callData;

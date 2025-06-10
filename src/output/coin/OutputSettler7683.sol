@@ -4,7 +4,7 @@ pragma solidity ^0.8.26;
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { IDestinationSettler } from "../../interfaces/IERC7683.sol";
-import { IOpenIntentCallback } from "../../interfaces/IOpenIntentCallback.sol";
+import { IOIFCallback } from "../../interfaces/IOIFCallback.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 import { OutputVerificationLib } from "../../libs/OutputVerificationLib.sol";
 
@@ -94,7 +94,7 @@ contract OutputInputSettler7683 is BaseOutputSettler, IDestinationSettler {
 
         // If there is an external call associated with the fill, execute it.
         bytes memory remoteCall = output.call;
-        if (remoteCall.length > 0) IOpenIntentCallback(recipient).outputFilled(output.token, outputAmount, remoteCall);
+        if (remoteCall.length > 0) IOIFCallback(recipient).outputFilled(output.token, outputAmount, remoteCall);
 
         emit OutputFilled(orderId, proposedSolver, uint32(block.timestamp), output);
 

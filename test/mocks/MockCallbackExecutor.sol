@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { IOpenIntentCallback } from "../../src/interfaces/IOpenIntentCallback.sol";
+import { IOIFCallback } from "../../src/interfaces/IOIFCallback.sol";
 
-contract MockCallbackExecutor is IOpenIntentCallback {
+contract MockCallbackExecutor is IOIFCallback {
     event InputsFilled(bytes executionData);
     event ExecutorOutputFilled(bytes32 token, uint256 amount, bytes executionData);
 
