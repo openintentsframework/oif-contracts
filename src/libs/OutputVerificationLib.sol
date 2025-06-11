@@ -22,10 +22,10 @@ library OutputVerificationLib {
      * @notice Validate the remote oracle address is this contract.
      */
     function _isThisOutputSettler(
-        bytes32 remoteFiller
+        bytes32 outputSettler
     ) internal view {
-        if (bytes32(uint256(uint160(address(this)))) != remoteFiller) {
-            revert WrongOutputSettler(bytes32(uint256(uint160(address(this)))), remoteFiller);
+        if (bytes32(uint256(uint160(address(this)))) != outputSettler) {
+            revert WrongOutputSettler(bytes32(uint256(uint160(address(this)))), outputSettler);
         }
     }
 }

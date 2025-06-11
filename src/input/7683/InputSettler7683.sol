@@ -326,13 +326,13 @@ contract InputSettler7683 is BaseInputSettler, IInputSettler7683 {
             bytes32 payloadHash = _proofPayloadHash(orderId, solvers[i], outputFilledAt, output);
 
             uint256 chainId = output.chainId;
-            bytes32 remoteOracle = output.oracle;
-            bytes32 remoteFiller = output.settler;
+            bytes32 outputOracle = output.oracle;
+            bytes32 outputSettler = output.settler;
             assembly ("memory-safe") {
                 let offset := add(add(proofSeries, 0x20), mul(i, 0x80))
                 mstore(offset, chainId)
-                mstore(add(offset, 0x20), remoteOracle)
-                mstore(add(offset, 0x40), remoteFiller)
+                mstore(add(offset, 0x20), outputOracle)
+                mstore(add(offset, 0x40), outputSettler)
                 mstore(add(offset, 0x60), payloadHash)
             }
         }
@@ -365,13 +365,13 @@ contract InputSettler7683 is BaseInputSettler, IInputSettler7683 {
             bytes32 payloadHash = _proofPayloadHash(orderId, solver, outputFilledAt, output);
 
             uint256 chainId = output.chainId;
-            bytes32 remoteOracle = output.oracle;
-            bytes32 remoteFiller = output.settler;
+            bytes32 outputOracle = output.oracle;
+            bytes32 outputSettler = output.settler;
             assembly ("memory-safe") {
                 let offset := add(add(proofSeries, 0x20), mul(i, 0x80))
                 mstore(offset, chainId)
-                mstore(add(offset, 0x20), remoteOracle)
-                mstore(add(offset, 0x40), remoteFiller)
+                mstore(add(offset, 0x20), outputOracle)
+                mstore(add(offset, 0x40), outputSettler)
                 mstore(add(offset, 0x60), payloadHash)
             }
         }

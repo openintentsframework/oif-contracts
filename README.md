@@ -7,7 +7,7 @@ The goal of the OIF is to provide a base implementation that can be permissionle
 
 OIF is built with output-input separation. The goal is to fully separate the various system components and support different mechanisms of asset collection. Specifically, both Output First and Input Second flows are facilitated by resource locks and traditional escrows in a single system. 
 
-To achieve this, the system has been designed to be componentized and modular.
+To achieve this, the system has been modularised:
 - **InputSettler**: Input collection contract on the input chain. Serves multiple proposes, but the main one is to finalise intents. This contracts is responsible for validating that the intents was filled on the validation chain(using the oracle) and unlocking input contracts to the filler.
 - **OutputSettler**: Output delivery contract on the output chain. Allows solvers to fill outputs of orders.
 - **Oracle**: Proof layer. Generally a messaging protocol but can be anything: Optimistic proofs, light clients, storage proofs, off-chain agent, etc. Generates proof of filled outputs.
@@ -45,7 +45,7 @@ Assuming the Settler supports both these structures, it is now compatible with t
 
 If an order contains multiple outputs, the **selected** solver will be the one filling the first output. That means:
 - If multiple solvers fill different outputs, only the first solver gets to decide who gets paid.
-- A filler may fill the first output but not the remaining. This effectively stops other solvers from filling the remaining order. For intent issuers: Always make the most first output the most expensive.
+- A filler may fill the first output but not the remaining. This effectively stops other solvers from filling the remaining order; For intent issuers: Always make the first output the most expensive.
 - Output 1 may be solved first while the remaining outputs may first be filled later.
 - Dutch auctions only work on the first output.
 - All Outputs may be solved atomically but in a random order. You cannot compose multiple assets into a single output call; You cannot know in which order the outputs will be filled in.
