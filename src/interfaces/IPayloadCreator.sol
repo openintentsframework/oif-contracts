@@ -11,7 +11,10 @@ interface IPayloadCreator {
         bytes32 payloadHash;
     }
 
+    /// @notice Check if a series of fill records are valid.
+    /// @param fills Encoded fill records to validate
+    /// @return bool Whether all fill records are valid
     function arePayloadsValid(
-        FillRecord[] calldata fills
+        bytes calldata fills
     ) external view returns (bool);
 }

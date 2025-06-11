@@ -154,16 +154,18 @@ abstract contract BaseOutputSettler is IPayloadCreator {
 
     /**
      * @notice Check if a series of fill records are valid.
-     * @param fills Array of fill records to validate
+     * @param fills Encoded fill records to validate
      * @return bool Whether all fill records are valid
      */
-    // TODO: Use an opaque bytes or bytes32 array instead of a struct array.
     function arePayloadsValid(
-        FillRecord[] calldata fills
+        bytes calldata fills
     ) external view returns (bool) {
-        uint256 numFills = fills.length;
+        // Decode the opaque bytes into FillRecord array
+        FillRecord[] memory fillRecords = abi.decode(fills, (FillRecord[]));
+
+        uint256 numFills = fillRecords.length;
         for (uint256 i; i < numFills; ++i) {
-            FillRecord calldata fillRecord = fills[i];
+            FillRecord memory fillRecord = fillRecords[i];
             if (_fillRecords[fillRecord.orderId][fillRecord.outputHash] != fillRecord.payloadHash) return false;
         }
         return true;
