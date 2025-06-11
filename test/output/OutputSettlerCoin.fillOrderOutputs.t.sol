@@ -8,7 +8,7 @@ import { OutputSettlerCoin } from "../../src/output/coin/OutputSettlerCoin.sol";
 
 import { MockERC20 } from "../mocks/MockERC20.sol";
 
-contract OutputSettlerCoinTestFillBatch is Test {
+contract OutputSettlerCoinTestfillOrderOutputs is Test {
     error FilledBySomeoneElse(bytes32 solver);
 
     event OutputFilled(bytes32 indexed orderId, bytes32 solver, uint32 timestamp, MandateOutput output);
@@ -98,8 +98,8 @@ contract OutputSettlerCoinTestFillBatch is Test {
         uint256 prefillSnapshot = vm.snapshot();
 
         vm.prank(sender);
-        outputSettlerCoin.fillBatch(type(uint32).max, orderId, outputs, filler);
-        vm.snapshotGasLastCall("outputSettler", "outputSettlerCoinFillBatch");
+        outputSettlerCoin.fillOrderOutputs(type(uint32).max, orderId, outputs, filler);
+        vm.snapshotGasLastCall("outputSettler", "outputSettlerCoinfillOrderOutputs");
 
         assertEq(outputToken.balanceOf(swapper), uint256(amount) + uint256(amount2));
         assertEq(outputToken.balanceOf(sender), 0);
@@ -111,7 +111,7 @@ contract OutputSettlerCoinTestFillBatch is Test {
 
         vm.expectRevert(abi.encodeWithSignature("FilledBySomeoneElse(bytes32)", (nextFiller)));
         vm.prank(sender);
-        outputSettlerCoin.fillBatch(type(uint32).max, orderId, outputs, filler);
+        outputSettlerCoin.fillOrderOutputs(type(uint32).max, orderId, outputs, filler);
 
         vm.revertTo(prefillSnapshot);
         // Fill the second output by someone else. The first output will be filled.
@@ -120,7 +120,7 @@ contract OutputSettlerCoinTestFillBatch is Test {
         outputSettlerCoin.fill(type(uint32).max, orderId, outputs[1], nextFiller);
 
         vm.prank(sender);
-        outputSettlerCoin.fillBatch(type(uint32).max, orderId, outputs, filler);
+        outputSettlerCoin.fillOrderOutputs(type(uint32).max, orderId, outputs, filler);
     }
 
     function test_revert_fill_batch_fillDeadline(uint24 fillDeadline, uint24 excess) public {
@@ -150,6 +150,6 @@ contract OutputSettlerCoinTestFillBatch is Test {
 
         if (excess != 0) vm.expectRevert(abi.encodeWithSignature("FillDeadline()"));
         vm.prank(sender);
-        outputSettlerCoin.fillBatch(fillDeadline, orderId, outputs, filler);
+        outputSettlerCoin.fillOrderOutputs(fillDeadline, orderId, outputs, filler);
     }
 }

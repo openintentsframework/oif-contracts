@@ -23,7 +23,7 @@ library AllowOpenType {
      * @notice Hashes an AllowOpen struct.
      * @param orderId The unique identifier for the order.
      * @param destination New destination for the order.
-     * @param call If set (!= "0x"), will execute an external inputsFilled call.
+     * @param call If set (!= "0x"), will execute an external orderFinalised call.
      * @return digest of hashAllowOpen.
      */
     function hashAllowOpen(bytes32 orderId, bytes32 destination, bytes calldata call) internal pure returns (bytes32) {

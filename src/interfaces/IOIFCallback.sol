@@ -15,5 +15,5 @@ interface IOIFCallback {
      * @param inputs Inputs of the order.
      * @param executionData Custom data.
      */
-    function inputsFilled(uint256[2][] calldata inputs, bytes calldata executionData) external;
+    function orderFinalised(uint256[2][] calldata inputs, bytes calldata executionData) external;
 }

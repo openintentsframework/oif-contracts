@@ -90,7 +90,7 @@ contract InputSettler7683TestBase is Permit2Test {
 
     bytes expectedCalldata;
 
-    function inputsFilled(
+    function orderFinalised(
         uint256[2][] calldata,
         /* inputs */
         bytes calldata cdat

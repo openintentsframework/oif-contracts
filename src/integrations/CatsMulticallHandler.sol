@@ -107,7 +107,7 @@ contract CatsMulticallHandler is IOIFCallback, ReentrancyGuard {
      * @dev Please make sure to empty the contract of tokens after your call otherwise they can be taken by someone
      * else.
      */
-    function inputsFilled(uint256[2][] calldata inputs, bytes calldata executionData) external nonReentrant {
+    function orderFinalised(uint256[2][] calldata inputs, bytes calldata executionData) external nonReentrant {
         Instructions memory instructions = abi.decode(executionData, (Instructions));
         // Set approvals base on inputs if requested.
         if (instructions.setApprovalsUsingInputsFor != address(0)) {

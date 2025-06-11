@@ -192,7 +192,7 @@ abstract contract BaseInputSettler is EIP712 {
         }
         {
             bytes calldata call = orderPurchase.call;
-            if (call.length > 0) IOIFCallback(newDestination).inputsFilled(inputs, call);
+            if (call.length > 0) IOIFCallback(newDestination).orderFinalised(inputs, call);
         }
     }
 }

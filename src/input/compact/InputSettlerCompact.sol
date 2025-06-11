@@ -171,7 +171,7 @@ contract InputSettlerCompact is BaseInputSettler, IInputSettlerCompact {
      * element
      * @param destination Where to send the inputs. If the solver wants to send the inputs to themselves, they should
      * pass their address to this parameter.
-     * @param call Optional callback data. If non-empty, will call inputsFilled on the destination
+     * @param call Optional callback data. If non-empty, will call orderFinalised on the destination
      */
     function finalise(
         StandardOrder calldata order,
@@ -192,7 +192,7 @@ contract InputSettlerCompact is BaseInputSettler, IInputSettlerCompact {
         _finalise(order, signatures, orderId, solvers[0], destination);
 
         if (call.length > 0) {
-            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).inputsFilled(order.inputs, call);
+            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
         }
     }
 
@@ -206,7 +206,7 @@ contract InputSettlerCompact is BaseInputSettler, IInputSettlerCompact {
      * @param solvers Array of solvers who filled each output (in order). For single solver, pass an array with only
      * element
      * @param destination Where to send the inputs
-     * @param call Optional callback data. If non-empty, will call inputsFilled on the destination
+     * @param call Optional callback data. If non-empty, will call orderFinalised on the destination
      * @param orderOwnerSignature Signature from the order owner authorizing this external call
      */
     function finaliseWithSignature(
@@ -233,7 +233,7 @@ contract InputSettlerCompact is BaseInputSettler, IInputSettlerCompact {
         _finalise(order, signatures, orderId, solvers[0], destination);
 
         if (call.length > 0) {
-            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).inputsFilled(order.inputs, call);
+            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
         }
     }
 

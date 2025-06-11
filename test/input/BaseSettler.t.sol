@@ -317,7 +317,7 @@ contract BaseInputSettlerTest is Test {
     uint256[2][] _inputs;
     bytes _executionData;
 
-    function inputsFilled(uint256[2][] calldata inputs, bytes calldata executionData) external {
+    function orderFinalised(uint256[2][] calldata inputs, bytes calldata executionData) external {
         if (failExternalCall) revert ExternalFail();
 
         _inputs = inputs;

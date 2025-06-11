@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
-import { IOIFCallback } from "../interfaces/IOIFCallback.sol";
-import { IPayloadCreator } from "../interfaces/IPayloadCreator.sol";
-import { MandateOutput, MandateOutputEncodingLib } from "../libs/MandateOutputEncodingLib.sol";
-import { OutputVerificationLib } from "../libs/OutputVerificationLib.sol";
+import {IOIFCallback} from "../interfaces/IOIFCallback.sol";
+import {IPayloadCreator} from "../interfaces/IPayloadCreator.sol";
+import {MandateOutput, MandateOutputEncodingLib} from "../libs/MandateOutputEncodingLib.sol";
+import {OutputVerificationLib} from "../libs/OutputVerificationLib.sol";
 
-import { BaseOracle } from "../oracles/BaseOracle.sol";
+import {BaseOracle} from "../oracles/BaseOracle.sol";
 
 /**
  * @notice Base Output Settler implementing logic for settling outputs.
@@ -24,12 +24,18 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
      * @notice Sets outputs as filled by their solver identifier, such that outputs won't be filled twice.
      * @dev Is not used for validating payloads, BaseOracle::_attestations is used instead.
      */
-    mapping(bytes32 orderId => mapping(bytes32 outputHash => bytes32 solver)) public filledOutputs;
+    mapping(bytes32 orderId => mapping(bytes32 outputHash => bytes32 solver))
+        public filledOutputs;
 
     /**
      * @notice Output has been filled.
      */
-    event OutputFilled(bytes32 indexed orderId, bytes32 solver, uint32 timestamp, MandateOutput output);
+    event OutputFilled(
+        bytes32 indexed orderId,
+        bytes32 solver,
+        uint32 timestamp,
+        MandateOutput output
+    );
 
     /**
      * @dev Output Settlers are expected to implement pre-fill logic through this interface. It will be through external
@@ -72,7 +78,9 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
         OutputVerificationLib._isThisChain(output.chainId);
         OutputVerificationLib._isThisOutputSettler(output.settler);
 
-        bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHash(output);
+        bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHash(
+            output
+        );
         bytes32 existingSolver = filledOutputs[orderId][outputHash];
         if (existingSolver != bytes32(0)) return existingSolver; // Early return if already solved.
         // The above and below lines act as a local re-entry check.
@@ -82,17 +90,38 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
         // contains the current timestamp. This timestamp needs to be collected from the event (or tx) to be able to
         // reproduce the payload(hash)
         bytes32 dataHash = keccak256(
-            MandateOutputEncodingLib.encodeFillDescription(proposedSolver, orderId, uint32(block.timestamp), output)
+            MandateOutputEncodingLib.encodeFillDescription(
+                proposedSolver,
+                orderId,
+                uint32(block.timestamp),
+                output
+            )
         );
-        _attestations[block.chainid][bytes32(uint256(uint160(address(this))))][bytes32(uint256(uint160(address(this))))][dataHash]
-        = true;
+        _attestations[block.chainid][bytes32(uint256(uint160(address(this))))][
+            bytes32(uint256(uint160(address(this))))
+        ][dataHash] = true;
 
         // Storage has been set. Fill the output.
         address recipient = address(uint160(uint256(output.recipient)));
-        SafeTransferLib.safeTransferFrom(address(uint160(uint256(output.token))), msg.sender, recipient, outputAmount);
-        if (output.call.length > 0) IOIFCallback(recipient).outputFilled(output.token, outputAmount, output.call);
+        SafeTransferLib.safeTransferFrom(
+            address(uint160(uint256(output.token))),
+            msg.sender,
+            recipient,
+            outputAmount
+        );
+        if (output.call.length > 0)
+            IOIFCallback(recipient).outputFilled(
+                output.token,
+                outputAmount,
+                output.call
+            );
 
-        emit OutputFilled(orderId, proposedSolver, uint32(block.timestamp), output);
+        emit OutputFilled(
+            orderId,
+            proposedSolver,
+            uint32(block.timestamp),
+            output
+        );
         return proposedSolver;
     }
 
@@ -133,7 +162,7 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
      * @param outputs Given outputs to fill. Ensure that the **first** order output is the first output for this call.
      * @param proposedSolver Solver to be sent to origin chain. If the first output has a different solver, reverts.
      */
-    function fillBatch(
+    function fillOrderOutputs(
         uint32 fillDeadline,
         bytes32 orderId,
         MandateOutput[] calldata outputs,
@@ -142,7 +171,8 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
         if (fillDeadline < block.timestamp) revert FillDeadline();
 
         bytes32 actualSolver = _fill(orderId, outputs[0], proposedSolver);
-        if (actualSolver != proposedSolver) revert FilledBySomeoneElse(actualSolver);
+        if (actualSolver != proposedSolver)
+            revert FilledBySomeoneElse(actualSolver);
 
         uint256 numOutputs = outputs.length;
         for (uint256 i = 1; i < numOutputs; ++i) {
@@ -163,7 +193,11 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
         // Disallow calling on-chain.
         require(msg.sender == address(0));
 
-        IOIFCallback(address(uint160(uint256(output.recipient)))).outputFilled(output.token, trueAmount, output.call);
+        IOIFCallback(address(uint160(uint256(output.recipient)))).outputFilled(
+            output.token,
+            trueAmount,
+            output.call
+        );
     }
 
     // --- IPayloadCreator --- //
@@ -176,9 +210,10 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
     function _isPayloadValid(
         bytes32 payloadHash
     ) internal view virtual returns (bool) {
-        return _attestations[block.chainid][bytes32(uint256(uint160(address(this))))][bytes32(
-            uint256(uint160(address(this)))
-        )][payloadHash];
+        return
+            _attestations[block.chainid][
+                bytes32(uint256(uint160(address(this))))
+            ][bytes32(uint256(uint160(address(this))))][payloadHash];
     }
 
     /**

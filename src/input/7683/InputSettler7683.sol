@@ -431,7 +431,7 @@ contract InputSettler7683 is BaseInputSettler, IInputSettler7683 {
 
         _finalise(order, orderId, solver, destination);
         if (call.length > 0) {
-            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).inputsFilled(order.inputs, call);
+            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
         }
     }
 
@@ -465,7 +465,7 @@ contract InputSettler7683 is BaseInputSettler, IInputSettler7683 {
 
         _finalise(order, orderId, solver, destination);
         if (call.length > 0) {
-            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).inputsFilled(order.inputs, call);
+            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
         }
     }
 
@@ -495,7 +495,7 @@ contract InputSettler7683 is BaseInputSettler, IInputSettler7683 {
 
         _finalise(order, orderId, solvers[0], destination);
         if (call.length > 0) {
-            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).inputsFilled(order.inputs, call);
+            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
         }
     }
 
@@ -528,7 +528,7 @@ contract InputSettler7683 is BaseInputSettler, IInputSettler7683 {
 
         _finalise(order, orderId, solvers[0], destination);
         if (call.length > 0) {
-            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).inputsFilled(order.inputs, call);
+            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
         }
     }
 
