@@ -77,38 +77,4 @@ library StandardOrderType {
             )
         );
     }
-
-    // --- Compact Hash --- //
-
-    bytes constant BATCH_COMPACT_TYPE_STUB = bytes(
-        "BatchCompact(address arbiter,address sponsor,uint256 nonce,uint256 expires,uint256[2][] idsAndAmounts,Mandate mandate)"
-    );
-    bytes constant BATCH_COMPACT_TYPE = abi.encodePacked(BATCH_COMPACT_TYPE_STUB, CATALYST_WITNESS_TYPE);
-    bytes32 constant BATCH_COMPACT_TYPE_HASH = keccak256(BATCH_COMPACT_TYPE);
-
-    function compactHash(
-        address arbiter,
-        address sponsor,
-        uint256 nonce,
-        uint256 expires,
-        StandardOrder calldata order
-    ) internal pure returns (bytes32) {
-        return keccak256(
-            abi.encode(
-                BATCH_COMPACT_TYPE_HASH,
-                arbiter,
-                sponsor,
-                nonce,
-                expires,
-                hashIdsAndAmounts(order.inputs),
-                witnessHash(order)
-            )
-        );
-    }
-
-    function hashIdsAndAmounts(
-        uint256[2][] calldata inputs
-    ) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(inputs));
-    }
 }

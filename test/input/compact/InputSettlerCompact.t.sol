@@ -28,16 +28,6 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
 
     address owner;
 
-    function compactHash(
-        address arbiter,
-        address sponsor,
-        uint256 nonce,
-        uint256 expires,
-        StandardOrder calldata order
-    ) external pure returns (bytes32) {
-        return StandardOrderType.compactHash(arbiter, sponsor, nonce, expires, order);
-    }
-
     // -- Units Tests -- //
 
     error InvalidProofSeries();

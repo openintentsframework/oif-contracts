@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import { Test } from "forge-std/Test.sol";
+import { Test, console } from "forge-std/Test.sol";
 
 import { TheCompact } from "the-compact/src/TheCompact.sol";
 import { SimpleAllocator } from "the-compact/src/examples/allocator/SimpleAllocator.sol";
@@ -142,6 +142,36 @@ contract InputSettlerCompactTestCrossChain is Test {
         messages.storeGuardianSetPub(guardianSet, uint32(0));
     }
 
+    struct Lock {
+        bytes12 lockTag;
+        address token;
+        uint256 amount;
+    }
+
+    function getLockHash(
+        uint256[2][] memory idsAndAmounts
+    ) public pure returns (bytes32) {
+        bytes32[] memory lockHashes = new bytes32[](idsAndAmounts.length);
+        for (uint256 i; i < idsAndAmounts.length; ++i) {
+            uint256[2] memory idsAndAmount = idsAndAmounts[i];
+            Lock memory lock = Lock({
+                lockTag: bytes12(bytes32(idsAndAmount[0])),
+                token: address(uint160(idsAndAmount[0])),
+                amount: idsAndAmount[1]
+            });
+            lockHashes[i] = keccak256(
+                abi.encode(
+                    keccak256(bytes("Lock(bytes12 lockTag,address token,uint256 amount)")),
+                    lock.lockTag,
+                    lock.token,
+                    lock.amount
+                )
+            );
+        }
+
+        return keccak256(abi.encodePacked(lockHashes));
+    }
+
     function getCompactBatchWitnessSignature(
         uint256 privateKey,
         address arbiter,
@@ -159,14 +189,14 @@ contract InputSettlerCompactTestCrossChain is Test {
                     abi.encode(
                         keccak256(
                             bytes(
-                                "BatchCompact(address arbiter,address sponsor,uint256 nonce,uint256 expires,uint256[2][] idsAndAmounts,Mandate mandate)Mandate(uint32 fillDeadline,address localOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 filler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
+                                "BatchCompact(address arbiter,address sponsor,uint256 nonce,uint256 expires,Lock[] commitments,Mandate mandate)Lock(bytes12 lockTag,address token,uint256 amount)Mandate(uint32 fillDeadline,address localOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 filler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
                             )
                         ),
                         arbiter,
                         sponsor,
                         nonce,
                         expires,
-                        keccak256(abi.encodePacked(idsAndAmounts)),
+                        getLockHash(idsAndAmounts),
                         witness
                     )
                 )
