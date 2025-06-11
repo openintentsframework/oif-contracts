@@ -9,7 +9,8 @@ import { BaseOracle } from "../BaseOracle.sol";
 import { ICrossL2Prover } from "./ICrossL2Prover.sol";
 
 /**
- * @notice Polymer Oracle that uses the fill event to reconstruct the payload for verification.
+ * @notice Polymer Oracle.
+ * Polymer uses the fill event to reconstruct the payload for verification instead of sending messages cross-chain.
  */
 contract PolymerOracle is BaseOracle {
     ICrossL2Prover CROSS_L2_PROVER;

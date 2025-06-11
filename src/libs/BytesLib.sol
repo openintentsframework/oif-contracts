@@ -2,11 +2,16 @@
 pragma solidity ^0.8.0;
 
 /// @title Library for Bytes Manipulation
-/// Based on Gonçalo Sá's BytesLib - but updated and heavily edited
+/// Based on Gonçalo Sá's BytesLib
 library BytesLib {
-    function toBytes(bytes calldata _bytes, uint256 arg) internal pure returns (bytes calldata res) {
+    /**
+     * @notice Takes a calldata reference, and decodes a bytes based on offset.
+     * @param _bytes Calldata reference.
+     * @param offset Offset for bytes array.
+     */
+    function toBytes(bytes calldata _bytes, uint256 offset) internal pure returns (bytes calldata res) {
         assembly {
-            let lengthPtr := add(_bytes.offset, calldataload(add(_bytes.offset, mul(0x20, arg))))
+            let lengthPtr := add(_bytes.offset, calldataload(add(_bytes.offset, offset)))
             res.offset := add(lengthPtr, 0x20)
             res.length := calldataload(lengthPtr)
         }

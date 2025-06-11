@@ -3,11 +3,11 @@ pragma solidity ^0.8.22;
 
 import { Script } from "forge-std/Script.sol";
 
-import { CoinFiller } from "../src/fillers/coin/CoinFiller.sol";
+import { OutputSettlerCoin } from "../src/output/coin/OutputSettlerCoin.sol";
 
-contract DeployCoinFiller is Script {
+contract DeployOutputSettlerCoin is Script {
     function deploy() external {
         vm.broadcast();
-        address(new CoinFiller{ salt: bytes32(0) }());
+        address(new OutputSettlerCoin{ salt: bytes32(0) }());
     }
 }
