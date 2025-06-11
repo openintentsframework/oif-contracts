@@ -114,14 +114,9 @@ contract OutputSettlerCoin is BaseOutputSettler {
      * @param orderId Input chain order identifier.
      * @param output The given output to fill.
      * @param proposedSolver Solver identifier to be sent to origin chain.
-     * @return actualSolver may differ from proposed solver if output has already been filled.
      */
-    function _fill(
-        bytes32 orderId,
-        MandateOutput calldata output,
-        bytes32 proposedSolver
-    ) internal override returns (bytes32) {
+    function _fill(bytes32 orderId, MandateOutput calldata output, bytes32 proposedSolver) internal override {
         uint256 amount = _orderType(output, proposedSolver);
-        return _fill(orderId, output, amount, proposedSolver);
+        _fill(orderId, output, amount, proposedSolver);
     }
 }

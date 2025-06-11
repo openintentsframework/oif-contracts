@@ -18,14 +18,9 @@ import { BaseOutputSettler } from "../BaseOutputSettler.sol";
 contract OutputInputSettler7683 is BaseOutputSettler, IDestinationSettler {
     error NotImplemented();
 
-    function _fill(
-        bytes32 orderId,
-        MandateOutput calldata output,
-        bytes32 proposedSolver
-    ) internal override returns (bytes32 recordedSolver) {
+    function _fill(bytes32 orderId, MandateOutput calldata output, bytes32 proposedSolver) internal override {
         uint256 amount = _getAmountMemory(output);
-        recordedSolver = _fillMemory(orderId, output, amount, proposedSolver);
-        if (recordedSolver != proposedSolver) revert FilledBySomeoneElse(recordedSolver);
+        _fillMemory(orderId, output, amount, proposedSolver);
     }
 
     function fill(bytes32 orderId, bytes calldata originData, bytes calldata fillerData) external {
@@ -37,8 +32,7 @@ contract OutputInputSettler7683 is BaseOutputSettler, IDestinationSettler {
         MandateOutput memory output = abi.decode(originData, (MandateOutput));
 
         uint256 amount = _getAmountMemory(output);
-        bytes32 recordedSolver = _fillMemory(orderId, output, amount, proposedSolver);
-        if (recordedSolver != proposedSolver) revert FilledBySomeoneElse(recordedSolver);
+        _fillMemory(orderId, output, amount, proposedSolver);
     }
 
     function _getAmountMemory(
@@ -56,7 +50,7 @@ contract OutputInputSettler7683 is BaseOutputSettler, IDestinationSettler {
         MandateOutput memory output,
         uint256 outputAmount,
         bytes32 proposedSolver
-    ) internal returns (bytes32) {
+    ) internal {
         if (proposedSolver == bytes32(0)) revert ZeroValue();
         // Validate order context. This lets us ensure that this filler is the correct filler for the output.
         OutputVerificationLib._isThisChain(output.chainId);
@@ -65,24 +59,14 @@ contract OutputInputSettler7683 is BaseOutputSettler, IDestinationSettler {
         // Get hash of output.
         bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHashMemory(output);
 
-        // Get the proof state of the fulfillment.
-        bytes32 existingSolver = filledOutputs[orderId][outputHash];
+        bytes32 existing = _fillRecords[orderId][outputHash];
+        if (existing != bytes32(0)) revert AlreadyFilled(orderId, outputHash);
 
-        // Early return if we have already seen proof.
-        if (existingSolver != bytes32(0)) return existingSolver;
-
-        // The fill status is set before the transfer.
-        // This allows the above code-chunk to act as a local re-entry check.
-        filledOutputs[orderId][outputHash] = proposedSolver;
-
-        // Set the associated attestation as true. This allows the filler to act as an oracle and check whether payload
-        // hashes have been filled. Note that within the payload we set the current timestamp. This
-        // timestamp needs to be collected from the event (or tx) to be able to reproduce the payload(hash)
-        bytes32 dataHash = keccak256(
+        bytes32 payloadHash = keccak256(
             MandateOutputEncodingLib.encodeFillDescriptionM(proposedSolver, orderId, uint32(block.timestamp), output)
         );
-        _attestations[block.chainid][bytes32(uint256(uint160(address(this))))][bytes32(uint256(uint160(address(this))))][dataHash]
-        = true;
+
+        _fillRecords[orderId][outputHash] = payloadHash;
 
         // Load order description.
         address recipient = address(uint160(uint256(output.recipient)));
@@ -97,7 +81,5 @@ contract OutputInputSettler7683 is BaseOutputSettler, IDestinationSettler {
         if (remoteCall.length > 0) IOIFCallback(recipient).outputFilled(output.token, outputAmount, remoteCall);
 
         emit OutputFilled(orderId, proposedSolver, uint32(block.timestamp), output);
-
-        return proposedSolver;
     }
 }
