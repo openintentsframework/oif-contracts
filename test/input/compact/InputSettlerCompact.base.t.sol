@@ -159,7 +159,7 @@ contract InputSettlerCompactTestBase is Test {
                 token: address(uint160(idsAndAmount[0])),
                 amount: idsAndAmount[1]
             });
-            lockHashes[0] = keccak256(
+            lockHashes[i] = keccak256(
                 abi.encode(
                     keccak256(bytes("Lock(bytes12 lockTag,address token,uint256 amount)")),
                     lock.lockTag,
