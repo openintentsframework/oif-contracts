@@ -73,7 +73,7 @@ contract InputSettler7683Test is InputSettler7683TestBase {
             timestamp: 10001,
             MandateOutput: MandateOutput({
                 oracle: keccak256(bytes("remoteOracle")),
-                settler: keccak256(bytes("remoteFiller")),
+                settler: keccak256(bytes("outputSettler")),
                 chainId: 123,
                 token: keccak256(bytes("token")),
                 amount: 10 ** 18,
@@ -86,7 +86,7 @@ contract InputSettler7683Test is InputSettler7683TestBase {
             timestamp: 10001,
             MandateOutput: MandateOutput({
                 oracle: keccak256(bytes("remoteOracle")),
-                settler: keccak256(bytes("remoteFiller")),
+                settler: keccak256(bytes("outputSettler")),
                 chainId: 321,
                 token: keccak256(bytes("token1")),
                 amount: 10 ** 12,
@@ -156,7 +156,7 @@ contract InputSettler7683Test is InputSettler7683TestBase {
             solver: keccak256(bytes("solverIdentifier1")),
             MandateOutput: MandateOutput({
                 oracle: keccak256(bytes("remoteOracle")),
-                settler: keccak256(bytes("remoteFiller")),
+                settler: keccak256(bytes("outputSettler")),
                 chainId: 123,
                 token: keccak256(bytes("token")),
                 amount: 10 ** 18,
@@ -170,7 +170,7 @@ contract InputSettler7683Test is InputSettler7683TestBase {
             solver: keccak256(bytes("solverIdentifier2")),
             MandateOutput: MandateOutput({
                 oracle: keccak256(bytes("remoteOracle")),
-                settler: keccak256(bytes("remoteFiller")),
+                settler: keccak256(bytes("outputSettler")),
                 chainId: 321,
                 token: keccak256(bytes("token1")),
                 amount: 10 ** 12,

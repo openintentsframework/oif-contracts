@@ -56,7 +56,7 @@ contract MandateOutputEncodingLibTest is Test {
         // This allows for better comparison to other vm implementations incase something is wrong.
         MandateOutput memory output = MandateOutput({
             oracle: keccak256(bytes("remoteOracle")),
-            settler: keccak256(bytes("remoteFiller")),
+            settler: keccak256(bytes("outputSettler")),
             chainId: uint256(keccak256(bytes("chainId"))),
             token: keccak256(bytes("token")),
             amount: uint256(keccak256(bytes("amount"))),
@@ -90,7 +90,7 @@ contract MandateOutputEncodingLibTest is Test {
     function test_revert_encodeMandateOutput_RemoteCallOutOfRange() external {
         MandateOutput memory output = MandateOutput({
             oracle: keccak256(bytes("remoteOracle")),
-            settler: keccak256(bytes("remoteFiller")),
+            settler: keccak256(bytes("outputSettler")),
             chainId: uint256(keccak256(bytes("chainId"))),
             token: keccak256(bytes("token")),
             amount: uint256(keccak256(bytes("amount"))),
@@ -113,7 +113,7 @@ contract MandateOutputEncodingLibTest is Test {
     function test_revert_encodeMandateOutput_FulfillmentContextCallOutOfRange() external {
         MandateOutput memory output = MandateOutput({
             oracle: keccak256(bytes("remoteOracle")),
-            settler: keccak256(bytes("remoteFiller")),
+            settler: keccak256(bytes("outputSettler")),
             chainId: uint256(keccak256(bytes("chainId"))),
             token: keccak256(bytes("token")),
             amount: uint256(keccak256(bytes("amount"))),
@@ -147,7 +147,7 @@ contract MandateOutputEncodingLibTest is Test {
 
         MandateOutput memory output = MandateOutput({
             oracle: keccak256(bytes("remoteOracle")),
-            settler: keccak256(bytes("remoteFiller")),
+            settler: keccak256(bytes("outputSettler")),
             chainId: uint256(keccak256(bytes("chainId"))),
             token: token,
             amount: amount,
@@ -201,7 +201,7 @@ contract MandateOutputEncodingLibTest is Test {
 
         MandateOutput memory output = MandateOutput({
             oracle: keccak256(bytes("remoteOracle")),
-            settler: keccak256(bytes("remoteFiller")),
+            settler: keccak256(bytes("outputSettler")),
             chainId: uint256(keccak256(bytes("chainId"))),
             token: token,
             amount: amount,
@@ -241,7 +241,7 @@ contract MandateOutputEncodingLibTest is Test {
 
         MandateOutput memory output = MandateOutput({
             oracle: keccak256(bytes("remoteOracle")),
-            settler: keccak256(bytes("remoteFiller")),
+            settler: keccak256(bytes("outputSettler")),
             chainId: uint256(keccak256(bytes("chainId"))),
             token: token,
             amount: amount,
