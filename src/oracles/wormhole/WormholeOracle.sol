@@ -4,7 +4,10 @@ pragma solidity ^0.8.26;
 import { Ownable } from "solady/auth/Ownable.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
+import { MandateOutput } from "../../input/types/MandateOutputType.sol";
 import { IPayloadCreator } from "../../interfaces/IPayloadCreator.sol";
+import { MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
+
 import { MessageEncodingLib } from "../../libs/MessageEncodingLib.sol";
 
 import { BaseOracle } from "../BaseOracle.sol";
@@ -38,15 +41,30 @@ contract WormholeOracle is ChainMap, BaseOracle, WormholeVerifier {
      * @notice Takes proofs that have been marked as valid by a source and submits them to Wormhole for broadcast.
      * @param source Application that has payloads that are marked as valid.
      * @param payloads List of payloads to broadcast.
+     * @param orderIds List of order ids to validate against the `IPayloadCreator`.
+     * @param outputHashes List of output hashes to validate against the `IPayloadCreator`.
      * @return refund If too much value has been sent, the excess will be returned to msg.sender.
      */
-    function submit(address source, bytes[] calldata payloads) public payable returns (uint256 refund) {
-        uint256 numPayloads = payloads.length;
-        bytes32[] memory payloadHashes = new bytes32[](numPayloads);
-        for (uint256 i; i < numPayloads; ++i) {
-            payloadHashes[i] = keccak256(payloads[i]);
+    function submit(
+        address source,
+        bytes[] calldata payloads,
+        bytes32[] calldata orderIds,
+        bytes32[] calldata outputHashes
+    ) public payable returns (uint256 refund) {
+        require(payloads.length == orderIds.length && payloads.length == outputHashes.length, "Length mismatch");
+
+        IPayloadCreator.FillRecord[] memory records = new IPayloadCreator.FillRecord[](payloads.length);
+
+        for (uint256 i; i < payloads.length; ++i) {
+            records[i] = IPayloadCreator.FillRecord({
+                orderId: orderIds[i],
+                outputHash: outputHashes[i],
+                payloadHash: keccak256(payloads[i])
+            });
         }
-        if (!IPayloadCreator(source).arePayloadsValid(payloadHashes)) revert NotAllPayloadsValid();
+
+        bytes memory encodedRecords = abi.encode(records);
+        if (!IPayloadCreator(source).arePayloadsValid(encodedRecords)) revert NotAllPayloadsValid();
         return _submit(source, payloads);
     }
 
