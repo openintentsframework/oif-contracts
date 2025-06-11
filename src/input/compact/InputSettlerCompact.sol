@@ -34,6 +34,7 @@ import { StandardOrder, StandardOrderType } from "../types/StandardOrderType.sol
  * The contract is intended to be entirely ownerless, permissionlessly deployable, and unstoppable.
  */
 contract InputSettlerCompact is BaseInputSettler, IInputSettlerCompact {
+    error UserCannotBeSettler();
     error NotOrderOwner();
     error NoDestination();
     error InvalidTimestampLength();
@@ -272,12 +273,15 @@ contract InputSettlerCompact is BaseInputSettler, IInputSettlerCompact {
             }
         }
 
+        address user = order.user;
+        // The Compact skips signature checks for msg.sender. Ensure no accidental intents are issued.
+        if (user == address(this)) revert UserCannotBeSettler();
         require(
             COMPACT.batchClaim(
                 BatchClaim({
                     allocatorData: allocatorData,
                     sponsorSignature: sponsorSignature,
-                    sponsor: order.user,
+                    sponsor: user,
                     nonce: order.nonce,
                     expires: order.expires,
                     witness: StandardOrderType.witnessHash(order),
