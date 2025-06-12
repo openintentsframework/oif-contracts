@@ -93,9 +93,14 @@ contract WormholeOracleTestSubmit is Test {
         bytes[] memory payloads = new bytes[](1);
         payloads[0] = payload;
 
+        bytes32[] memory orderIds = new bytes32[](1);
+        orderIds[0] = orderId;
+        bytes32[] memory outputHashes = new bytes32[](1);
+        outputHashes[0] = MandateOutputEncodingLib.getMandateOutputHashMemory(output);
+
         // Fill without submitting
         vm.expectRevert(abi.encodeWithSignature("NotAllPayloadsValid()"));
-        oracle.submit(address(filler), payloads);
+        oracle.submit(address(filler), payloads, orderIds, outputHashes);
 
         vm.expectCall(
             address(token),
@@ -109,25 +114,33 @@ contract WormholeOracleTestSubmit is Test {
 
         vm.expectEmit();
         emit PackagePublished(0, expectedPayload, 15);
-        oracle.submit(address(filler), payloads);
+        oracle.submit(address(filler), payloads, orderIds, outputHashes);
         vm.snapshotGasLastCall("oracle", "wormholeOracleSubmit");
     }
 
     function test_submit_excess_value(uint64 val, bytes[] calldata payloads) external {
         expectedValueOnCall = val;
-        oracle.submit{ value: val }(address(this), payloads);
+
+        // Empty values to satisfy the function signature
+        bytes32[] memory orderIds = new bytes32[](payloads.length);
+        bytes32[] memory outputHashes = new bytes32[](payloads.length);
+        oracle.submit{ value: val }(address(this), payloads, orderIds, outputHashes);
     }
 
     function test_revert_submit_excess_value(uint64 val, bytes[] calldata payloads) external {
         revertFallback = true;
         expectedValueOnCall = val;
 
+        // Empty values to satisfy the function signature
+        bytes32[] memory orderIds = new bytes32[](payloads.length);
+        bytes32[] memory outputHashes = new bytes32[](payloads.length);
+
         if (val > 0) vm.expectRevert();
-        oracle.submit{ value: val }(address(this), payloads);
+        oracle.submit{ value: val }(address(this), payloads, orderIds, outputHashes);
     }
 
     function arePayloadsValid(
-        bytes32[] calldata
+        bytes calldata
     ) external pure returns (bool) {
         return true;
     }

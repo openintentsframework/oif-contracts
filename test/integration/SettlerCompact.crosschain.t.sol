@@ -403,11 +403,16 @@ contract InputSettlerCompactTestCrossChain is Test {
             solverIdentifier, orderId, uint32(block.timestamp), outputs[0]
         );
 
+        bytes32[] memory orderIds = new bytes32[](1);
+        orderIds[0] = orderId;
+        bytes32[] memory outputHashes = new bytes32[](1);
+        outputHashes[0] = MandateOutputEncodingLib.getMandateOutputHashMemory(outputs[0]);
+
         bytes memory expectedMessageEmitted = this.encodeMessage(outputs[0].settler, payloads);
 
         vm.expectEmit();
         emit PackagePublished(0, expectedMessageEmitted, 15);
-        wormholeOracle.submit(address(outputSettlerCoin), payloads);
+        wormholeOracle.submit(address(outputSettlerCoin), payloads, orderIds, outputHashes);
         vm.snapshotGasLastCall("inputSettler", "IntegrationWormholeSubmit");
 
         bytes memory vaa =
@@ -502,11 +507,19 @@ contract InputSettlerCompactTestCrossChain is Test {
                 solverIdentifier2, orderId, uint32(block.timestamp), outputs[1]
             );
 
+            // Create required arrays for new submit interface
+            bytes32[] memory orderIds = new bytes32[](2);
+            orderIds[0] = orderId;
+            orderIds[1] = orderId;
+            bytes32[] memory outputHashes = new bytes32[](2);
+            outputHashes[0] = MandateOutputEncodingLib.getMandateOutputHashMemory(outputs[0]);
+            outputHashes[1] = MandateOutputEncodingLib.getMandateOutputHashMemory(outputs[1]);
+
             bytes memory expectedMessageEmitted = this.encodeMessage(outputs[0].settler, payloads);
 
             vm.expectEmit();
             emit PackagePublished(0, expectedMessageEmitted, 15);
-            wormholeOracle.submit(address(outputSettlerCoin), payloads);
+            wormholeOracle.submit(address(outputSettlerCoin), payloads, orderIds, outputHashes);
 
             bytes memory vaa =
                 makeValidVAA(uint16(block.chainid), address(wormholeOracle).toIdentifier(), expectedMessageEmitted);

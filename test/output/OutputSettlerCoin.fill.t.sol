@@ -4,6 +4,7 @@ pragma solidity ^0.8.22;
 import { Test } from "forge-std/Test.sol";
 
 import { MandateOutput } from "../../src/input/types/MandateOutputType.sol";
+import { MandateOutputEncodingLib } from "../../src/libs/MandateOutputEncodingLib.sol";
 import { OutputSettlerCoin } from "../../src/output/coin/OutputSettlerCoin.sol";
 
 import { MockCallbackExecutor } from "../mocks/MockCallbackExecutor.sol";
@@ -13,6 +14,7 @@ contract OutputSettlerCoinTestFill is Test {
     error ZeroValue();
     error WrongChain(uint256 expected, uint256 actual);
     error WrongOutputSettler(bytes32 addressThis, bytes32 expected);
+    error AlreadyFilled(bytes32 orderId, bytes32 outputHash);
     error NotImplemented();
     error SlopeStopped();
 
@@ -502,10 +504,12 @@ contract OutputSettlerCoinTestFill is Test {
         vm.prank(sender);
         outputSettlerCoin.fill(type(uint32).max, orderId, output, filler);
         vm.prank(sender);
-        bytes32 alreadyFilledBy = outputSettlerCoin.fill(type(uint32).max, orderId, output, differentFiller);
-
-        assertNotEq(alreadyFilledBy, differentFiller);
-        assertEq(alreadyFilledBy, filler);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                AlreadyFilled.selector, orderId, MandateOutputEncodingLib.getMandateOutputHashMemory(output)
+            )
+        );
+        outputSettlerCoin.fill(type(uint32).max, orderId, output, differentFiller);
     }
 
     function test_invalid_fulfillment_context(
