@@ -12,8 +12,10 @@ import { IOracle } from "../interfaces/IOracle.sol";
 
 /**
  * @notice Base Output Settler implementing logic for settling outputs.
- * Does not support native coins.
- * This base output settler implements logic to work as both a PayloadCreator (for oracles) and as an oracle itself.
+ * @dev Does not support native coins.
+ * @dev This base output settler implements logic to work as both a PayloadCreator (for oracles) and as an oracle
+ * itself. The output settler can be used as an oracle for same-chain intents. This is achieved by setting the
+ * `localOracle` of the order to the output settler address.
  */
 abstract contract BaseOutputSettler is IPayloadCreator, IOracle {
     error FillDeadline();
