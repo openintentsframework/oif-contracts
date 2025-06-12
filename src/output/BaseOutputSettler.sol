@@ -129,7 +129,7 @@ abstract contract BaseOutputSettler is IPayloadCreator {
         if (fillDeadline < block.timestamp) revert FillDeadline();
 
         uint256 numOutputs = outputs.length;
-        for (uint256 i = 1; i < numOutputs; ++i) {
+        for (uint256 i = 0; i < numOutputs; ++i) {
             _fill(orderId, outputs[i], proposedSolver);
         }
     }
