@@ -115,12 +115,24 @@ contract InputSettlerCompact is BaseInputSettler, IInputSettlerCompact {
             uint256 chainId = output.chainId;
             bytes32 outputOracle = output.oracle;
             bytes32 outputSettler = output.settler;
-            assembly ("memory-safe") {
-                let offset := add(add(proofSeries, 0x20), mul(i, 0x80))
-                mstore(offset, chainId)
-                mstore(add(offset, 0x20), outputOracle)
-                mstore(add(offset, 0x40), outputSettler)
-                mstore(add(offset, 0x60), payloadHash)
+
+            if (bytes32(uint256(uint160(order.localOracle))) == outputSettler) {
+                // The output settler is acting as an oracle for the intent.
+                bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHash(output);
+                assembly ("memory-safe") {
+                    let offset := add(add(proofSeries, 0x20), mul(i, 0x60))
+                    mstore(offset, orderId)
+                    mstore(add(offset, 0x20), outputHash)
+                    mstore(add(offset, 0x40), payloadHash)
+                }
+            } else {
+                assembly ("memory-safe") {
+                    let offset := add(add(proofSeries, 0x20), mul(i, 0x80))
+                    mstore(offset, chainId)
+                    mstore(add(offset, 0x20), outputOracle)
+                    mstore(add(offset, 0x40), outputSettler)
+                    mstore(add(offset, 0x60), payloadHash)
+                }
             }
         }
         IOracle(order.localOracle).efficientRequireProven(proofSeries);

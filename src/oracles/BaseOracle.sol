@@ -9,7 +9,6 @@ import { IOracle } from "../interfaces/IOracle.sol";
  */
 abstract contract BaseOracle is IOracle {
     error NotDivisible(uint256 value, uint256 divisor);
-    error NotProven();
 
     event OutputProven(uint256 chainid, bytes32 remoteIdentifier, bytes32 application, bytes32 payloadHash);
 

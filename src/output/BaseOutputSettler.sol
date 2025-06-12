@@ -8,14 +8,14 @@ import { IPayloadCreator } from "../interfaces/IPayloadCreator.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../libs/MandateOutputEncodingLib.sol";
 import { OutputVerificationLib } from "../libs/OutputVerificationLib.sol";
 
-import { BaseOracle } from "../oracles/BaseOracle.sol";
+import { IOracle } from "../interfaces/IOracle.sol";
 
 /**
  * @notice Base Output Settler implementing logic for settling outputs.
  * Does not support native coins.
  * This base output settler implements logic to work as both a PayloadCreator (for oracles) and as an oracle itself.
  */
-abstract contract BaseOutputSettler is IPayloadCreator {
+abstract contract BaseOutputSettler is IPayloadCreator, IOracle {
     error FillDeadline();
     error AlreadyFilled(bytes32 orderId, bytes32 outputHash);
     error ZeroValue();
@@ -159,7 +159,7 @@ abstract contract BaseOutputSettler is IPayloadCreator {
      */
     function arePayloadsValid(
         bytes calldata fills
-    ) external view returns (bool) {
+    ) public view returns (bool) {
         // Decode the opaque bytes into FillRecord array
         FillRecord[] memory fillRecords = abi.decode(fills, (FillRecord[]));
 
@@ -169,5 +169,13 @@ abstract contract BaseOutputSettler is IPayloadCreator {
             if (_fillRecords[fillRecord.orderId][fillRecord.outputHash] != fillRecord.payloadHash) return false;
         }
         return true;
+    }
+
+    // --- IOracle --- //
+
+    function efficientRequireProven(
+        bytes calldata proofSeries
+    ) external view {
+        if (!arePayloadsValid(proofSeries)) revert NotProven();
     }
 }
