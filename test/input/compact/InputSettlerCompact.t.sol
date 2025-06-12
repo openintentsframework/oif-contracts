@@ -63,6 +63,9 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
             timestamps[i] = orderFulfillmentDescription[i].timestamp;
             MandateOutputs[i] = orderFulfillmentDescription[i].MandateOutput;
 
+            // Require that the settler is different from the local oracle
+            vm.assume(MandateOutputs[i].settler != localOracle.toIdentifier());
+
             expectedProofPayload = abi.encodePacked(
                 expectedProofPayload,
                 MandateOutputs[i].chainId,
@@ -112,6 +115,9 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
         MandateOutput[] memory MandateOutputs = new MandateOutput[](orderFulfillmentDescriptionWithSolver.length);
         bytes32[] memory solvers = new bytes32[](orderFulfillmentDescriptionWithSolver.length);
         for (uint256 i; i < orderFulfillmentDescriptionWithSolver.length; ++i) {
+            // Require that the settler is different from the local oracle
+            vm.assume(orderFulfillmentDescriptionWithSolver[i].MandateOutput.settler != localOracle.toIdentifier());
+
             timestamps[i] = orderFulfillmentDescriptionWithSolver[i].timestamp;
             MandateOutputs[i] = orderFulfillmentDescriptionWithSolver[i].MandateOutput;
             solvers[i] = orderFulfillmentDescriptionWithSolver[i].solver;
