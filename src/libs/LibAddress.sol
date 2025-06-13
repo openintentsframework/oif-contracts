@@ -9,7 +9,9 @@ library LibAddress {
     /// @dev Uses the address's numeric value as a bytes32 identifier by casting through uint256
     /// @param addr The address to convert
     /// @return identifier The bytes32 identifier representation of the address
-    function toIdentifier(address addr) internal pure returns (bytes32 identifier) {
+    function toIdentifier(
+        address addr
+    ) internal pure returns (bytes32 identifier) {
         return bytes32(uint256(uint160(addr)));
     }
 
@@ -17,7 +19,9 @@ library LibAddress {
     /// @dev Reverses the toIdentifier operation by casting through uint256 and uint160
     /// @param identifier The bytes32 identifier to convert
     /// @return addr The address representation of the identifier
-    function fromIdentifier(bytes32 identifier) internal pure returns (address addr) {
+    function fromIdentifier(
+        bytes32 identifier
+    ) internal pure returns (address addr) {
         return address(uint160(uint256(identifier)));
     }
 }

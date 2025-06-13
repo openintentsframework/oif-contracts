@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { MandateOutput } from "./MandateOutputEncodingLib.sol";
 import { LibAddress } from "./LibAddress.sol";
+import { MandateOutput } from "./MandateOutputEncodingLib.sol";
 
 /**
  * @notice Provides helpers to verify if an output has been submitted to the right consumer.

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { LibBytes } from "solady/utils/LibBytes.sol";
 import { LibAddress } from "../../libs/LibAddress.sol";
+import { LibBytes } from "solady/utils/LibBytes.sol";
 
 import { MandateOutput, MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 

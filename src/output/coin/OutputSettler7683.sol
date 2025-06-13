@@ -5,9 +5,10 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { IDestinationSettler } from "../../interfaces/IERC7683.sol";
 import { IOIFCallback } from "../../interfaces/IOIFCallback.sol";
+
+import { LibAddress } from "../../libs/LibAddress.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 import { OutputVerificationLib } from "../../libs/OutputVerificationLib.sol";
-import { LibAddress } from "../../libs/LibAddress.sol";
 
 import { BaseOutputSettler } from "../BaseOutputSettler.sol";
 
@@ -84,8 +85,7 @@ contract OutputInputSettler7683 is BaseOutputSettler, IDestinationSettler {
         bytes32 dataHash = keccak256(
             MandateOutputEncodingLib.encodeFillDescriptionM(proposedSolver, orderId, uint32(block.timestamp), output)
         );
-        _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][dataHash]
-        = true;
+        _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][dataHash] = true;
 
         // Load order description.
         address recipient = address(uint160(uint256(output.recipient)));

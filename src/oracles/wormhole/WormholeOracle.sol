@@ -5,8 +5,9 @@ import { Ownable } from "solady/auth/Ownable.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { IPayloadCreator } from "../../interfaces/IPayloadCreator.sol";
-import { MessageEncodingLib } from "../../libs/MessageEncodingLib.sol";
+
 import { LibAddress } from "../../libs/LibAddress.sol";
+import { MessageEncodingLib } from "../../libs/MessageEncodingLib.sol";
 
 import { BaseOracle } from "../BaseOracle.sol";
 import { ChainMap } from "../ChainMap.sol";
