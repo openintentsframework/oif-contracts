@@ -14,7 +14,6 @@ import { OutputVerificationLib } from "../../libs/OutputVerificationLib.sol";
 import { LibAddress } from "../../libs/LibAddress.sol";
 
 import { BaseOracle } from "../BaseOracle.sol";
-import { Ownable, Pausable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 using LibAddress for address;
 
@@ -34,7 +33,7 @@ using LibAddress for address;
  *
  * 0xB17C012
  */
-contract BitcoinOracle is BaseOracle, Ownable, Pausable {
+contract BitcoinOracle is BaseOracle {
     error AlreadyClaimed(bytes32 claimer);
     error AlreadyDisputed(address disputer);
     error BadAmount();
