@@ -7,6 +7,7 @@ import { IOIFCallback } from "../interfaces/IOIFCallback.sol";
 import { IPayloadCreator } from "../interfaces/IPayloadCreator.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../libs/MandateOutputEncodingLib.sol";
 import { OutputVerificationLib } from "../libs/OutputVerificationLib.sol";
+import { LibAddress } from "../libs/LibAddress.sol";
 
 import { BaseOracle } from "../oracles/BaseOracle.sol";
 
@@ -19,6 +20,8 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
     error FillDeadline();
     error FilledBySomeoneElse(bytes32 solver);
     error ZeroValue();
+
+    using LibAddress for address;
 
     /**
      * @notice Sets outputs as filled by their solver identifier, such that outputs won't be filled twice.
@@ -84,7 +87,7 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
         bytes32 dataHash = keccak256(
             MandateOutputEncodingLib.encodeFillDescription(proposedSolver, orderId, uint32(block.timestamp), output)
         );
-        _attestations[block.chainid][bytes32(uint256(uint160(address(this))))][bytes32(uint256(uint160(address(this))))][dataHash]
+        _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][dataHash]
         = true;
 
         // Storage has been set. Fill the output.
@@ -176,9 +179,7 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
     function _isPayloadValid(
         bytes32 payloadHash
     ) internal view virtual returns (bool) {
-        return _attestations[block.chainid][bytes32(uint256(uint160(address(this))))][bytes32(
-            uint256(uint160(address(this)))
-        )][payloadHash];
+        return _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][payloadHash];
     }
 
     /**
@@ -193,5 +194,9 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
             accumulator = accumulator && _isPayloadValid(payloadHashes[i]);
         }
         return accumulator;
+    }
+
+    function checkAttestation(bytes32 dataHash) external view returns (bool attested) {
+        return _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][dataHash];
     }
 }

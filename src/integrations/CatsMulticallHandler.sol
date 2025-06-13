@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { LibAddress } from "../libs/LibAddress.sol";
 
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
@@ -17,6 +18,8 @@ import { IOIFCallback } from "../interfaces/IOIFCallback.sol";
  * otherwise they will be left in the contract free to take for next the next caller.
  */
 contract CatsMulticallHandler is IOIFCallback, ReentrancyGuard {
+    using LibAddress for address;
+
     struct Call {
         address target;
         bytes callData;
@@ -91,7 +94,7 @@ contract CatsMulticallHandler is IOIFCallback, ReentrancyGuard {
 
         // Set approvals base on inputs if requested.
         if (instructions.setApprovalsUsingInputsFor != address(0)) {
-            _setApproval(address(uint160(uint256(token))), amount, instructions.setApprovalsUsingInputsFor);
+            _setApproval(token.fromIdentifier(), amount, instructions.setApprovalsUsingInputsFor);
         }
 
         // Execute attached instructions
@@ -99,7 +102,7 @@ contract CatsMulticallHandler is IOIFCallback, ReentrancyGuard {
 
         if (instructions.fallbackRecipient == address(0)) return;
         // If there are leftover tokens, send them to the fallback recipient regardless of execution success.
-        _drainRemainingTokens(address(uint160(uint256(token))), payable(instructions.fallbackRecipient));
+        _drainRemainingTokens(token.fromIdentifier(), payable(instructions.fallbackRecipient));
     }
 
     /**
