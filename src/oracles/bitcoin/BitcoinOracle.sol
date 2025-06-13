@@ -9,6 +9,7 @@ import { AddressType, BitcoinAddress, BtcScript } from "bitcoinprism-evm/src/lib
 
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
+import { LibAddress } from "../../libs/LibAddress.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 import { OutputVerificationLib } from "../../libs/OutputVerificationLib.sol";
 
@@ -31,6 +32,8 @@ import { BaseOracle } from "../BaseOracle.sol";
  * 0xB17C012
  */
 contract BitcoinOracle is BaseOracle {
+    using LibAddress for address;
+
     error AlreadyClaimed(bytes32 claimer);
     error AlreadyDisputed(address disputer);
     error BadAmount();
@@ -288,9 +291,7 @@ contract BitcoinOracle is BaseOracle {
     function _isPayloadValid(
         bytes32 payloadHash
     ) internal view returns (bool) {
-        return _attestations[block.chainid][bytes32(uint256(uint160(address(this))))][bytes32(
-            uint256(uint160(address(this)))
-        )][payloadHash];
+        return _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][payloadHash];
     }
 
     /**
@@ -403,7 +404,7 @@ contract BitcoinOracle is BaseOracle {
 
         bytes32 outputHash =
             keccak256(MandateOutputEncodingLib.encodeFillDescription(solver, orderId, uint32(timestamp), output));
-        _attestations[block.chainid][bytes32(uint256(uint160(address(this))))][bytes32(uint256(uint160(address(this))))][outputHash]
+        _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][outputHash]
         = true;
 
         emit OutputFilled(orderId, solver, uint32(timestamp), output);
@@ -621,7 +622,7 @@ contract BitcoinOracle is BaseOracle {
         bytes32 solver = claimedOrder.solver;
         bytes32 outputHash =
             keccak256(MandateOutputEncodingLib.encodeFillDescription(solver, orderId, uint32(block.timestamp), output));
-        _attestations[block.chainid][bytes32(uint256(uint160(address(this))))][bytes32(uint256(uint160(address(this))))][outputHash]
+        _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][outputHash]
         = true;
         emit OutputFilled(orderId, solver, uint32(block.timestamp), output);
 

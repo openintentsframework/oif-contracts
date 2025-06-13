@@ -5,6 +5,7 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { IDestinationSettler } from "../../interfaces/IERC7683.sol";
 import { IOIFCallback } from "../../interfaces/IOIFCallback.sol";
+import { LibAddress } from "../../libs/LibAddress.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 import { OutputVerificationLib } from "../../libs/OutputVerificationLib.sol";
 
@@ -16,6 +17,8 @@ import { BaseOutputSettler } from "../BaseOutputSettler.sol";
  * This filler contract only supports limit orders.
  */
 contract OutputInputSettler7683 is BaseOutputSettler, IDestinationSettler {
+    using LibAddress for address;
+
     error NotImplemented();
 
     function _fill(
@@ -81,7 +84,7 @@ contract OutputInputSettler7683 is BaseOutputSettler, IDestinationSettler {
         bytes32 dataHash = keccak256(
             MandateOutputEncodingLib.encodeFillDescriptionM(proposedSolver, orderId, uint32(block.timestamp), output)
         );
-        _attestations[block.chainid][bytes32(uint256(uint160(address(this))))][bytes32(uint256(uint160(address(this))))][dataHash]
+        _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][dataHash]
         = true;
 
         // Load order description.
