@@ -9,9 +9,9 @@ import { AddressType, BitcoinAddress, BtcScript } from "bitcoinprism-evm/src/lib
 
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
+import { LibAddress } from "../../libs/LibAddress.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 import { OutputVerificationLib } from "../../libs/OutputVerificationLib.sol";
-import { LibAddress } from "../../libs/LibAddress.sol";
 
 import { BaseOracle } from "../BaseOracle.sol";
 
@@ -404,8 +404,7 @@ contract BitcoinOracle is BaseOracle {
 
         bytes32 outputHash =
             keccak256(MandateOutputEncodingLib.encodeFillDescription(solver, orderId, uint32(timestamp), output));
-        _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][outputHash]
-        = true;
+        _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][outputHash] = true;
 
         emit OutputFilled(orderId, solver, uint32(timestamp), output);
         emit OutputVerified(inclusionProof.txId);
@@ -622,8 +621,7 @@ contract BitcoinOracle is BaseOracle {
         bytes32 solver = claimedOrder.solver;
         bytes32 outputHash =
             keccak256(MandateOutputEncodingLib.encodeFillDescription(solver, orderId, uint32(block.timestamp), output));
-        _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][outputHash]
-        = true;
+        _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][outputHash] = true;
         emit OutputFilled(orderId, solver, uint32(block.timestamp), output);
 
         address sponsor = claimedOrder.sponsor;

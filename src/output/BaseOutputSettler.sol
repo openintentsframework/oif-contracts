@@ -5,9 +5,10 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { IOIFCallback } from "../interfaces/IOIFCallback.sol";
 import { IPayloadCreator } from "../interfaces/IPayloadCreator.sol";
+
+import { LibAddress } from "../libs/LibAddress.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../libs/MandateOutputEncodingLib.sol";
 import { OutputVerificationLib } from "../libs/OutputVerificationLib.sol";
-import { LibAddress } from "../libs/LibAddress.sol";
 
 import { BaseOracle } from "../oracles/BaseOracle.sol";
 
@@ -87,8 +88,7 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
         bytes32 dataHash = keccak256(
             MandateOutputEncodingLib.encodeFillDescription(proposedSolver, orderId, uint32(block.timestamp), output)
         );
-        _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][dataHash]
-        = true;
+        _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][dataHash] = true;
 
         // Storage has been set. Fill the output.
         address recipient = address(uint160(uint256(output.recipient)));
@@ -194,9 +194,5 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
             accumulator = accumulator && _isPayloadValid(payloadHashes[i]);
         }
         return accumulator;
-    }
-
-    function checkAttestation(bytes32 dataHash) external view returns (bool attested) {
-        return _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][dataHash];
     }
 }

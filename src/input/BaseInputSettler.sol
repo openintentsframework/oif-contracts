@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import { LibAddress } from "../libs/LibAddress.sol";
 import { EIP712 } from "solady/utils/EIP712.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { SignatureCheckerLib } from "solady/utils/SignatureCheckerLib.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
-import { LibAddress } from "../libs/LibAddress.sol";
 
 import { IOIFCallback } from "../interfaces/IOIFCallback.sol";
 import { IOracle } from "../interfaces/IOracle.sol";
@@ -21,6 +21,7 @@ import { OrderPurchase, OrderPurchaseType } from "./types/OrderPurchaseType.sol"
  */
 abstract contract BaseInputSettler is EIP712 {
     using LibAddress for address;
+    using LibAddress for bytes32;
 
     error AlreadyPurchased();
     error Expired();
@@ -196,9 +197,5 @@ abstract contract BaseInputSettler is EIP712 {
             bytes calldata call = orderPurchase.call;
             if (call.length > 0) IOIFCallback(newDestination).orderFinalised(inputs, call);
         }
-    }
-
-    function _resolveFromIdentifier(bytes32 orderSolvedByIdentifier) internal pure returns (address) {
-        return orderSolvedByIdentifier.fromIdentifier();
     }
 }

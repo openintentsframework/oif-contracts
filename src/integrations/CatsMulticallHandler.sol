@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity ^0.8.0;
 
+import { LibAddress } from "../libs/LibAddress.sol";
 import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-import { LibAddress } from "../libs/LibAddress.sol";
 
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
@@ -19,6 +19,7 @@ import { IOIFCallback } from "../interfaces/IOIFCallback.sol";
  */
 contract CatsMulticallHandler is IOIFCallback, ReentrancyGuard {
     using LibAddress for address;
+    using LibAddress for bytes32;
 
     struct Call {
         address target;
