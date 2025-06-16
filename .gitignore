@@ -17,3 +17,6 @@ docs/
 
 # Coverage files
 lcov.info
+
+# Cursor
+.cursorrules

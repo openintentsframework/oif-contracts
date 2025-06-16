@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import { LibAddress } from "../libs/LibAddress.sol";
 import { EIP712 } from "solady/utils/EIP712.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-import { SignatureCheckerLib } from "solady/utils/SignatureCheckerLib.sol";
 import { SignatureCheckerLib } from "solady/utils/SignatureCheckerLib.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
@@ -20,6 +20,9 @@ import { OrderPurchase, OrderPurchaseType } from "./types/OrderPurchaseType.sol"
  * schemes.
  */
 abstract contract BaseInputSettler is EIP712 {
+    using LibAddress for address;
+    using LibAddress for bytes32;
+
     error AlreadyPurchased();
     error Expired();
     error InvalidPurchaser();
@@ -166,7 +169,7 @@ abstract contract BaseInputSettler is EIP712 {
         }
 
         {
-            address orderSolvedByAddress = address(uint160(uint256(orderSolvedByIdentifier)));
+            address orderSolvedByAddress = orderSolvedByIdentifier.fromIdentifier();
             bytes32 digest = _hashTypedData(OrderPurchaseType.hashOrderPurchase(orderPurchase));
             bool isValid =
                 SignatureCheckerLib.isValidSignatureNowCalldata(orderSolvedByAddress, digest, solverSignature);

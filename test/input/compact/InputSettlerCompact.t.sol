@@ -11,7 +11,7 @@ import { OutputSettlerCoin } from "../../../src/output/coin/OutputSettlerCoin.so
 import { AlwaysYesOracle } from "../../mocks/AlwaysYesOracle.sol";
 import { MockERC20 } from "../../mocks/MockERC20.sol";
 
-import { LibAddress } from "../../utils/LibAddress.sol";
+import { LibAddress } from "../../../src/libs/LibAddress.sol";
 import { IInputSettlerCompactHarness, InputSettlerCompactTestBase } from "./InputSettlerCompact.base.t.sol";
 
 contract InputSettlerCompactTest is InputSettlerCompactTestBase {
