@@ -15,8 +15,6 @@ import { OutputVerificationLib } from "../../libs/OutputVerificationLib.sol";
 
 import { BaseOracle } from "../BaseOracle.sol";
 
-using LibAddress for address;
-
 /**
  * @dev Bitcoin oracle can operate in 2 modes:
  * 1. Directly as an Output Settlement.
@@ -34,6 +32,8 @@ using LibAddress for address;
  * 0xB17C012
  */
 contract BitcoinOracle is BaseOracle {
+    using LibAddress for address;
+
     error AlreadyClaimed(bytes32 claimer);
     error AlreadyDisputed(address disputer);
     error BadAmount();

@@ -18,9 +18,9 @@ import { BaseOutputSettler } from "../BaseOutputSettler.sol";
  * This filler contract only supports limit orders.
  */
 contract OutputInputSettler7683 is BaseOutputSettler, IDestinationSettler {
-    error NotImplemented();
-
     using LibAddress for address;
+
+    error NotImplemented();
 
     function _fill(
         bytes32 orderId,

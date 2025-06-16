@@ -8,10 +8,10 @@ import { MandateOutput } from "./MandateOutputEncodingLib.sol";
  * @notice Provides helpers to verify if an output has been submitted to the right consumer.
  */
 library OutputVerificationLib {
+    using LibAddress for address;
+
     error WrongChain(uint256 expected, uint256 actual);
     error WrongOutputSettler(bytes32 addressThis, bytes32 expected);
-
-    using LibAddress for address;
 
     /**
      * @param chainId Expected chain id. Validated to match block.chainId.

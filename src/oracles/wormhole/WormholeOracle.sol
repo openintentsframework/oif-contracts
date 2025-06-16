@@ -23,14 +23,14 @@ import { IWormhole } from "./interfaces/IWormhole.sol";
  * proper chainIds. These maps once set are immutable and trustless.
  */
 contract WormholeOracle is ChainMap, BaseOracle, WormholeVerifier {
+    using LibAddress for address;
+
     error NotAllPayloadsValid();
 
     /// @dev Wormhole generally defines 15 to be equal to Finality
     uint8 constant WORMHOLE_CONSISTENCY = 15;
 
     IWormhole public immutable WORMHOLE;
-
-    using LibAddress for address;
 
     constructor(address _owner, address _wormhole) payable ChainMap(_owner) WormholeVerifier(_wormhole) {
         WORMHOLE = IWormhole(_wormhole);

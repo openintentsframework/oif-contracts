@@ -18,11 +18,11 @@ import { BaseOracle } from "../oracles/BaseOracle.sol";
  * This base output settler implements logic to work as both a PayloadCreator (for oracles) and as an oracle itself.
  */
 abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
+    using LibAddress for address;
+
     error FillDeadline();
     error FilledBySomeoneElse(bytes32 solver);
     error ZeroValue();
-
-    using LibAddress for address;
 
     /**
      * @notice Sets outputs as filled by their solver identifier, such that outputs won't be filled twice.
