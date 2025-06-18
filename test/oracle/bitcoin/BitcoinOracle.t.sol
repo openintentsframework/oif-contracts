@@ -373,7 +373,7 @@ contract BitcoinOracleTest is Test {
         bitcoinOracle.claim(solver, orderId, output);
 
         vm.prank(disputer);
-        vm.expectRevert(abi.encodeWithSignature("TransferFromFailed()"));
+        vm.expectRevert(abi.encodeWithSignature("InsufficientAllowance()"));
         bitcoinOracle.dispute(orderId, output);
     }
 

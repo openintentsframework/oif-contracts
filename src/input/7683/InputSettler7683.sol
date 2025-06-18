@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 import { ISignatureTransfer } from "permit2/src/interfaces/ISignatureTransfer.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
 import {
@@ -134,7 +135,8 @@ contract InputSettler7683 is BaseInputSettler, IInputSettler7683 {
             uint256[2] memory input = inputs[i];
             address token = EfficiencyLib.asSanitizedAddress(input[0]);
             uint256 amount = input[1];
-            SafeTransferLib.safeTransferFrom(token, msg.sender, address(this), amount);
+
+            SafeERC20.safeTransferFrom(IERC20(token), msg.sender, address(this), amount);
         }
 
         emit Open(orderId, _resolve(uint32(0), orderId, compactOrder));
@@ -552,7 +554,7 @@ contract InputSettler7683 is BaseInputSettler, IInputSettler7683 {
             address token = EfficiencyLib.asSanitizedAddress(input[0]);
             uint256 amount = input[1];
 
-            SafeTransferLib.safeTransfer(token, solvedBy, amount);
+            SafeERC20.safeTransfer(IERC20(token), solvedBy, amount);
         }
     }
 }

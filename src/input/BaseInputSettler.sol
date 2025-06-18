@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 import { EIP712 } from "solady/utils/EIP712.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-import { SignatureCheckerLib } from "solady/utils/SignatureCheckerLib.sol";
 import { SignatureCheckerLib } from "solady/utils/SignatureCheckerLib.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
@@ -183,8 +183,8 @@ abstract contract BaseInputSettler is EIP712 {
                 uint256 allocatedAmount = input[1];
                 uint256 amountAfterDiscount = (allocatedAmount * (DISCOUNT_DENOM - discount)) / DISCOUNT_DENOM;
                 // Throws if discount > DISCOUNT_DENOM => DISCOUNT_DENOM - discount < 0;
-                SafeTransferLib.safeTransferFrom(
-                    EfficiencyLib.asSanitizedAddress(tokenId), msg.sender, newDestination, amountAfterDiscount
+                SafeERC20.safeTransferFrom(
+                    IERC20(EfficiencyLib.asSanitizedAddress(tokenId)), msg.sender, newDestination, amountAfterDiscount
                 );
             }
             // Emit the event now because of stack issues.

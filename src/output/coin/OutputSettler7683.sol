@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 
 import { IDestinationSettler } from "../../interfaces/IERC7683.sol";
 import { IOIFCallback } from "../../interfaces/IOIFCallback.sol";
@@ -90,7 +91,7 @@ contract OutputInputSettler7683 is BaseOutputSettler, IDestinationSettler {
 
         // Collect tokens from the user. If this fails, then the call reverts and
         // the proof is not set to true.
-        SafeTransferLib.safeTransferFrom(token, msg.sender, recipient, outputAmount);
+        SafeERC20.safeTransferFrom(IERC20(token), msg.sender, recipient, outputAmount);
 
         // If there is an external call associated with the fill, execute it.
         bytes memory remoteCall = output.call;
