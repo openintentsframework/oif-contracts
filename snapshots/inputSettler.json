@@ -11,9 +11,9 @@
   "CompactFinaliseSelf": "92003",
   "CompactFinaliseTo": "92003",
   "IntegrationCoinFill": "87838",
-  "IntegrationCompactFinaliseSelf": "84960",
-  "IntegrationWormholeReceiveMessage": "45766",
-  "IntegrationWormholeSubmit": "14114",
+  "IntegrationCompactFinaliseSelf": "84916",
+  "IntegrationWormholeReceiveMessage": "45701",
+  "IntegrationWormholeSubmit": "14070",
   "maxTimestamp1": "505",
   "minTimestamp1": "461"
 }
