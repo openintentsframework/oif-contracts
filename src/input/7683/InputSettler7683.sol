@@ -61,16 +61,7 @@ contract InputSettler7683 is BaseInputSettler, IInputSettler7683 {
     // Address of the Permit2 contract.
     ISignatureTransfer constant PERMIT2 = ISignatureTransfer(0x000000000022D473030F116dDEE9F6B43aC78BA3);
 
-    function _domainNameAndVersion()
-        internal
-        pure
-        virtual
-        override
-        returns (string memory name, string memory version)
-    {
-        name = "CatalystEscrow7683";
-        version = "7683Escrow1";
-    }
+    constructor() BaseInputSettler("CatalystEscrow7683", "7683Escrow1") { }
 
     // Generic order identifier
     function orderIdentifier(

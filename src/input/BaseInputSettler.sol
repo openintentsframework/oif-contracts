@@ -3,8 +3,9 @@ pragma solidity ^0.8.26;
 
 import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
+
+import { EIP712 } from "openzeppelin/utils/cryptography/EIP712.sol";
 import { SignatureChecker } from "openzeppelin/utils/cryptography/SignatureChecker.sol";
-import { EIP712 } from "solady/utils/EIP712.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
 import { IOIFCallback } from "../interfaces/IOIFCallback.sol";
@@ -37,8 +38,10 @@ abstract contract BaseInputSettler is EIP712 {
 
     mapping(bytes32 solver => mapping(bytes32 orderId => Purchased)) public purchasedOrders;
 
+    constructor(string memory name, string memory version) EIP712(name, version) { }
+
     function DOMAIN_SEPARATOR() external view returns (bytes32) {
-        return _domainSeparator();
+        return _domainSeparatorV4();
     }
 
     // --- Timestamp Helpers --- //
@@ -93,7 +96,7 @@ abstract contract BaseInputSettler is EIP712 {
         bytes calldata call,
         bytes calldata orderOwnerSignature
     ) internal view {
-        bytes32 digest = _hashTypedData(AllowOpenType.hashAllowOpen(orderId, nextDestination, call));
+        bytes32 digest = _hashTypedDataV4(AllowOpenType.hashAllowOpen(orderId, nextDestination, call));
         bool isValid = SignatureChecker.isValidSignatureNow(orderOwner, digest, orderOwnerSignature);
         if (!isValid) revert InvalidSigner();
     }
@@ -167,7 +170,7 @@ abstract contract BaseInputSettler is EIP712 {
 
         {
             address orderSolvedByAddress = address(uint160(uint256(orderSolvedByIdentifier)));
-            bytes32 digest = _hashTypedData(OrderPurchaseType.hashOrderPurchase(orderPurchase));
+            bytes32 digest = _hashTypedDataV4(OrderPurchaseType.hashOrderPurchase(orderPurchase));
             bool isValid = SignatureChecker.isValidSignatureNow(orderSolvedByAddress, digest, solverSignature);
             if (!isValid) revert InvalidSigner();
         }

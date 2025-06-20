@@ -44,20 +44,8 @@ contract InputSettlerCompact is BaseInputSettler, IInputSettlerCompact {
 
     constructor(
         address compact
-    ) {
+    ) BaseInputSettler("CatalystSettler", "Compact1") {
         COMPACT = TheCompact(compact);
-    }
-
-    /// @notice EIP712
-    function _domainNameAndVersion()
-        internal
-        pure
-        virtual
-        override
-        returns (string memory name, string memory version)
-    {
-        name = "CatalystSettler";
-        version = "Compact1";
     }
 
     // --- Generic order identifier --- //

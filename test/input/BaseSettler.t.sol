@@ -13,16 +13,7 @@ interface EIP712 {
 }
 
 contract MockSettler is BaseInputSettler {
-    function _domainNameAndVersion()
-        internal
-        pure
-        virtual
-        override
-        returns (string memory name, string memory version)
-    {
-        name = "MockSettler";
-        version = "-1";
-    }
+    constructor() BaseInputSettler("MockSettler", "-1") { }
 
     function purchaseGetOrderOwner(
         bytes32 orderId,
