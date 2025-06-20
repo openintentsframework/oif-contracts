@@ -3,7 +3,7 @@ pragma solidity ^0.8.26;
 
 import { MandateOutput, MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 import { BaseOutputSettler } from "../BaseOutputSettler.sol";
-import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
+import { Math } from "openzeppelin/utils/math/Math.sol";
 
 /**
  * @notice Output Settler for ERC20 tokens.
@@ -35,7 +35,7 @@ contract OutputSettlerCoin is BaseOutputSettler {
         uint32 startTime,
         uint32 stopTime
     ) internal view returns (uint256 currentAmount) {
-        uint32 currentTime = uint32(FixedPointMathLib.max(block.timestamp, uint256(startTime)));
+        uint32 currentTime = uint32(Math.max(block.timestamp, uint256(startTime)));
         if (stopTime < currentTime) return minimumAmount; // This check also catches stopTime < startTime.
 
         uint256 timeDiff;
