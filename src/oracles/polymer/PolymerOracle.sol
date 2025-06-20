@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { LibBytes } from "solady/utils/LibBytes.sol";
+import { Bytes } from "openzeppelin/utils/Bytes.sol";
 
 import { MandateOutput, MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 
@@ -44,7 +44,7 @@ contract PolymerOracle is BaseOracle {
             CROSS_L2_PROVER.validateEvent(proof);
 
         // OrderId is topic[1] which is 32 to 64 bytes.
-        bytes32 orderId = bytes32(LibBytes.slice(topics, 32, 64));
+        bytes32 orderId = bytes32(Bytes.slice(topics, 32, 64));
 
         (bytes32 solver, uint32 timestamp, MandateOutput memory output) =
             abi.decode(unindexedData, (bytes32, uint32, MandateOutput));

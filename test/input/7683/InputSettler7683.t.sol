@@ -235,7 +235,7 @@ contract InputSettler7683Test is InputSettler7683TestBase {
     function test_open(uint32 fillDeadline, uint128 amount, address user) public {
         vm.assume(fillDeadline > block.timestamp);
         vm.assume(token.balanceOf(user) == 0);
-        vm.assume(user != inputsettler7683);
+        vm.assume(user != inputsettler7683 && user != address(0));
 
         token.mint(user, amount);
         vm.prank(user);
@@ -475,6 +475,7 @@ contract InputSettler7683Test is InputSettler7683TestBase {
     function test_finalise_to(
         address destination
     ) public {
+        vm.assume(destination != address(0));
         vm.assume(token.balanceOf(destination) == 0);
 
         uint256 amount = 1e18 / 10;
@@ -561,6 +562,7 @@ contract InputSettler7683Test is InputSettler7683TestBase {
 
     function test_finalise_for(address destination, address caller) public {
         vm.assume(token.balanceOf(destination) == 0);
+        vm.assume(destination != address(0) && caller != address(0));
 
         uint256 amount = 1e18 / 10;
 

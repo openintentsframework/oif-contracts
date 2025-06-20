@@ -51,8 +51,8 @@ contract OutputSettlerCoinTestfillOrderOutputs is Test {
         uint128 amount2
     ) public {
         vm.assume(
-            filler != bytes32(0) && swapper != sender && nextFiller != filler && nextFiller != bytes32(0)
-                && amount != amount2
+            filler != bytes32(0) && swapper != sender && nextFiller != filler && sender != address(0)
+                && nextFiller != bytes32(0) && amount != amount2
         );
 
         outputToken.mint(sender, uint256(amount) + uint256(amount2));

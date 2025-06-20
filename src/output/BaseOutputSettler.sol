@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 
 import { IOIFCallback } from "../interfaces/IOIFCallback.sol";
 import { IPayloadCreator } from "../interfaces/IPayloadCreator.sol";
@@ -89,7 +90,7 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
 
         // Storage has been set. Fill the output.
         address recipient = address(uint160(uint256(output.recipient)));
-        SafeTransferLib.safeTransferFrom(address(uint160(uint256(output.token))), msg.sender, recipient, outputAmount);
+        SafeERC20.safeTransferFrom(IERC20(address(uint160(uint256(output.token)))), msg.sender, recipient, outputAmount);
         if (output.call.length > 0) IOIFCallback(recipient).outputFilled(output.token, outputAmount, output.call);
 
         emit OutputFilled(orderId, proposedSolver, uint32(block.timestamp), output);
