@@ -398,6 +398,7 @@ contract BitcoinOracle is BaseOracle {
             _bitcoinScript(token, output.recipient),
             output.call
         );
+
         if (sats != output.amount) revert BadAmount(); // Exact amount is checked to protect against "double spends".
 
         bytes32 solver = _resolveClaimed(uint32(timestamp), orderId, output);

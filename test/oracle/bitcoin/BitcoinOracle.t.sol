@@ -46,6 +46,8 @@ contract BitcoinOracleTest is Test {
 
     uint256 multiplier = 1e10 * 100;
 
+    address disputedOrderFeeDestination = makeAddr("DISPUTED_ORDER_FEE_DESTINATION");
+
     function setUp() public {
         ExportedMessages messages = new ExportedMessages();
         wormholeOracle = new WormholeOracle(address(this), address(messages));
@@ -54,7 +56,8 @@ contract BitcoinOracleTest is Test {
 
         btcPrism = new BtcPrism(BLOCK_HEIGHT, BLOCK_HASH, BLOCK_TIME, EXPECTED_TARGET, false);
 
-        bitcoinOracle = new BitcoinOracleHarness(address(btcPrism), address(0), address(token), uint64(multiplier));
+        bitcoinOracle =
+            new BitcoinOracleHarness(address(btcPrism), disputedOrderFeeDestination, address(token), uint64(multiplier));
     }
 
     // --- Time To Confirmation --- //
@@ -87,7 +90,7 @@ contract BitcoinOracleTest is Test {
 
     function test_claim(bytes32 solver, bytes32 orderId, uint64 amount, address caller) public {
         vm.assume(caller != address(bitcoinOracle));
-        vm.assume(caller != address(token));
+        vm.assume(caller != address(token) && caller != address(0));
 
         MandateOutput memory output = MandateOutput({
             oracle: bytes32(uint256(uint160(address(bitcoinOracle)))),
@@ -135,7 +138,7 @@ contract BitcoinOracleTest is Test {
         bytes32 solver = bytes32(0);
         vm.assume(orderId != bytes32(0));
         vm.assume(caller != address(bitcoinOracle));
-        vm.assume(caller != address(token));
+        vm.assume(caller != address(token) && caller != address(0));
 
         MandateOutput memory output = MandateOutput({
             oracle: bytes32(uint256(uint160(address(bitcoinOracle)))),
@@ -162,7 +165,7 @@ contract BitcoinOracleTest is Test {
         bytes32 orderId = bytes32(0);
         vm.assume(solver != bytes32(0));
         vm.assume(caller != address(bitcoinOracle));
-        vm.assume(caller != address(token));
+        vm.assume(caller != address(token) && caller != address(0));
 
         MandateOutput memory output = MandateOutput({
             oracle: bytes32(uint256(uint160(address(bitcoinOracle)))),
@@ -189,7 +192,7 @@ contract BitcoinOracleTest is Test {
         vm.assume(solver != bytes32(0));
         vm.assume(orderId != bytes32(0));
         vm.assume(caller != address(bitcoinOracle));
-        vm.assume(caller != address(token));
+        vm.assume(caller != address(token) && caller != address(0));
 
         MandateOutput memory output = MandateOutput({
             oracle: bytes32(uint256(uint160(address(bitcoinOracle)))),
@@ -373,7 +376,14 @@ contract BitcoinOracleTest is Test {
         bitcoinOracle.claim(solver, orderId, output);
 
         vm.prank(disputer);
-        vm.expectRevert(abi.encodeWithSignature("InsufficientAllowance()"));
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "ERC20InsufficientAllowance(address,uint256,uint256)",
+                address(bitcoinOracle),
+                0,
+                collateralAmount * bitcoinOracle.CHALLENGER_COLLATERAL_FACTOR()
+            )
+        );
         bitcoinOracle.dispute(orderId, output);
     }
 
