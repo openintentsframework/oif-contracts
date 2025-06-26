@@ -41,12 +41,7 @@ contract WormholeOracle is ChainMap, BaseOracle, WormholeVerifier {
      * @return refund If too much value has been sent, the excess will be returned to msg.sender.
      */
     function submit(address source, bytes[] calldata payloads) public payable returns (uint256 refund) {
-        uint256 numPayloads = payloads.length;
-        bytes32[] memory payloadHashes = new bytes32[](numPayloads);
-        for (uint256 i; i < numPayloads; ++i) {
-            payloadHashes[i] = keccak256(payloads[i]);
-        }
-        if (!IPayloadCreator(source).arePayloadsValid(payloadHashes)) revert NotAllPayloadsValid();
+        if (!IPayloadCreator(source).arePayloadsValid(payloads)) revert NotAllPayloadsValid();
         return _submit(source, payloads);
     }
 

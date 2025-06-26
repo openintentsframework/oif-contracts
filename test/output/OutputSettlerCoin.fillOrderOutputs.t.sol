@@ -9,8 +9,6 @@ import { OutputSettlerCoin } from "../../src/output/coin/OutputSettlerCoin.sol";
 import { MockERC20 } from "../mocks/MockERC20.sol";
 
 contract OutputSettlerCoinTestfillOrderOutputs is Test {
-    error FilledBySomeoneElse(bytes32 solver);
-
     event OutputFilled(bytes32 indexed orderId, bytes32 solver, uint32 timestamp, MandateOutput output);
 
     OutputSettlerCoin outputSettlerCoin;
@@ -109,7 +107,7 @@ contract OutputSettlerCoinTestfillOrderOutputs is Test {
         vm.prank(sender);
         outputSettlerCoin.fill(type(uint32).max, orderId, outputs[0], nextFiller);
 
-        vm.expectRevert(abi.encodeWithSignature("FilledBySomeoneElse(bytes32)", (nextFiller)));
+        vm.expectRevert(abi.encodeWithSignature("AlreadyFilled()"));
         vm.prank(sender);
         outputSettlerCoin.fillOrderOutputs(type(uint32).max, orderId, outputs, filler);
 

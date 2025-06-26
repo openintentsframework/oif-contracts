@@ -504,8 +504,8 @@ contract OutputSettlerCoinTestFill is Test {
         vm.prank(sender);
         bytes32 alreadyFilledBy = outputSettlerCoin.fill(type(uint32).max, orderId, output, differentFiller);
 
-        assertNotEq(alreadyFilledBy, differentFiller);
-        assertEq(alreadyFilledBy, filler);
+        assertNotEq(alreadyFilledBy, keccak256(abi.encodePacked(differentFiller, uint32(block.timestamp))));
+        assertEq(alreadyFilledBy, keccak256(abi.encodePacked(filler, uint32(block.timestamp))));
     }
 
     function test_invalid_fulfillment_context(
