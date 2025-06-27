@@ -524,7 +524,7 @@ contract BitcoinOracleTest is Test {
             uint32 disputeTimestamp_
         ) = bitcoinOracle._claimedOrder(orderId, outputId);
 
-        assertEq(bytes32(0), solver_);
+        assertEq(solver, solver_);
         assertEq(0, claimTimestamp_);
         assertEq(0, uint256(multiplier_));
         assertEq(address(0), sponsor_);
@@ -741,7 +741,7 @@ contract BitcoinOracleTest is Test {
         (solver_, claimTimestamp_, multiplier_, sponsor_, disputer_, disputeTimestamp_) =
             bitcoinOracle._claimedOrder(orderId, outputId);
 
-        assertEq(bytes32(0), solver_);
+        assertEq(solver, solver_);
         assertEq(0, claimTimestamp_);
         assertEq(0, uint256(multiplier_));
         assertEq(address(0), sponsor_);
@@ -926,6 +926,10 @@ contract BitcoinOracleTest is Test {
         // assertEq(0, uint256(multiplier_));
         // assertEq(address(0), sponsor_);
         // assertEq(address(0), disputer_);
+
+        // Try to claim the transaction again.
+        vm.expectRevert(abi.encodeWithSignature("AlreadyClaimed(bytes32)", solver));
+        bitcoinOracle.claim(keccak256(abi.encodePacked(solver)), orderId, output);
     }
 
     function test_verify_custom_multiplier(
