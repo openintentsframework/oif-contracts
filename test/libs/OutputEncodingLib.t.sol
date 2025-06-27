@@ -25,10 +25,25 @@ contract MandateOutputEncodingLibTest is Test {
         bytes32 token,
         uint256 amount,
         bytes32 recipient,
+        bytes calldata remoteCall,
+        bytes calldata fulfillmentContext
+    ) external pure returns (bytes memory encodedOutput) {
+        return MandateOutputEncodingLib.encodeFillDescription(
+            solver, orderId, timestamp, token, amount, recipient, remoteCall, fulfillmentContext
+        );
+    }
+
+    function encodeFillDescriptionMemoryHarness(
+        bytes32 solver,
+        bytes32 orderId,
+        uint32 timestamp,
+        bytes32 token,
+        uint256 amount,
+        bytes32 recipient,
         bytes memory remoteCall,
         bytes memory fulfillmentContext
     ) external pure returns (bytes memory encodedOutput) {
-        return MandateOutputEncodingLib.encodeFillDescription(
+        return MandateOutputEncodingLib.encodeFillDescriptionM(
             solver, orderId, timestamp, token, amount, recipient, remoteCall, fulfillmentContext
         );
     }
@@ -162,8 +177,12 @@ contract MandateOutputEncodingLibTest is Test {
         bytes memory encodedOutput = this.encodeFillDescriptionHarness(
             solver, orderId, timestamp, token, amount, recipient, remoteCall, fulfillmentContext
         );
+        bytes memory encodedOutputMemory = this.encodeFillDescriptionMemoryHarness(
+            solver, orderId, timestamp, token, amount, recipient, remoteCall, fulfillmentContext
+        );
         assertEq(encodedOutputFromOutput, encodedOutputFromOutputMemory);
         assertEq(encodedOutputFromOutput, encodedOutput);
+        assertEq(encodedOutput, encodedOutputMemory);
         assertEq(
             encodedOutputFromOutput,
             hex"1da5212527b611fa26a679f652ca82511b7def2f4c7af4d7bb6f175835f323dcaad60a3265e1c3c0dff4ef3474d6c608ca5f7ec61bd7dcbc5a992ad0576306911227958e9b9b0454cadcb5884dd3faa6ba975da4d2459aa3f11d31291a25a8358f84946d89c4783cb6cc307f98e95f2d5d5d8647bdb3d4bdd087209374f187b38e098895811085f5b5d1b29598e73ca51de3d712f5d3103ad50e22dc1f4d3ff1559d511500000000"
@@ -181,8 +200,12 @@ contract MandateOutputEncodingLibTest is Test {
         encodedOutput = this.encodeFillDescriptionHarness(
             solver, orderId, timestamp, token, amount, recipient, remoteCall, fulfillmentContext
         );
+        encodedOutputMemory = this.encodeFillDescriptionMemoryHarness(
+            solver, orderId, timestamp, token, amount, recipient, remoteCall, fulfillmentContext
+        );
         assertEq(encodedOutputFromOutput, encodedOutputFromOutputMemory);
         assertEq(encodedOutputFromOutput, encodedOutput);
+        assertEq(encodedOutput, encodedOutputMemory);
         assertEq(
             encodedOutputFromOutput,
             hex"1da5212527b611fa26a679f652ca82511b7def2f4c7af4d7bb6f175835f323dcaad60a3265e1c3c0dff4ef3474d6c608ca5f7ec61bd7dcbc5a992ad0576306911227958e9b9b0454cadcb5884dd3faa6ba975da4d2459aa3f11d31291a25a8358f84946d89c4783cb6cc307f98e95f2d5d5d8647bdb3d4bdd087209374f187b38e098895811085f5b5d1b29598e73ca51de3d712f5d3103ad50e22dc1f4d3ff1559d51150043c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a4705fe7f977e71dba2ea1a68e21057beebb9be2ac30c6410aa38d4f3fbe41dcffd20102030084f2ee15ea639b73fa3db9b34a245bdfa015c260c598b211bf05a1ecc4b3e3b4f269c322e3248a5dfc29d73c5b0553b0185a35cd5bb6386747517ef7e53b15e287f343681465b9efe82c933c3e8748c70cb8aa06539c361de20f72eac04e766393dbb8d0f4c497851a5043c6363657698cb1387682cac2f786c731f8936109d79501020304"
@@ -215,6 +238,9 @@ contract MandateOutputEncodingLibTest is Test {
         this.encodeFillDescriptionHarness(
             solver, orderId, timestamp, token, amount, recipient, remoteCall, fulfillmentContext
         );
+        this.encodeFillDescriptionMemoryHarness(
+            solver, orderId, timestamp, token, amount, recipient, remoteCall, fulfillmentContext
+        );
 
         remoteCall = new bytes(65536);
         output.call = remoteCall;
@@ -225,6 +251,10 @@ contract MandateOutputEncodingLibTest is Test {
         this.encodeFillDescriptionMemoryHarness(solver, orderId, timestamp, output);
         vm.expectRevert(abi.encodeWithSignature("CallOutOfRange()"));
         this.encodeFillDescriptionHarness(
+            solver, orderId, timestamp, token, amount, recipient, remoteCall, fulfillmentContext
+        );
+        vm.expectRevert(abi.encodeWithSignature("CallOutOfRange()"));
+        this.encodeFillDescriptionMemoryHarness(
             solver, orderId, timestamp, token, amount, recipient, remoteCall, fulfillmentContext
         );
     }
@@ -255,6 +285,9 @@ contract MandateOutputEncodingLibTest is Test {
         this.encodeFillDescriptionHarness(
             solver, orderId, timestamp, token, amount, recipient, remoteCall, fulfillmentContext
         );
+        this.encodeFillDescriptionMemoryHarness(
+            solver, orderId, timestamp, token, amount, recipient, remoteCall, fulfillmentContext
+        );
 
         fulfillmentContext = new bytes(65536);
         output.context = fulfillmentContext;
@@ -265,6 +298,10 @@ contract MandateOutputEncodingLibTest is Test {
         this.encodeFillDescriptionMemoryHarness(solver, orderId, timestamp, output);
         vm.expectRevert(abi.encodeWithSignature("ContextOutOfRange()"));
         this.encodeFillDescriptionHarness(
+            solver, orderId, timestamp, token, amount, recipient, remoteCall, fulfillmentContext
+        );
+        vm.expectRevert(abi.encodeWithSignature("ContextOutOfRange()"));
+        this.encodeFillDescriptionMemoryHarness(
             solver, orderId, timestamp, token, amount, recipient, remoteCall, fulfillmentContext
         );
     }
