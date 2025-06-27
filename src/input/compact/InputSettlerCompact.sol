@@ -40,6 +40,7 @@ contract InputSettlerCompact is BaseInputSettler, IInputSettlerCompact {
     error InvalidTimestampLength();
     error OrderIdMismatch(bytes32 provided, bytes32 computed);
     error FilledTooLate(uint32 expected, uint32 actual);
+    error WrongChainId();
 
     TheCompact public immutable COMPACT;
 
@@ -183,6 +184,7 @@ contract InputSettlerCompact is BaseInputSettler, IInputSettlerCompact {
         bytes calldata call
     ) external virtual {
         if (destination == bytes32(0)) revert NoDestination();
+        if (order.originChainId != block.chainid) revert WrongChainId();
 
         bytes32 orderId = _orderIdentifier(order);
         bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
@@ -220,6 +222,7 @@ contract InputSettlerCompact is BaseInputSettler, IInputSettlerCompact {
         bytes calldata orderOwnerSignature
     ) external virtual {
         if (destination == bytes32(0)) revert NoDestination();
+        if (order.originChainId != block.chainid) revert WrongChainId();
 
         bytes32 orderId = _orderIdentifier(order);
         bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
