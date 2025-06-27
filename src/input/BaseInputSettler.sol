@@ -4,7 +4,6 @@ pragma solidity ^0.8.26;
 import { EIP712 } from "solady/utils/EIP712.sol";
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { SignatureCheckerLib } from "solady/utils/SignatureCheckerLib.sol";
-import { SignatureCheckerLib } from "solady/utils/SignatureCheckerLib.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
 import { IOIFCallback } from "../interfaces/IOIFCallback.sol";
