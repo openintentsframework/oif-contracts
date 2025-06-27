@@ -278,8 +278,9 @@ contract BitcoinOracle is BaseOracle {
     // --- Data Validation Function --- //
 
     /**
-     * @notice The Bitcoin Oracle should also work as an filler if it sits locally on a chain.
-     * Instead of storing 2 attestations of proofs (filler and oracle uses different schemes) the payload attestation is
+     * @notice The Bitcoin Oracle should also work as an output settler if it sits locally on a chain.
+     * Instead of storing 2 attestations of proofs (output settler and oracle uses different schemes) the payload
+     * attestation is
      * stored instead. That allows settlers to check if outputs has been filled but also if payloads are valid (if
      * accessed through an oracle).
      * @param payloadHash Hash of the payload to verify.

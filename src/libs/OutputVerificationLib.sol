@@ -19,7 +19,7 @@ library OutputVerificationLib {
     }
 
     /**
-     * @notice Validate the remote oracle address is this contract.
+     * @notice Validate the output oracle address is this contract.
      */
     function _isThisOutputSettler(
         bytes32 outputSettler
