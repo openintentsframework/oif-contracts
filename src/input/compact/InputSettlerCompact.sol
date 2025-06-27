@@ -163,7 +163,6 @@ contract InputSettlerCompact is BaseInputSettler, IInputSettlerCompact {
     /**
      * @notice Finalises an order when called directly by the solver
      * @dev The caller must be the address corresponding to the first solver in the solvers array.
-     * If destination is bytes32(0), the order owner will be used as the destination.
      * @param order StandardOrder signed in conjunction with a Compact to form an order
      * @param signatures A signature for the sponsor and the allocator. abi.encode(bytes(sponsorSignature),
      * bytes(allocatorData))
