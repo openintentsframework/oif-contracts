@@ -105,7 +105,7 @@ contract BitcoinOracle is BaseOracle {
     /**
      * @notice Returns the number of seconds required to reach confirmation with 99.9%
      * certainty.
-     * @dev confirmations == 0 returns 181 minutes.
+     * @dev confirmations == 0 returns 119 minutes.
      * @param confirmations Current block height - inclusion block height + 1.
      * @return Expected time to reach the confirmation with 99,9% certainty.
      */
