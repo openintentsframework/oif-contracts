@@ -616,8 +616,7 @@ contract BitcoinOracle is BaseOracle {
         bytes32 solver = claimedOrder.solver;
         if (solver == bytes32(0)) revert NotClaimed();
         if (claimedOrder.claimTimestamp + DISPUTE_PERIOD >= block.timestamp) revert TooEarly();
-        bool disputed = claimedOrder.disputer != address(0);
-        if (disputed) revert Disputed();
+        if (claimedOrder.disputer != address(0)) revert Disputed();
 
         bytes32 outputHash =
             keccak256(MandateOutputEncodingLib.encodeFillDescription(solver, orderId, uint32(block.timestamp), output));
