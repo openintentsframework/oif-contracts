@@ -1,9 +1,9 @@
 {
   "bitcoinFinaliseDispute": "66591",
-  "bitcoinOPVerify": "87100",
+  "bitcoinOPVerify": "87374",
   "bitcoinOutputClaim": "99548",
   "bitcoinOutputDispute": "74450",
-  "bitcoinVerify": "133931",
-  "bitcoinVerifyWithEmbed": "136556",
+  "bitcoinVerify": "134197",
+  "bitcoinVerifyWithEmbed": "136822",
   "wormholeOracleSubmit": "14084"
 }

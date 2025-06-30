@@ -96,7 +96,7 @@ contract OutputInputSettler7683 is BaseOutputSettler, IDestinationSettler {
         bytes memory remoteCall = output.call;
         if (remoteCall.length > 0) IOIFCallback(recipient).outputFilled(output.token, outputAmount, remoteCall);
 
-        emit OutputFilled(orderId, proposedSolver, uint32(block.timestamp), output);
+        emit OutputFilled(orderId, proposedSolver, uint32(block.timestamp), output, outputAmount);
 
         return proposedSolver;
     }
