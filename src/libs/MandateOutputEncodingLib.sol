@@ -108,7 +108,7 @@ library MandateOutputEncodingLib {
     }
 
     /**
-     * @notice Hash of an MandateOutput computed based on a fill description.
+     * @notice Hash of an MandateOutput computed based on a common payload.
      * @param oracle Address of the oracle of the output.
      * @param settler Address of the settler contract of the output.
      * @param chainId Identifier of the chain for the output.
@@ -204,7 +204,7 @@ library MandateOutputEncodingLib {
      * @param fillDescription Serialised fill description.
      * @return solver Solver of the output.
      */
-    function loadSolverFromFill(
+    function loadSolverFromFillDescription(
         bytes calldata fillDescription
     ) internal pure returns (bytes32 solver) {
         assembly ("memory-safe") {
@@ -217,7 +217,7 @@ library MandateOutputEncodingLib {
      * @param fillDescription Serialised fill description.
      * @return orderId associated with the output.
      */
-    function loadOrderIdFromFill(
+    function loadOrderIdFromFillDescription(
         bytes calldata fillDescription
     ) internal pure returns (bytes32 orderId) {
         assembly ("memory-safe") {
@@ -230,7 +230,7 @@ library MandateOutputEncodingLib {
      * @param fillDescription Serialised fill description.
      * @return ts Timestamp associated with the output.
      */
-    function loadTimestampFromFill(
+    function loadTimestampFromFillDescription(
         bytes calldata fillDescription
     ) internal pure returns (uint32 ts) {
         assembly ("memory-safe") {

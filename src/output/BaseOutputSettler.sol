@@ -19,12 +19,12 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
     error FillDeadline();
     error AlreadyFilled();
     error NotFilled();
+    error InvalidAttestation(bytes32 storedFillRecordHash, bytes32 givenFillRecordHash);
     error ZeroValue();
     error PayloadTooSmall();
 
     /**
      * @notice Sets outputs as filled by their solver identifier, such that outputs won't be filled twice.
-     * @dev Is not used for validating payloads, BaseOracle::_attestations is used instead.
      */
     mapping(bytes32 orderId => mapping(bytes32 outputHash => bytes32 payloadHash)) internal _fillRecords;
 
@@ -167,8 +167,8 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
 
     /**
      * @notice Helper function to check whether a payload is valid.
-     * @dev Works by checked if the entirety of the payload has been recorded as valid. Every byte of the payload is
-     * checked to ensure the payload has to be filled.
+     * @dev Works by checking if the entirety of the payload has been recorded as valid. Every byte of the payload is
+     * checked to ensure the payload has been filled.
      * @param payload keccak256 hash of the relevant payload.
      * @return bool Whether or not the payload has been recorded as filled.
      */
@@ -183,12 +183,12 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
             block.chainid,
             payload[68:]
         );
-        bytes32 payloadOrderId = MandateOutputEncodingLib.loadOrderIdFromFill(payload);
+        bytes32 payloadOrderId = MandateOutputEncodingLib.loadOrderIdFromFillDescription(payload);
         bytes32 fillRecord = _fillRecords[payloadOrderId][outputHash];
 
         // Get the expected record based on the fillDescription (payload).
-        bytes32 payloadSolver = MandateOutputEncodingLib.loadSolverFromFill(payload);
-        uint32 payloadTimestamp = MandateOutputEncodingLib.loadTimestampFromFill(payload);
+        bytes32 payloadSolver = MandateOutputEncodingLib.loadSolverFromFillDescription(payload);
+        uint32 payloadTimestamp = MandateOutputEncodingLib.loadTimestampFromFillDescription(payload);
         bytes32 expectedFillRecord = _getFillRecordHash(payloadSolver, payloadTimestamp);
 
         return fillRecord == expectedFillRecord;
@@ -218,7 +218,10 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
     ) external {
         bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHash(output);
         bytes32 existingFillRecordHash = _fillRecords[orderId][outputHash];
-        if (existingFillRecordHash != bytes32(0)) revert NotFilled();
+        bytes32 givenFillRecordHash = _getFillRecordHash(solver, timestamp);
+        if (existingFillRecordHash != givenFillRecordHash) {
+            revert InvalidAttestation(existingFillRecordHash, givenFillRecordHash);
+        }
 
         bytes32 dataHash = keccak256(MandateOutputEncodingLib.encodeFillDescription(solver, orderId, timestamp, output));
 
