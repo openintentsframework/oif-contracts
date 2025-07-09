@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import { LibAddress } from "../../libs/LibAddress.sol";
 import { LibBytes } from "solady/utils/LibBytes.sol";
 
 import { MandateOutput, MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 
+import { BaseOutputSettler } from "../../output/BaseOutputSettler.sol";
 import { BaseOracle } from "../BaseOracle.sol";
 import { ICrossL2Prover } from "./ICrossL2Prover.sol";
 
@@ -13,6 +15,10 @@ import { ICrossL2Prover } from "./ICrossL2Prover.sol";
  * Polymer uses the fill event to reconstruct the payload for verification instead of sending messages cross-chain.
  */
 contract PolymerOracle is BaseOracle {
+    using LibAddress for address;
+    
+    error WrongEventSignature();
+
     ICrossL2Prover CROSS_L2_PROVER;
 
     constructor(
@@ -43,6 +49,11 @@ contract PolymerOracle is BaseOracle {
         (uint32 chainId, address emittingContract, bytes memory topics, bytes memory unindexedData) =
             CROSS_L2_PROVER.validateEvent(proof);
 
+        // While it is unlikely that an event will be emitted matching the data pattern we have, validate the event
+        // signature.
+        bytes32 eventSignature = bytes32(LibBytes.slice(topics, 0, 32));
+        if (eventSignature != BaseOutputSettler.OutputFilled.selector) revert WrongEventSignature();
+
         // OrderId is topic[1] which is 32 to 64 bytes.
         bytes32 orderId = bytes32(LibBytes.slice(topics, 32, 64));
 
@@ -54,10 +65,10 @@ contract PolymerOracle is BaseOracle {
         // Convert the Polymer ChainID into the canonical chainId.
         uint256 remoteChainId = _getChainId(uint256(chainId));
 
-        bytes32 application = bytes32(uint256(uint160(emittingContract)));
-        _attestations[remoteChainId][bytes32(uint256(uint160(address(this))))][application][payloadHash] = true;
+        bytes32 application = emittingContract.toIdentifier();
+        _attestations[remoteChainId][address(this).toIdentifier()][application][payloadHash] = true;
 
-        emit OutputProven(remoteChainId, bytes32(uint256(uint160(address(this)))), application, payloadHash);
+        emit OutputProven(remoteChainId, address(this).toIdentifier(), application, payloadHash);
     }
 
     function receiveMessage(
