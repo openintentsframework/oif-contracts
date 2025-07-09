@@ -16,7 +16,7 @@ import { ICrossL2Prover } from "./ICrossL2Prover.sol";
  */
 contract PolymerOracle is BaseOracle {
     using LibAddress for address;
-    
+
     error WrongEventSignature();
 
     ICrossL2Prover CROSS_L2_PROVER;
