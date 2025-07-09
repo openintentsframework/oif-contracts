@@ -97,7 +97,10 @@ abstract contract BaseOracle is IOracle {
                     dataHash := calldataload(offset)
                     offset := add(offset, 0x20)
                 }
-                state = state && _isProven(remoteChainId, remoteOracle, application, dataHash);
+                bool _proven = _isProven(remoteChainId, remoteOracle, application, dataHash);
+                assembly ("memory-safe") {
+                    state := and(state, _proven)
+                }
             }
             if (!state) revert NotProven();
         }

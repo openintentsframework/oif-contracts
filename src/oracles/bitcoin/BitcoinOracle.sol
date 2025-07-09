@@ -305,9 +305,11 @@ contract BitcoinOracle is BaseOracle {
         accumulator = true;
         uint256 numPayloads = payloadHashes.length;
         for (uint256 i; i < numPayloads; ++i) {
-            accumulator = accumulator && _isPayloadValid(payloadHashes[i]);
+            bool payloadValid = _isPayloadValid(payloadHashes[i]);
+            assembly ("memory-safe") {
+                accumulator := and(accumulator, payloadValid)
+            }
         }
-        return accumulator;
     }
 
     // --- Validation --- //

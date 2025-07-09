@@ -3,7 +3,7 @@
   "bitcoinOPVerify": "87374",
   "bitcoinOutputClaim": "99548",
   "bitcoinOutputDispute": "74450",
-  "bitcoinVerify": "134197",
-  "bitcoinVerifyWithEmbed": "136822",
-  "wormholeOracleSubmit": "14084"
+  "bitcoinVerify": "133931",
+  "bitcoinVerifyWithEmbed": "136556",
+  "wormholeOracleSubmit": "14041"
 }
