@@ -5,6 +5,8 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { IOIFCallback } from "../interfaces/IOIFCallback.sol";
 import { IPayloadCreator } from "../interfaces/IPayloadCreator.sol";
+
+import { LibAddress } from "../libs/LibAddress.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../libs/MandateOutputEncodingLib.sol";
 import { OutputVerificationLib } from "../libs/OutputVerificationLib.sol";
 
@@ -16,6 +18,8 @@ import { BaseOracle } from "../oracles/BaseOracle.sol";
  * This base output settler implements logic to work as both a PayloadCreator (for oracles) and as an oracle itself.
  */
 abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
+    using LibAddress for address;
+
     error FillDeadline();
     error FilledBySomeoneElse(bytes32 solver);
     error ZeroValue();
@@ -86,8 +90,7 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
         bytes32 dataHash = keccak256(
             MandateOutputEncodingLib.encodeFillDescription(proposedSolver, orderId, uint32(block.timestamp), output)
         );
-        _attestations[block.chainid][bytes32(uint256(uint160(address(this))))][bytes32(uint256(uint160(address(this))))][dataHash]
-        = true;
+        _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][dataHash] = true;
 
         // Storage has been set. Fill the output.
         address recipient = address(uint160(uint256(output.recipient)));
@@ -178,9 +181,7 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
     function _isPayloadValid(
         bytes32 payloadHash
     ) internal view virtual returns (bool) {
-        return _attestations[block.chainid][bytes32(uint256(uint160(address(this))))][bytes32(
-            uint256(uint160(address(this)))
-        )][payloadHash];
+        return _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][payloadHash];
     }
 
     /**
