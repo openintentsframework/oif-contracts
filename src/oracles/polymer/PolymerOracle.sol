@@ -34,7 +34,7 @@ contract PolymerOracle is BaseOracle {
         MandateOutput memory mandateOutput
     ) internal pure returns (bytes32 outputHash) {
         return outputHash =
-            keccak256(MandateOutputEncodingLib.encodeFillDescriptionM(solver, orderId, timestamp, mandateOutput));
+            keccak256(MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, timestamp, mandateOutput));
     }
 
     function _processMessage(

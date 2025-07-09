@@ -79,7 +79,9 @@ contract OutputInputSettler7683 is BaseOutputSettler, IDestinationSettler {
         // hashes have been filled. Note that within the payload we set the current timestamp. This
         // timestamp needs to be collected from the event (or tx) to be able to reproduce the payload(hash)
         bytes32 dataHash = keccak256(
-            MandateOutputEncodingLib.encodeFillDescriptionM(proposedSolver, orderId, uint32(block.timestamp), output)
+            MandateOutputEncodingLib.encodeFillDescriptionMemory(
+                proposedSolver, orderId, uint32(block.timestamp), output
+            )
         );
         _attestations[block.chainid][bytes32(uint256(uint160(address(this))))][bytes32(uint256(uint160(address(this))))][dataHash]
         = true;

@@ -109,8 +109,6 @@ library MandateOutputEncodingLib {
 
     // --- FillDescription Encoding --- //
 
-
-
     /**
      * @notice FillDescription encoding.
      * @dev The encoding scheme uses 2 bytes long length identifiers. As a result, neither call nor context exceed
@@ -194,13 +192,13 @@ library MandateOutputEncodingLib {
         );
     }
 
-    function encodeFillDescriptionM(
+    function encodeFillDescriptionMemory(
         bytes32 solver,
         bytes32 orderId,
         uint32 timestamp,
         MandateOutput memory mandateOutput
     ) internal pure returns (bytes memory encodedOutput) {
-        return encodedOutput = encodeFillDescriptionM(
+        return encodedOutput = encodeFillDescriptionMemory(
             solver,
             orderId,
             timestamp,

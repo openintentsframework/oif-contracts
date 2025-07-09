@@ -43,7 +43,7 @@ contract MandateOutputEncodingLibTest is Test {
         bytes memory remoteCall,
         bytes memory fulfillmentContext
     ) external pure returns (bytes memory encodedOutput) {
-        return MandateOutputEncodingLib.encodeFillDescriptionM(
+        return MandateOutputEncodingLib.encodeFillDescriptionMemory(
             solver, orderId, timestamp, token, amount, recipient, remoteCall, fulfillmentContext
         );
     }
@@ -63,7 +63,7 @@ contract MandateOutputEncodingLibTest is Test {
         uint32 timestamp,
         MandateOutput memory output
     ) external pure returns (bytes memory encodedOutput) {
-        return MandateOutputEncodingLib.encodeFillDescriptionM(solver, orderId, timestamp, output);
+        return MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, timestamp, output);
     }
 
     function test_encodeMandateOutput() external view {
