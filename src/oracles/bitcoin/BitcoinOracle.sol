@@ -9,6 +9,7 @@ import { AddressType, BitcoinAddress, BtcScript } from "bitcoinprism-evm/src/lib
 
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
+import { LibAddress } from "../../libs/LibAddress.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 import { OutputVerificationLib } from "../../libs/OutputVerificationLib.sol";
 
@@ -26,11 +27,13 @@ import { BaseOracle } from "../BaseOracle.sol";
  * Bitcoin addresses can encoded in at most 33 bytes: 32 bytes of script- or witnesshash or 20 bytes of pubkeyhash +
  * 1 byte of address type identification. Since the recipient is only 32 bytes the remaining byte (address type) will be
  * encoded in the token as the right most byte. Another byte of the token is used to set confirmations as a uint8.
- * The result is the token is: 30B: BITCOIN_AS_TOKEN | 1B: Confiramtions | 1B: Address type.
+ * The result is the token is: 30B: BITCOIN_AS_TOKEN | 1B: Confirmations | 1B: Address type.
  *
  * 0xB17C012
  */
 contract BitcoinOracle is BaseOracle {
+    using LibAddress for address;
+
     error AlreadyClaimed(bytes32 claimer);
     error AlreadyDisputed(address disputer);
     error BadAmount();
@@ -105,7 +108,7 @@ contract BitcoinOracle is BaseOracle {
     /**
      * @notice Returns the number of seconds required to reach confirmation with 99.9%
      * certainty.
-     * @dev confirmations == 0 returns 181 minutes.
+     * @dev confirmations == 0 returns 119 minutes.
      * @param confirmations Current block height - inclusion block height + 1.
      * @return Expected time to reach the confirmation with 99,9% certainty.
      */
@@ -288,9 +291,7 @@ contract BitcoinOracle is BaseOracle {
     function _isPayloadValid(
         bytes32 payloadHash
     ) internal view returns (bool) {
-        return _attestations[block.chainid][bytes32(uint256(uint160(address(this))))][bytes32(
-            uint256(uint160(address(this)))
-        )][payloadHash];
+        return _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][payloadHash];
     }
 
     /**
@@ -403,8 +404,7 @@ contract BitcoinOracle is BaseOracle {
 
         bytes32 outputHash =
             keccak256(MandateOutputEncodingLib.encodeFillDescription(solver, orderId, uint32(timestamp), output));
-        _attestations[block.chainid][bytes32(uint256(uint160(address(this))))][bytes32(uint256(uint160(address(this))))][outputHash]
-        = true;
+        _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][outputHash] = true;
 
         emit OutputFilled(orderId, solver, uint32(timestamp), output);
         emit OutputVerified(inclusionProof.txId);
@@ -437,7 +437,7 @@ contract BitcoinOracle is BaseOracle {
      * @param blockNum Bitcoin block number of block that included the transaction that fills the output.
      * @param inclusionProof Context required to validate an output has been filled.
      * @param txOutIndex Index of the output in the transaction being proved.
-     * @param previousBlockHeader Hheader of the block before blockNum. Timestamp will be collected from this header.
+     * @param previousBlockHeader Header of the block before blockNum. Timestamp will be collected from this header.
      */
     function _verifyAttachTimestamp(
         bytes32 orderId,
@@ -482,7 +482,7 @@ contract BitcoinOracle is BaseOracle {
      * @param blockNum Bitcoin block number of block that included the transaction that fills the output.
      * @param inclusionProof Context required to validate an output has been filled.
      * @param txOutIndex Index of the output in the transaction being proved.
-     * @param previousBlockHeader Hheader of the block before blockNum. Timestamp will be collected from this header.
+     * @param previousBlockHeader Header of the block before blockNum. Timestamp will be collected from this header.
      */
     function verify(
         bytes32 orderId,
@@ -621,8 +621,7 @@ contract BitcoinOracle is BaseOracle {
         bytes32 solver = claimedOrder.solver;
         bytes32 outputHash =
             keccak256(MandateOutputEncodingLib.encodeFillDescription(solver, orderId, uint32(block.timestamp), output));
-        _attestations[block.chainid][bytes32(uint256(uint160(address(this))))][bytes32(uint256(uint160(address(this))))][outputHash]
-        = true;
+        _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][outputHash] = true;
         emit OutputFilled(orderId, solver, uint32(block.timestamp), output);
 
         address sponsor = claimedOrder.sponsor;

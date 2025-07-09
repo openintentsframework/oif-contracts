@@ -61,7 +61,7 @@ library MandateOutputType {
             }
             for (uint256 i = 0; i < outputs.length; ++i) {
                 bytes32 outputHash = hashOutput(outputs[i]);
-                assembly {
+                assembly ("memory-safe") {
                     mstore(add(p, mul(i, 0x20)), outputHash)
                 }
             }
@@ -99,7 +99,7 @@ library MandateOutputType {
             }
             for (uint256 i = 0; i < outputs.length; ++i) {
                 bytes32 outputHash = hashOutputM(outputs[i]);
-                assembly {
+                assembly ("memory-safe") {
                     mstore(add(p, mul(i, 0x20)), outputHash)
                 }
             }
