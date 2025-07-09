@@ -601,7 +601,7 @@ contract BitcoinOracle is BaseOracle {
         collateralAmount = collateralAmount * CHALLENGER_COLLATERAL_FACTOR;
         SafeTransferLib.safeTransferFrom(COLLATERAL_TOKEN, msg.sender, address(this), collateralAmount);
 
-        emit OutputDisputed(orderId, _outputIdentifier(output));
+        emit OutputDisputed(orderId, outputId);
     }
 
     /**
@@ -638,7 +638,7 @@ contract BitcoinOracle is BaseOracle {
         uint256 collateralAmount = output.amount * multiplier;
         SafeTransferLib.safeTransfer(COLLATERAL_TOKEN, sponsor, collateralAmount);
 
-        emit OutputOptimisticallyVerified(orderId, _outputIdentifier(output));
+        emit OutputOptimisticallyVerified(orderId, outputId);
     }
 
     /**
@@ -676,6 +676,6 @@ contract BitcoinOracle is BaseOracle {
             SafeTransferLib.safeTransfer(COLLATERAL_TOKEN, DISPUTED_ORDER_FEE_DESTINATION, disputeCost);
         }
 
-        emit OutputDisputeFinalised(orderId, _outputIdentifier(output));
+        emit OutputDisputeFinalised(orderId, outputId);
     }
 }
