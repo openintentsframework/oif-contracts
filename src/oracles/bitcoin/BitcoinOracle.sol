@@ -46,7 +46,9 @@ contract BitcoinOracle is BaseOracle {
     error TooLate();
     error ZeroValue();
 
-    event OutputFilled(bytes32 indexed orderId, bytes32 solver, uint32 timestamp, MandateOutput output);
+    event OutputFilled(
+        bytes32 indexed orderId, bytes32 solver, uint32 timestamp, MandateOutput output, uint256 finalAmount
+    );
     event OutputVerified(bytes32 verificationContext);
 
     event OutputClaimed(bytes32 indexed orderId, bytes32 outputId);
@@ -179,7 +181,7 @@ contract BitcoinOracle is BaseOracle {
     function _outputIdentifier(
         MandateOutput calldata output
     ) internal pure returns (bytes32) {
-        return keccak256(MandateOutputEncodingLib.encodeMandateOutput(output));
+        return MandateOutputEncodingLib.getMandateOutputHash(output);
     }
 
     function outputIdentifier(
@@ -303,9 +305,11 @@ contract BitcoinOracle is BaseOracle {
         accumulator = true;
         uint256 numPayloads = payloadHashes.length;
         for (uint256 i; i < numPayloads; ++i) {
-            accumulator = accumulator && _isPayloadValid(payloadHashes[i]);
+            bool payloadValid = _isPayloadValid(payloadHashes[i]);
+            assembly ("memory-safe") {
+                accumulator := and(accumulator, payloadValid)
+            }
         }
-        return accumulator;
     }
 
     // --- Validation --- //
@@ -406,7 +410,7 @@ contract BitcoinOracle is BaseOracle {
             keccak256(MandateOutputEncodingLib.encodeFillDescription(solver, orderId, timestamp, output));
         _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][outputHash] = true;
 
-        emit OutputFilled(orderId, solver, timestamp, output);
+        emit OutputFilled(orderId, solver, uint32(timestamp), output, output.amount);
         emit OutputVerified(inclusionProof.txId);
     }
 
@@ -613,16 +617,15 @@ contract BitcoinOracle is BaseOracle {
         bytes32 outputId = _outputIdentifier(output);
 
         ClaimedOrder storage claimedOrder = _claimedOrder[orderId][outputId];
-        if (claimedOrder.solver == bytes32(0)) revert NotClaimed();
-        if (claimedOrder.claimTimestamp + DISPUTE_PERIOD >= block.timestamp) revert TooEarly();
-        bool disputed = claimedOrder.disputer != address(0);
-        if (disputed) revert Disputed();
-
         bytes32 solver = claimedOrder.solver;
+        if (solver == bytes32(0)) revert NotClaimed();
+        if (claimedOrder.claimTimestamp + DISPUTE_PERIOD >= block.timestamp) revert TooEarly();
+        if (claimedOrder.disputer != address(0)) revert Disputed();
+
         bytes32 outputHash =
             keccak256(MandateOutputEncodingLib.encodeFillDescription(solver, orderId, uint32(block.timestamp), output));
         _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][outputHash] = true;
-        emit OutputFilled(orderId, solver, uint32(block.timestamp), output);
+        emit OutputFilled(orderId, solver, uint32(block.timestamp), output, output.amount);
 
         address sponsor = claimedOrder.sponsor;
         uint256 multiplier = claimedOrder.multiplier;

@@ -7,13 +7,13 @@
   "7683open": "86045",
   "7683openFor": "132710",
   "BasePurchaseOrder": "137111",
-  "CompactFinaliseFor": "139590",
-  "CompactFinaliseSelf": "131010",
-  "CompactFinaliseTo": "131010",
+  "CompactFinaliseFor": "139560",
+  "CompactFinaliseSelf": "130980",
+  "CompactFinaliseTo": "130980",
   "IntegrationCoinFill": "112123",
-  "IntegrationCompactFinaliseSelf": "127643",
+  "IntegrationCompactFinaliseSelf": "127551",
   "IntegrationWormholeReceiveMessage": "73550",
-  "IntegrationWormholeSubmit": "42526",
+  "IntegrationWormholeSubmit": "42489",
   "maxTimestamp1": "505",
   "minTimestamp1": "461"
 }
