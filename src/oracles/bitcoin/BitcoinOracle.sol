@@ -181,7 +181,7 @@ contract BitcoinOracle is BaseOracle {
     function _outputIdentifier(
         MandateOutput calldata output
     ) internal pure returns (bytes32) {
-        return keccak256(MandateOutputEncodingLib.encodeMandateOutput(output));
+        return MandateOutputEncodingLib.getMandateOutputHash(output);
     }
 
     function outputIdentifier(
