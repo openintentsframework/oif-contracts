@@ -84,7 +84,7 @@ contract WormholeOracle is ChainMap, BaseOracle, WormholeVerifier {
     ) external {
         (uint16 remoteMessagingProtocolChainIdentifier, bytes32 remoteSenderIdentifier, bytes calldata message) =
             _verifyPacket(rawMessage);
-        (bytes32 application, bytes32[] memory payloadHashes) = MessageEncodingLib.decodeMessage(message);
+        (bytes32 application, bytes32[] memory payloadHashes) = MessageEncodingLib.getHashesOfEncodedPayloads(message);
 
         uint256 remoteChainId = _getMappedChainId(uint256(remoteMessagingProtocolChainIdentifier));
 

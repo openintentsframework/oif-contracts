@@ -51,7 +51,7 @@ library MessageEncodingLib {
      * @return application Source of the messages on the payload.
      * @return payloadHashes A hash of every payload.
      */
-    function decodeMessage(
+    function getHashesOfEncodedPayloads(
         bytes calldata encodedPayload
     ) internal pure returns (bytes32 application, bytes32[] memory payloadHashes) {
         unchecked {
