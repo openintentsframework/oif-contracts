@@ -57,8 +57,8 @@ contract PolymerOracle is BaseOracle {
         // OrderId is topic[1] which is 32 to 64 bytes.
         bytes32 orderId = bytes32(LibBytes.slice(topics, 32, 64));
 
-        (bytes32 solver, uint32 timestamp, MandateOutput memory output) =
-            abi.decode(unindexedData, (bytes32, uint32, MandateOutput));
+        (bytes32 solver, uint32 timestamp, MandateOutput memory output,) =
+            abi.decode(unindexedData, (bytes32, uint32, MandateOutput, uint256));
 
         bytes32 payloadHash = _proofPayloadHash(orderId, solver, timestamp, output);
 

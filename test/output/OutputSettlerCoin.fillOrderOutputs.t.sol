@@ -11,7 +11,9 @@ import { MockERC20 } from "../mocks/MockERC20.sol";
 contract OutputSettlerCoinTestfillOrderOutputs is Test {
     error FilledBySomeoneElse(bytes32 solver);
 
-    event OutputFilled(bytes32 indexed orderId, bytes32 solver, uint32 timestamp, MandateOutput output);
+    event OutputFilled(
+        bytes32 indexed orderId, bytes32 solver, uint32 timestamp, MandateOutput output, uint256 finalAmount
+    );
 
     OutputSettlerCoin outputSettlerCoin;
 
@@ -83,8 +85,8 @@ contract OutputSettlerCoinTestfillOrderOutputs is Test {
         });
 
         vm.expectEmit();
-        emit OutputFilled(orderId, filler, uint32(block.timestamp), outputs[0]);
-        emit OutputFilled(orderId, filler, uint32(block.timestamp), outputs[1]);
+        emit OutputFilled(orderId, filler, uint32(block.timestamp), outputs[0], outputs[0].amount);
+        emit OutputFilled(orderId, filler, uint32(block.timestamp), outputs[1], outputs[1].amount);
 
         vm.expectCall(
             outputTokenAddress,

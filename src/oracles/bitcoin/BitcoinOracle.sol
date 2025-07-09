@@ -46,7 +46,9 @@ contract BitcoinOracle is BaseOracle {
     error TooLate();
     error ZeroValue();
 
-    event OutputFilled(bytes32 indexed orderId, bytes32 solver, uint32 timestamp, MandateOutput output);
+    event OutputFilled(
+        bytes32 indexed orderId, bytes32 solver, uint32 timestamp, MandateOutput output, uint256 finalAmount
+    );
     event OutputVerified(bytes32 verificationContext);
 
     event OutputClaimed(bytes32 indexed orderId, bytes32 outputId);
@@ -406,7 +408,7 @@ contract BitcoinOracle is BaseOracle {
             keccak256(MandateOutputEncodingLib.encodeFillDescription(solver, orderId, uint32(timestamp), output));
         _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][outputHash] = true;
 
-        emit OutputFilled(orderId, solver, uint32(timestamp), output);
+        emit OutputFilled(orderId, solver, uint32(timestamp), output, output.amount);
         emit OutputVerified(inclusionProof.txId);
     }
 
@@ -622,7 +624,7 @@ contract BitcoinOracle is BaseOracle {
         bytes32 outputHash =
             keccak256(MandateOutputEncodingLib.encodeFillDescription(solver, orderId, uint32(block.timestamp), output));
         _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][outputHash] = true;
-        emit OutputFilled(orderId, solver, uint32(block.timestamp), output);
+        emit OutputFilled(orderId, solver, uint32(block.timestamp), output, output.amount);
 
         address sponsor = claimedOrder.sponsor;
         uint256 multiplier = claimedOrder.multiplier;
