@@ -79,7 +79,7 @@ contract OutputSettlerCoin is BaseOutputSettler {
 
         if (orderType == 0xe0 && fulfillmentLength == 37) {
             bytes calldata fulfillmentContext = output.context;
-            bytes32 exclusiveFor; // = bytes32(bytes32(output.context[1:33]));
+            bytes32 exclusiveFor; // = bytes32(output.context[1:33]);
             uint32 startTime; // = uint32(bytes4(output.context[33:37]));
             assembly ("memory-safe") {
                 exclusiveFor := calldataload(add(fulfillmentContext.offset, 1))
@@ -91,7 +91,7 @@ contract OutputSettlerCoin is BaseOutputSettler {
         }
         if (orderType == 0xe1 && fulfillmentLength == 73) {
             bytes calldata fulfillmentContext = output.context;
-            bytes32 exclusiveFor; // = bytes32(bytes32(output.context[1:33]));
+            bytes32 exclusiveFor; // = bytes32(output.context[1:33]);
             uint32 startTime; // = uint32(bytes4(output.context[33:37]));
             uint32 stopTime; // = uint32(bytes4(output.context[37:41]));
             uint256 slope; // = uint256(bytes4(output.context[41:73]));
