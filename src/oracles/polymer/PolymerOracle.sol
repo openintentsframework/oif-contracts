@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import { LibAddress } from "../../libs/LibAddress.sol";
 import { LibBytes } from "solady/utils/LibBytes.sol";
 
 import { MandateOutput, MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
@@ -13,6 +14,8 @@ import { ICrossL2Prover } from "./ICrossL2Prover.sol";
  * Polymer uses the fill event to reconstruct the payload for verification instead of sending messages cross-chain.
  */
 contract PolymerOracle is BaseOracle {
+    using LibAddress for address;
+
     ICrossL2Prover CROSS_L2_PROVER;
 
     constructor(
@@ -54,10 +57,10 @@ contract PolymerOracle is BaseOracle {
         // Convert the Polymer ChainID into the canonical chainId.
         uint256 remoteChainId = _getChainId(uint256(chainId));
 
-        bytes32 application = bytes32(uint256(uint160(emittingContract)));
-        _attestations[remoteChainId][bytes32(uint256(uint160(address(this))))][application][payloadHash] = true;
+        bytes32 application = emittingContract.toIdentifier();
+        _attestations[remoteChainId][address(this).toIdentifier()][application][payloadHash] = true;
 
-        emit OutputProven(remoteChainId, bytes32(uint256(uint160(address(this)))), application, payloadHash);
+        emit OutputProven(remoteChainId, address(this).toIdentifier(), application, payloadHash);
     }
 
     function receiveMessage(

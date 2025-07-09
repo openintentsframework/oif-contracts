@@ -10,7 +10,7 @@ library BytesLib {
      * @param offset Offset for bytes array.
      */
     function toBytes(bytes calldata _bytes, uint256 offset) internal pure returns (bytes calldata res) {
-        assembly {
+        assembly ("memory-safe") {
             let lengthPtr := add(_bytes.offset, calldataload(add(_bytes.offset, offset)))
             res.offset := add(lengthPtr, 0x20)
             res.length := calldataload(lengthPtr)

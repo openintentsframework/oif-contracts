@@ -25,9 +25,9 @@ import { Messages } from "../../src/oracles/wormhole/external/wormhole/Messages.
 import { Setters } from "../../src/oracles/wormhole/external/wormhole/Setters.sol";
 import { Structs } from "../../src/oracles/wormhole/external/wormhole/Structs.sol";
 
+import { LibAddress } from "../../src/libs/LibAddress.sol";
 import { AlwaysYesOracle } from "../mocks/AlwaysYesOracle.sol";
 import { MockERC20 } from "../mocks/MockERC20.sol";
-import { LibAddress } from "../utils/LibAddress.sol";
 
 interface EIP712 {
     function DOMAIN_SEPARATOR() external view returns (bytes32);
