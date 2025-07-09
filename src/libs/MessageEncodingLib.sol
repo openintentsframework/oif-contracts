@@ -14,7 +14,7 @@ pragma solidity ^0.8.26;
  *      + NUM_PAYLOADS          32      (2 bytes)
  *
  *  Payloads (repeated NUM_PAYLOADS times)
- *      PAYLOAD_LENGTH          M_i+0   (2 bytes3)
+ *      PAYLOAD_LENGTH          M_i+0   (2 bytes)
  *      PAYLOAD                 M_i+2   (PAYLOAD_LENGTH bytes)
  *
  * where M_i = the byte offset of the ith payload, calculated as the sum of previous payload lengths plus their 2-byte
@@ -51,7 +51,7 @@ library MessageEncodingLib {
      * @return application Source of the messages on the payload.
      * @return payloadHashes A hash of every payload.
      */
-    function decodeMessage(
+    function getHashesOfEncodedPayloads(
         bytes calldata encodedPayload
     ) internal pure returns (bytes32 application, bytes32[] memory payloadHashes) {
         unchecked {
