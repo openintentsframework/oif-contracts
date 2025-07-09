@@ -223,7 +223,7 @@ contract BitcoinOracle is BaseOracle {
      */
     function _getTimestampOfBlock(
         bytes calldata blockHeader
-    ) internal pure returns (uint256 timestamp) {
+    ) internal pure returns (uint32 timestamp) {
         return timestamp = Endian.reverse32(uint32(bytes4(blockHeader[68:68 + 4])));
     }
 
@@ -240,7 +240,7 @@ contract BitcoinOracle is BaseOracle {
     function _getTimestampOfPreviousBlock(
         bytes calldata previousBlockHeader,
         bytes calldata currentBlockHeader
-    ) internal pure returns (uint256 timestamp) {
+    ) internal pure returns (uint32 timestamp) {
         bytes32 proposedPreviousBlockHash = BtcProof.getBlockHash(previousBlockHeader);
         bytes32 actualPreviousBlockHash = bytes32(Endian.reverse256(uint256(bytes32(currentBlockHeader[4:36]))));
         if (actualPreviousBlockHash != proposedPreviousBlockHash) {
@@ -389,9 +389,9 @@ contract BitcoinOracle is BaseOracle {
         uint256 blockNum,
         BtcTxProof calldata inclusionProof,
         uint256 txOutIndex,
-        uint256 timestamp
+        uint32 timestamp
     ) internal {
-        if (timestamp + CAN_VALIDATE_OUTPUTS_FOR < block.timestamp) revert TooLate();
+        if (timestamp + CAN_VALIDATE_OUTPUTS_FOR < uint32(block.timestamp)) revert TooLate();
 
         bytes32 token = output.token;
         uint256 sats = _validateUnderlyingPayment(
@@ -404,10 +404,10 @@ contract BitcoinOracle is BaseOracle {
         );
         if (sats != output.amount) revert BadAmount(); // Exact amount is checked to protect against "double spends".
 
-        bytes32 solver = _resolveClaimed(uint32(timestamp), orderId, output);
+        bytes32 solver = _resolveClaimed(timestamp, orderId, output);
 
         bytes32 outputHash =
-            keccak256(MandateOutputEncodingLib.encodeFillDescription(solver, orderId, uint32(timestamp), output));
+            keccak256(MandateOutputEncodingLib.encodeFillDescription(solver, orderId, timestamp, output));
         _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][outputHash] = true;
 
         emit OutputFilled(orderId, solver, uint32(timestamp), output, output.amount);
@@ -430,7 +430,7 @@ contract BitcoinOracle is BaseOracle {
         uint256 txOutIndex
     ) internal {
         // _validateUnderlyingPayment checks if inclusionProof.blockHeader == 80.
-        uint256 timestamp = _getTimestampOfBlock(inclusionProof.blockHeader);
+        uint32 timestamp = _getTimestampOfBlock(inclusionProof.blockHeader);
         _verify(orderId, output, blockNum, inclusionProof, txOutIndex, timestamp);
     }
 
@@ -452,7 +452,7 @@ contract BitcoinOracle is BaseOracle {
         bytes calldata previousBlockHeader
     ) internal {
         // _validateUnderlyingPayment checks if inclusionProof.blockHeader == 80.
-        uint256 timestamp = _getTimestampOfPreviousBlock(previousBlockHeader, inclusionProof.blockHeader);
+        uint32 timestamp = _getTimestampOfPreviousBlock(previousBlockHeader, inclusionProof.blockHeader);
         _verify(orderId, output, blockNum, inclusionProof, txOutIndex, timestamp);
     }
 
