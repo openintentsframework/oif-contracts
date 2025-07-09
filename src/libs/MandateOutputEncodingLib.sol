@@ -146,7 +146,7 @@ library MandateOutputEncodingLib {
     /**
      * @notice Memory version of encodeFillDescription
      */
-    function encodeFillDescriptionM(
+    function encodeFillDescriptionMemory(
         bytes32 solver,
         bytes32 orderId,
         uint32 timestamp,
