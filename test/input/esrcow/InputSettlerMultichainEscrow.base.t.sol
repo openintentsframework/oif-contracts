@@ -8,8 +8,9 @@ import { OutputSettlerCoin } from "../../../src/output/coin/OutputSettlerCoin.so
 import { InputSettlerMultichainEscrow } from "../../../src/input/escrow/InputSettlerMultichainEscrow.sol";
 import { AllowOpenType } from "../../../src/input/types/AllowOpenType.sol";
 import { MandateOutput, MandateOutputType } from "../../../src/input/types/MandateOutputType.sol";
-import { OrderPurchase, OrderPurchaseType } from "../../../src/input/types/OrderPurchaseType.sol";
+
 import { MultichainOrder, MultichainOrderType } from "../../../src/input/types/MultichainOrderType.sol";
+import { OrderPurchase, OrderPurchaseType } from "../../../src/input/types/OrderPurchaseType.sol";
 import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
 import { MessageEncodingLib } from "../../../src/libs/MessageEncodingLib.sol";
 import { WormholeOracle } from "../../../src/oracles/wormhole/WormholeOracle.sol";

@@ -32,7 +32,8 @@ library MultichainOrderType {
     ) internal view returns (bytes32) {
         return keccak256(
             abi.encodePacked(
-                // TODO: How to encode address(this) field. If this field is present, how do we do cross-vm / zk-sync compatibility? 
+                // TODO: How to encode address(this) field. If this field is present, how do we do cross-vm / zk-sync
+                // compatibility?
                 address(this),
                 order.user,
                 order.nonce,
