@@ -900,7 +900,7 @@ contract BitcoinOracleTest is Test {
 
         // Output oracle (as filler)
         bytes memory payload =
-            MandateOutputEncodingLib.encodeFillDescriptionM(solver, orderId, uint32(BLOCK_TIME), output);
+            MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, uint32(BLOCK_TIME), output);
         bytes[] memory payloads = new bytes[](1);
         payloads[0] = payload;
         bool fillerValid = bitcoinOracle.arePayloadsValid(payloads);
@@ -970,7 +970,7 @@ contract BitcoinOracleTest is Test {
         }
         // Local oracle (as oracle)
         bytes memory payload =
-            MandateOutputEncodingLib.encodeFillDescriptionM(solver, orderId, uint32(BLOCK_TIME), output);
+            MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, uint32(BLOCK_TIME), output);
         bool oracleValid =
             bitcoinOracle.isProven(block.chainid, bitcoinOracleBytes32, bitcoinOracleBytes32, keccak256(payload));
         assertEq(oracleValid, true);
@@ -1118,7 +1118,7 @@ contract BitcoinOracleTest is Test {
 
         // Local oracle (as oracle)
         bytes memory payload =
-            MandateOutputEncodingLib.encodeFillDescriptionM(solver, orderId, uint32(BLOCK_TIME), output);
+            MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, uint32(BLOCK_TIME), output);
         bool oracleValid =
             bitcoinOracle.isProven(block.chainid, bitcoinOracleBytes32, bitcoinOracleBytes32, keccak256(payload));
         assertEq(oracleValid, true);
@@ -1313,7 +1313,7 @@ contract BitcoinOracleTest is Test {
 
         // Local oracle (as oracle)
         bytes memory payload =
-            MandateOutputEncodingLib.encodeFillDescriptionM(solver, orderId, uint32(BLOCK_TIME), output);
+            MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, uint32(BLOCK_TIME), output);
         bool oracleValid =
             bitcoinOracle.isProven(block.chainid, bitcoinOracleBytes32, bitcoinOracleBytes32, keccak256(payload));
         assertEq(oracleValid, true);

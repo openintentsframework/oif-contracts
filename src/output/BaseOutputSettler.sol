@@ -209,7 +209,7 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
         uint256 numPayloads = payloads.length;
         accumulator = true;
         for (uint256 i; i < numPayloads; ++i) {
-            bool payloadValid = _isPayloadValid(payloadHashes[i]);
+            bool payloadValid = _isPayloadValid(payloads[i]);
             assembly ("memory-safe") {
                 accumulator := and(accumulator, payloadValid)
             }

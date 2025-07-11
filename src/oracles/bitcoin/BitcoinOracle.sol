@@ -409,8 +409,7 @@ contract BitcoinOracle is BaseOracle {
 
         bytes32 fillDescriptionHash =
             keccak256(MandateOutputEncodingLib.encodeFillDescription(solver, orderId, uint32(timestamp), output));
-        _attestations[block.chainid][output.oracle][address(this).toIdentifier()][fillDescriptionHash] =
-            true;
+        _attestations[block.chainid][output.oracle][address(this).toIdentifier()][fillDescriptionHash] = true;
 
         emit OutputFilled(orderId, solver, uint32(timestamp), output, output.amount);
         emit OutputVerified(inclusionProof.txId);
