@@ -128,7 +128,7 @@ contract WormholeOracleTestSubmit is Test {
     }
 
     function arePayloadsValid(
-        bytes32[] calldata
+        bytes[] calldata
     ) external pure returns (bool) {
         return true;
     }

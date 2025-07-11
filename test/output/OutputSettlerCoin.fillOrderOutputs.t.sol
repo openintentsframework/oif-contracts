@@ -111,7 +111,7 @@ contract OutputSettlerCoinTestfillOrderOutputs is Test {
         vm.prank(sender);
         outputSettlerCoin.fill(type(uint32).max, orderId, outputs[0], nextFiller);
 
-        vm.expectRevert(abi.encodeWithSignature("FilledBySomeoneElse(bytes32)", (nextFiller)));
+        vm.expectRevert(abi.encodeWithSignature("AlreadyFilled()"));
         vm.prank(sender);
         outputSettlerCoin.fillOrderOutputs(type(uint32).max, orderId, outputs, filler);
 

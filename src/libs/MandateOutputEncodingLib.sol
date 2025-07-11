@@ -107,6 +107,23 @@ library MandateOutputEncodingLib {
         return keccak256(encodeMandateOutputMemory(output));
     }
 
+    /**
+     * @notice Hash of an MandateOutput computed based on a common payload.
+     * @param oracle Address of the oracle of the output.
+     * @param settler Address of the settler contract of the output.
+     * @param chainId Identifier of the chain for the output.
+     * @param commonPayload Common payload of the serialised outputs.
+     * @return bytes32 OutputDescription hash.
+     */
+    function getMandateOutputHashFromCommonPayload(
+        bytes32 oracle,
+        bytes32 settler,
+        uint256 chainId,
+        bytes calldata commonPayload
+    ) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(oracle, settler, chainId, commonPayload));
+    }
+
     // --- FillDescription Encoding --- //
 
     /**
@@ -208,5 +225,47 @@ library MandateOutputEncodingLib {
             mandateOutput.call,
             mandateOutput.context
         );
+    }
+
+    // --- FillDescription Decoding --- //
+
+    /**
+     * @notice Loads the solver of the output from a serialised fill description.
+     * @param fillDescription Serialised fill description.
+     * @return solver Solver of the output.
+     */
+    function loadSolverFromFillDescription(
+        bytes calldata fillDescription
+    ) internal pure returns (bytes32 solver) {
+        assembly ("memory-safe") {
+            solver := calldataload(fillDescription.offset)
+        }
+    }
+
+    /**
+     * @notice Loads the orderId from a serialised fill description.
+     * @param fillDescription Serialised fill description.
+     * @return orderId associated with the output.
+     */
+    function loadOrderIdFromFillDescription(
+        bytes calldata fillDescription
+    ) internal pure returns (bytes32 orderId) {
+        assembly ("memory-safe") {
+            orderId := calldataload(add(fillDescription.offset, 0x20))
+        }
+    }
+
+    /**
+     * @notice Loads the timestamp when the fill was made from a serialised fill description.
+     * @param fillDescription Serialised fill description.
+     * @return ts Timestamp associated with the output.
+     */
+    function loadTimestampFromFillDescription(
+        bytes calldata fillDescription
+    ) internal pure returns (uint32 ts) {
+        assembly ("memory-safe") {
+            // Clean the leftmost bytes: (32-4)*8 = 224
+            ts := shr(224, shl(224, calldataload(add(fillDescription.offset, 0x24))))
+        }
     }
 }

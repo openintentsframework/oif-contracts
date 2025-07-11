@@ -287,25 +287,26 @@ contract BitcoinOracle is BaseOracle {
      * Instead of storing 2 attestations of proofs (output settler and oracle uses different schemes) the payload
      * attestation is stored instead. That allows settlers to check if outputs has been filled but also if payloads are
      * valid (if accessed through an oracle).
-     * @param payloadHash Hash of the payload to verify.
+     * @param payload Bytes encoded payload to verify.
      * @return bool Whether the payload has been verified.
      */
     function _isPayloadValid(
-        bytes32 payloadHash
+        bytes calldata payload
     ) internal view returns (bool) {
-        return _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][payloadHash];
+        bytes32 payloadHash = keccak256(payload);
+        return _attestations[block.chainid][(msg.sender).toIdentifier()][address(this).toIdentifier()][payloadHash];
     }
 
     /**
      * @dev Allows oracles to verify we have confirmed payloads.
      */
     function arePayloadsValid(
-        bytes32[] calldata payloadHashes
+        bytes[] calldata payloads
     ) external view returns (bool accumulator) {
         accumulator = true;
-        uint256 numPayloads = payloadHashes.length;
+        uint256 numPayloads = payloads.length;
         for (uint256 i; i < numPayloads; ++i) {
-            bool payloadValid = _isPayloadValid(payloadHashes[i]);
+            bool payloadValid = _isPayloadValid(payloads[i]);
             assembly ("memory-safe") {
                 accumulator := and(accumulator, payloadValid)
             }
@@ -406,9 +407,9 @@ contract BitcoinOracle is BaseOracle {
 
         bytes32 solver = _resolveClaimed(timestamp, orderId, output);
 
-        bytes32 outputHash =
-            keccak256(MandateOutputEncodingLib.encodeFillDescription(solver, orderId, timestamp, output));
-        _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][outputHash] = true;
+        bytes32 fillDescriptionHash =
+            keccak256(MandateOutputEncodingLib.encodeFillDescription(solver, orderId, uint32(timestamp), output));
+        _attestations[block.chainid][output.oracle][address(this).toIdentifier()][fillDescriptionHash] = true;
 
         emit OutputFilled(orderId, solver, uint32(timestamp), output, output.amount);
         emit OutputVerified(inclusionProof.txId);
@@ -624,7 +625,7 @@ contract BitcoinOracle is BaseOracle {
 
         bytes32 outputHash =
             keccak256(MandateOutputEncodingLib.encodeFillDescription(solver, orderId, uint32(block.timestamp), output));
-        _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][outputHash] = true;
+        _attestations[block.chainid][output.oracle][address(this).toIdentifier()][outputHash] = true;
         emit OutputFilled(orderId, solver, uint32(block.timestamp), output, output.amount);
 
         address sponsor = claimedOrder.sponsor;
