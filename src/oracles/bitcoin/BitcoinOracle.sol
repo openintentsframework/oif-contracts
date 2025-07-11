@@ -61,10 +61,9 @@ contract BitcoinOracle is BaseOracle {
         bytes32 solver;
         uint32 claimTimestamp;
         uint64 multiplier;
-        address sponsor;
+        address claimant;
         address disputer;
-        /// @notice For a claim to be paid to the sponsor, it is required that the input was included before this
-        /// timestamp.
+        /// @notice For a claim to be paid to the claimant, the input has to be included before this timestamp.
         /// For disputers, note that it is possible to set the inclusion timestamp to 1 block prior.
         /// @dev Is the maximum of (block.timestamp and claimTimestamp + MIN_TIME_FOR_INCLUSION)
         uint32 disputeTimestamp;
@@ -523,21 +522,20 @@ contract BitcoinOracle is BaseOracle {
         solver = claimedOrder.solver;
         if (solver == bytes32(0)) revert NotClaimed();
 
-        address sponsor = claimedOrder.sponsor;
+        address claimant = claimedOrder.claimant;
         uint96 multiplier = claimedOrder.multiplier;
         uint32 disputeTimestamp = claimedOrder.disputeTimestamp;
         address disputer = claimedOrder.disputer;
 
         // - fillTimestamp >= claimTimestamp is not checked and it is assumed the 1 day validation window is sufficient
         // to check that the transaction was made to fill this output.
-        if (sponsor != address(0) && (disputer == address(0) || fillTimestamp <= disputeTimestamp)) {
+        if (claimant != address(0) && (disputer == address(0) || fillTimestamp <= disputeTimestamp)) {
             bool disputed = disputer != address(0);
 
             // Delete storage; no re-entry.
-            delete claimedOrder.solver;
             delete claimedOrder.multiplier;
             delete claimedOrder.claimTimestamp;
-            delete claimedOrder.sponsor;
+            delete claimedOrder.claimant;
             delete claimedOrder.disputer;
             delete claimedOrder.disputeTimestamp;
 
@@ -546,7 +544,7 @@ contract BitcoinOracle is BaseOracle {
             collateralAmount =
                 disputed ? collateralAmount * (CHALLENGER_COLLATERAL_FACTOR + 1) - disputeCost : collateralAmount;
 
-            SafeTransferLib.safeTransfer(COLLATERAL_TOKEN, sponsor, collateralAmount);
+            SafeTransferLib.safeTransfer(COLLATERAL_TOKEN, claimant, collateralAmount);
             if (disputed && 0 < disputeCost) {
                 SafeTransferLib.safeTransfer(COLLATERAL_TOKEN, DISPUTED_ORDER_FEE_DESTINATION, disputeCost);
             }
@@ -572,7 +570,7 @@ contract BitcoinOracle is BaseOracle {
 
         claimedOrder.solver = solver;
         claimedOrder.claimTimestamp = uint32(block.timestamp);
-        claimedOrder.sponsor = msg.sender;
+        claimedOrder.claimant = msg.sender;
         claimedOrder.multiplier = uint64(multiplier);
         // The above lines acts as a local re-entry guard. External calls are now allowed.
 
@@ -591,7 +589,7 @@ contract BitcoinOracle is BaseOracle {
         bytes32 outputId = _outputIdentifier(output);
 
         ClaimedOrder storage claimedOrder = _claimedOrder[orderId][outputId];
-        if (claimedOrder.solver == bytes32(0)) revert NotClaimed();
+        if (claimedOrder.claimant == address(0)) revert NotClaimed();
         if (claimedOrder.claimTimestamp + DISPUTE_PERIOD < block.timestamp) revert TooLate();
 
         if (claimedOrder.disputer != address(0)) revert AlreadyDisputed(claimedOrder.disputer);
@@ -618,29 +616,28 @@ contract BitcoinOracle is BaseOracle {
         bytes32 outputId = _outputIdentifier(output);
 
         ClaimedOrder storage claimedOrder = _claimedOrder[orderId][outputId];
-        bytes32 solver = claimedOrder.solver;
-        if (solver == bytes32(0)) revert NotClaimed();
+        if (claimedOrder.claimant == address(0)) revert NotClaimed();
         if (claimedOrder.claimTimestamp + DISPUTE_PERIOD >= block.timestamp) revert TooEarly();
         if (claimedOrder.disputer != address(0)) revert Disputed();
 
+        bytes32 solver = claimedOrder.solver;
         bytes32 outputHash =
             keccak256(MandateOutputEncodingLib.encodeFillDescription(solver, orderId, uint32(block.timestamp), output));
         _attestations[block.chainid][output.oracle][address(this).toIdentifier()][outputHash] = true;
         emit OutputFilled(orderId, solver, uint32(block.timestamp), output, output.amount);
 
-        address sponsor = claimedOrder.sponsor;
+        address claimant = claimedOrder.claimant;
         uint256 multiplier = claimedOrder.multiplier;
 
-        delete claimedOrder.solver;
         delete claimedOrder.multiplier;
         delete claimedOrder.claimTimestamp;
-        delete claimedOrder.sponsor;
+        delete claimedOrder.claimant;
         delete claimedOrder.disputer;
         delete claimedOrder.disputeTimestamp;
         // The above lines acts as a local re-entry guard. External calls are now allowed.
 
         uint256 collateralAmount = output.amount * multiplier;
-        SafeTransferLib.safeTransfer(COLLATERAL_TOKEN, sponsor, collateralAmount);
+        SafeTransferLib.safeTransfer(COLLATERAL_TOKEN, claimant, collateralAmount);
 
         emit OutputOptimisticallyVerified(orderId, outputId);
     }
@@ -664,10 +661,9 @@ contract BitcoinOracle is BaseOracle {
 
         if (disputeTimestamp + proofPeriod >= block.timestamp) revert TooEarly();
 
-        delete claimedOrder.solver;
         delete claimedOrder.multiplier;
         delete claimedOrder.claimTimestamp;
-        delete claimedOrder.sponsor;
+        delete claimedOrder.claimant;
         delete claimedOrder.disputer;
         delete claimedOrder.disputeTimestamp;
         // The above lines acts as a local re-entry guard. External calls are now allowed.
