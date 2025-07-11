@@ -43,7 +43,7 @@ library StandardOrderType {
                 order.expires,
                 order.fillDeadline,
                 order.localOracle,
-                order.inputs,
+                keccak256(abi.encodePacked(order.inputs)),
                 abi.encode(order.outputs)
             )
         );
