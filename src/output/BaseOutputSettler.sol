@@ -5,6 +5,8 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { IOIFCallback } from "../interfaces/IOIFCallback.sol";
 import { IPayloadCreator } from "../interfaces/IPayloadCreator.sol";
+
+import { LibAddress } from "../libs/LibAddress.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../libs/MandateOutputEncodingLib.sol";
 import { OutputVerificationLib } from "../libs/OutputVerificationLib.sol";
 
@@ -16,6 +18,8 @@ import { BaseOracle } from "../oracles/BaseOracle.sol";
  * This base output settler implements logic to work as both a PayloadCreator (for oracles) and as an oracle itself.
  */
 abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
+    using LibAddress for address;
+
     error FillDeadline();
     error AlreadyFilled();
     error NotFilled();
@@ -31,7 +35,9 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
     /**
      * @notice Output has been filled.
      */
-    event OutputFilled(bytes32 indexed orderId, bytes32 solver, uint32 timestamp, MandateOutput output);
+    event OutputFilled(
+        bytes32 indexed orderId, bytes32 solver, uint32 timestamp, MandateOutput output, uint256 finalAmount
+    );
 
     function _getFillRecordHash(bytes32 solver, uint32 timestamp) internal pure returns (bytes32 fillRecordHash) {
         fillRecordHash = keccak256(abi.encodePacked(solver, timestamp));
@@ -90,7 +96,7 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
         SafeTransferLib.safeTransferFrom(address(uint160(uint256(output.token))), msg.sender, recipient, outputAmount);
         if (output.call.length > 0) IOIFCallback(recipient).outputFilled(output.token, outputAmount, output.call);
 
-        emit OutputFilled(orderId, proposedSolver, fillTimestamp, output);
+        emit OutputFilled(orderId, proposedSolver, fillTimestamp, output, outputAmount);
     }
 
     // --- External Solver Interface --- //
@@ -199,13 +205,15 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
      */
     function arePayloadsValid(
         bytes[] calldata payloads
-    ) external view returns (bool) {
+    ) external view returns (bool accumulator) {
         uint256 numPayloads = payloads.length;
-        bool accumulator = true;
+        accumulator = true;
         for (uint256 i; i < numPayloads; ++i) {
-            accumulator = accumulator && _isPayloadValid(payloads[i]);
+            bool payloadValid = _isPayloadValid(payloadHashes[i]);
+            assembly ("memory-safe") {
+                accumulator := and(accumulator, payloadValid)
+            }
         }
-        return accumulator;
     }
 
     // --- Oracle Interfaces --- //

@@ -119,7 +119,7 @@ contract InputSettler7683Test is InputSettler7683TestBase {
                 MandateOutputs[i].oracle,
                 MandateOutputs[i].settler,
                 keccak256(
-                    MandateOutputEncodingLib.encodeFillDescriptionM(
+                    MandateOutputEncodingLib.encodeFillDescriptionMemory(
                         solverIdentifier, orderId, timestamps[i], MandateOutputs[i]
                     )
                 )
@@ -204,7 +204,7 @@ contract InputSettler7683Test is InputSettler7683TestBase {
                 MandateOutputs[i].oracle,
                 MandateOutputs[i].settler,
                 keccak256(
-                    MandateOutputEncodingLib.encodeFillDescriptionM(
+                    MandateOutputEncodingLib.encodeFillDescriptionMemory(
                         solvers[i], orderId, timestamps[i], MandateOutputs[i]
                     )
                 )
@@ -384,7 +384,7 @@ contract InputSettler7683Test is InputSettler7683TestBase {
         assertEq(token.balanceOf(solver), 0);
 
         bytes32 orderId = IInputSettler7683Harness(inputsettler7683).orderIdentifier(compactOrder);
-        bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionM(
+        bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionMemory(
             bytes32(uint256(uint160((solver)))), orderId, uint32(block.timestamp), outputs[0]
         );
         bytes32 payloadHash = keccak256(payload);
@@ -526,7 +526,7 @@ contract InputSettler7683Test is InputSettler7683TestBase {
 
         {
             bytes32 orderId = IInputSettler7683Harness(inputsettler7683).orderIdentifier(compactOrder);
-            bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionM(
+            bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionMemory(
                 bytes32(uint256(uint160((solver)))), orderId, uint32(block.timestamp), outputs[0]
             );
             bytes32 payloadHash = keccak256(payload);
@@ -617,7 +617,7 @@ contract InputSettler7683Test is InputSettler7683TestBase {
         bytes memory orderOwnerSignature =
             this.getOrderOpenSignature(solverPrivateKey, orderId, bytes32(uint256(uint160(destination))), hex"");
         {
-            bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionM(
+            bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionMemory(
                 bytes32(uint256(uint160((solver)))), orderId, uint32(block.timestamp), outputs[0]
             );
             bytes32 payloadHash = keccak256(payload);

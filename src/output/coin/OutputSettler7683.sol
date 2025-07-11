@@ -5,6 +5,8 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { IDestinationSettler } from "../../interfaces/IERC7683.sol";
 import { IOIFCallback } from "../../interfaces/IOIFCallback.sol";
+
+import { LibAddress } from "../../libs/LibAddress.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 import { OutputVerificationLib } from "../../libs/OutputVerificationLib.sol";
 
@@ -13,9 +15,11 @@ import { BaseOutputSettler } from "../BaseOutputSettler.sol";
 /**
  * @dev Solvers use Oracles to pay outputs. This allows us to record the payment.
  * Tokens never touch this contract but goes directly from solver to user.
- * This filler contract only supports limit orders.
+ * This output settler contract only supports limit orders.
  */
 contract OutputInputSettler7683 is BaseOutputSettler, IDestinationSettler {
+    using LibAddress for address;
+
     error NotImplemented();
 
     function _fill(
@@ -73,6 +77,6 @@ contract OutputInputSettler7683 is BaseOutputSettler, IDestinationSettler {
         SafeTransferLib.safeTransferFrom(address(uint160(uint256(output.token))), msg.sender, recipient, outputAmount);
         if (output.call.length > 0) IOIFCallback(recipient).outputFilled(output.token, outputAmount, output.call);
 
-        emit OutputFilled(orderId, proposedSolver, fillTimestamp, output);
+        emit OutputFilled(orderId, proposedSolver, fillTimestamp, output, outputAmount);
     }
 }

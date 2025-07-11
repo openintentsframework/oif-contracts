@@ -25,9 +25,9 @@ import { Messages } from "../../src/oracles/wormhole/external/wormhole/Messages.
 import { Setters } from "../../src/oracles/wormhole/external/wormhole/Setters.sol";
 import { Structs } from "../../src/oracles/wormhole/external/wormhole/Structs.sol";
 
+import { LibAddress } from "../../src/libs/LibAddress.sol";
 import { AlwaysYesOracle } from "../mocks/AlwaysYesOracle.sol";
 import { MockERC20 } from "../mocks/MockERC20.sol";
-import { LibAddress } from "../utils/LibAddress.sol";
 
 interface EIP712 {
     function DOMAIN_SEPARATOR() external view returns (bytes32);
@@ -189,7 +189,7 @@ contract InputSettlerCompactTestCrossChain is Test {
                     abi.encode(
                         keccak256(
                             bytes(
-                                "BatchCompact(address arbiter,address sponsor,uint256 nonce,uint256 expires,Lock[] commitments,Mandate mandate)Lock(bytes12 lockTag,address token,uint256 amount)Mandate(uint32 fillDeadline,address localOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 filler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
+                                "BatchCompact(address arbiter,address sponsor,uint256 nonce,uint256 expires,Lock[] commitments,Mandate mandate)Lock(bytes12 lockTag,address token,uint256 amount)Mandate(uint32 fillDeadline,address localOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
                             )
                         ),
                         arbiter,
@@ -214,7 +214,7 @@ contract InputSettlerCompactTestCrossChain is Test {
             abi.encode(
                 keccak256(
                     bytes(
-                        "Mandate(uint32 fillDeadline,address localOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 filler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
+                        "Mandate(uint32 fillDeadline,address localOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
                     )
                 ),
                 order.fillDeadline,
@@ -234,7 +234,7 @@ contract InputSettlerCompactTestCrossChain is Test {
                 abi.encode(
                     keccak256(
                         bytes(
-                            "MandateOutput(bytes32 oracle,bytes32 filler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
+                            "MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
                         )
                     ),
                     output.oracle,
@@ -399,7 +399,7 @@ contract InputSettlerCompactTestCrossChain is Test {
         vm.snapshotGasLastCall("inputSettler", "IntegrationCoinFill");
 
         bytes[] memory payloads = new bytes[](1);
-        payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionM(
+        payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
             solverIdentifier, orderId, uint32(block.timestamp), outputs[0]
         );
 
@@ -495,10 +495,10 @@ contract InputSettlerCompactTestCrossChain is Test {
             outputSettlerCoin.fill(type(uint32).max, orderId, outputs[1], solverIdentifier2);
 
             bytes[] memory payloads = new bytes[](2);
-            payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionM(
+            payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
                 solverIdentifier, orderId, uint32(block.timestamp), outputs[0]
             );
-            payloads[1] = MandateOutputEncodingLib.encodeFillDescriptionM(
+            payloads[1] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
                 solverIdentifier2, orderId, uint32(block.timestamp), outputs[1]
             );
 
