@@ -8,13 +8,13 @@ import { MandateOutput } from "../input/types/MandateOutputType.sol";
  * @dev This library defines 2 payload encodings, one for internal usage and one for cross-chain communication.
  * - MandateOutput serialisation of the exact output on a output chain (encodes the entirety MandateOutput struct). This
  * encoding may be used to obtain a collision free hash to uniquely identify a MandateOutput.
- * - FillDescription serialisation to describe describe what has been filled on a remote chain. Its purpose is to
- * provide a source of truth of a remote action.
+ * - FillDescription serialisation to describe describe what has been filled on a output chain. Its purpose is to
+ * provide a source of truth of a output action.
  * The encoding scheme uses 2 bytes long length identifiers. As a result, neither call nor context exceed 65'535 bytes.
  *
  * Serialised MandateOutput
- *      REMOTE_ORACLE           0               (32 bytes)
- *      + REMOTE_FILLER         32              (32 bytes)
+ *      OUTPUT_ORACLE           0               (32 bytes)
+ *      + OUTPUT_SETTLER        32              (32 bytes)
  *      + CHAIN_ID              64              (32 bytes)
  *      + COMMON_PAYLOAD        96
  *
@@ -92,7 +92,7 @@ library MandateOutputEncodingLib {
 
     /**
      * @notice Hash of an MandateOutput intended for output identification.
-     * @dev This identifier is purely intended for the remote chain. It should never be ferried cross-chain.
+     * @dev This identifier is purely intended for the output chain. It should never be ferried cross-chain.
      * Chains or VMs may hash data differently.
      */
     function getMandateOutputHash(
@@ -107,6 +107,23 @@ library MandateOutputEncodingLib {
         return keccak256(encodeMandateOutputMemory(output));
     }
 
+    /**
+     * @notice Hash of an MandateOutput computed based on a common payload.
+     * @param oracle Address of the oracle of the output.
+     * @param settler Address of the settler contract of the output.
+     * @param chainId Identifier of the chain for the output.
+     * @param commonPayload Common payload of the serialised outputs.
+     * @return bytes32 OutputDescription hash.
+     */
+    function getMandateOutputHashFromCommonPayload(
+        bytes32 oracle,
+        bytes32 settler,
+        uint256 chainId,
+        bytes calldata commonPayload
+    ) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(oracle, settler, chainId, commonPayload));
+    }
+
     // --- FillDescription Encoding --- //
 
     /**
@@ -115,6 +132,36 @@ library MandateOutputEncodingLib {
      * 65'535 bytes.
      */
     function encodeFillDescription(
+        bytes32 solver,
+        bytes32 orderId,
+        uint32 timestamp,
+        bytes32 token,
+        uint256 amount,
+        bytes32 recipient,
+        bytes calldata call,
+        bytes calldata context
+    ) internal pure returns (bytes memory encodedOutput) {
+        if (call.length > type(uint16).max) revert CallOutOfRange();
+        if (context.length > type(uint16).max) revert ContextOutOfRange();
+
+        return encodedOutput = abi.encodePacked(
+            solver,
+            orderId,
+            timestamp,
+            token,
+            amount,
+            recipient,
+            uint16(call.length), // To protect against data collisions
+            call,
+            uint16(context.length), // To protect against data collisions
+            context
+        );
+    }
+
+    /**
+     * @notice Memory version of encodeFillDescription
+     */
+    function encodeFillDescriptionMemory(
         bytes32 solver,
         bytes32 orderId,
         uint32 timestamp,
@@ -162,13 +209,13 @@ library MandateOutputEncodingLib {
         );
     }
 
-    function encodeFillDescriptionM(
+    function encodeFillDescriptionMemory(
         bytes32 solver,
         bytes32 orderId,
         uint32 timestamp,
         MandateOutput memory mandateOutput
     ) internal pure returns (bytes memory encodedOutput) {
-        return encodedOutput = encodeFillDescription(
+        return encodedOutput = encodeFillDescriptionMemory(
             solver,
             orderId,
             timestamp,
@@ -178,5 +225,47 @@ library MandateOutputEncodingLib {
             mandateOutput.call,
             mandateOutput.context
         );
+    }
+
+    // --- FillDescription Decoding --- //
+
+    /**
+     * @notice Loads the solver of the output from a serialised fill description.
+     * @param fillDescription Serialised fill description.
+     * @return solver Solver of the output.
+     */
+    function loadSolverFromFillDescription(
+        bytes calldata fillDescription
+    ) internal pure returns (bytes32 solver) {
+        assembly ("memory-safe") {
+            solver := calldataload(fillDescription.offset)
+        }
+    }
+
+    /**
+     * @notice Loads the orderId from a serialised fill description.
+     * @param fillDescription Serialised fill description.
+     * @return orderId associated with the output.
+     */
+    function loadOrderIdFromFillDescription(
+        bytes calldata fillDescription
+    ) internal pure returns (bytes32 orderId) {
+        assembly ("memory-safe") {
+            orderId := calldataload(add(fillDescription.offset, 0x20))
+        }
+    }
+
+    /**
+     * @notice Loads the timestamp when the fill was made from a serialised fill description.
+     * @param fillDescription Serialised fill description.
+     * @return ts Timestamp associated with the output.
+     */
+    function loadTimestampFromFillDescription(
+        bytes calldata fillDescription
+    ) internal pure returns (uint32 ts) {
+        assembly ("memory-safe") {
+            // Clean the leftmost bytes: (32-4)*8 = 224
+            ts := shr(224, shl(224, calldataload(add(fillDescription.offset, 0x24))))
+        }
     }
 }

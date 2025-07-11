@@ -11,7 +11,7 @@ interface IOIFCallback {
     function outputFilled(bytes32 token, uint256 amount, bytes calldata executionData) external;
 
     /**
-     * @notice If configured, is called when the input is sent to the filler.
+     * @notice If configured, is called when the input is sent to the solver.
      * @param inputs Inputs of the order.
      * @param executionData Custom data.
      */
