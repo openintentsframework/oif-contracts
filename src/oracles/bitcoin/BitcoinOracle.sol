@@ -618,8 +618,7 @@ contract BitcoinOracle is BaseOracle {
         ClaimedOrder storage claimedOrder = _claimedOrder[orderId][outputId];
         if (claimedOrder.claimant == address(0)) revert NotClaimed();
         if (claimedOrder.claimTimestamp + DISPUTE_PERIOD >= block.timestamp) revert TooEarly();
-        bool disputed = claimedOrder.disputer != address(0);
-        if (disputed) revert Disputed();
+        if (claimedOrder.disputer != address(0)) revert Disputed();
 
         bytes32 solver = claimedOrder.solver;
         bytes32 outputHash =
