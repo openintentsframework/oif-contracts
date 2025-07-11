@@ -5,6 +5,8 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { IDestinationSettler } from "../../interfaces/IERC7683.sol";
 import { IOIFCallback } from "../../interfaces/IOIFCallback.sol";
+
+import { LibAddress } from "../../libs/LibAddress.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 import { OutputVerificationLib } from "../../libs/OutputVerificationLib.sol";
 
@@ -13,9 +15,11 @@ import { BaseOutputSettler } from "../BaseOutputSettler.sol";
 /**
  * @dev Solvers use Oracles to pay outputs. This allows us to record the payment.
  * Tokens never touch this contract but goes directly from solver to user.
- * This filler contract only supports limit orders.
+ * This output settler contract only supports limit orders.
  */
 contract OutputInputSettler7683 is BaseOutputSettler, IDestinationSettler {
+    using LibAddress for address;
+
     error NotImplemented();
 
     function _fill(
@@ -58,7 +62,8 @@ contract OutputInputSettler7683 is BaseOutputSettler, IDestinationSettler {
         bytes32 proposedSolver
     ) internal returns (bytes32) {
         if (proposedSolver == bytes32(0)) revert ZeroValue();
-        // Validate order context. This lets us ensure that this filler is the correct filler for the output.
+        // Validate order context. This lets us ensure that this output settler is the correct output settler for the
+        // output.
         OutputVerificationLib._isThisChain(output.chainId);
         OutputVerificationLib._isThisOutputSettler(output.settler);
 
@@ -75,14 +80,13 @@ contract OutputInputSettler7683 is BaseOutputSettler, IDestinationSettler {
         // This allows the above code-chunk to act as a local re-entry check.
         filledOutputs[orderId][outputHash] = proposedSolver;
 
-        // Set the associated attestation as true. This allows the filler to act as an oracle and check whether payload
-        // hashes have been filled. Note that within the payload we set the current timestamp. This
-        // timestamp needs to be collected from the event (or tx) to be able to reproduce the payload(hash)
+        // Set the associated attestation as true. This allows the output settler to act as an oracle and check whether
+        // payload hashes have been filled. Note that within the payload we set the current timestamp. This timestamp
+        // needs to be collected from the event (or tx) to be able to reproduce the payload(hash)
         bytes32 dataHash = keccak256(
             MandateOutputEncodingLib.encodeFillDescriptionM(proposedSolver, orderId, uint32(block.timestamp), output)
         );
-        _attestations[block.chainid][bytes32(uint256(uint160(address(this))))][bytes32(uint256(uint160(address(this))))][dataHash]
-        = true;
+        _attestations[block.chainid][address(this).toIdentifier()][address(this).toIdentifier()][dataHash] = true;
 
         // Load order description.
         address recipient = address(uint160(uint256(output.recipient)));
@@ -93,10 +97,10 @@ contract OutputInputSettler7683 is BaseOutputSettler, IDestinationSettler {
         SafeTransferLib.safeTransferFrom(token, msg.sender, recipient, outputAmount);
 
         // If there is an external call associated with the fill, execute it.
-        bytes memory remoteCall = output.call;
-        if (remoteCall.length > 0) IOIFCallback(recipient).outputFilled(output.token, outputAmount, remoteCall);
+        bytes memory call = output.call;
+        if (call.length > 0) IOIFCallback(recipient).outputFilled(output.token, outputAmount, call);
 
-        emit OutputFilled(orderId, proposedSolver, uint32(block.timestamp), output);
+        emit OutputFilled(orderId, proposedSolver, uint32(block.timestamp), output, outputAmount);
 
         return proposedSolver;
     }

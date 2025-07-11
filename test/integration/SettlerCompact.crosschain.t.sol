@@ -25,9 +25,9 @@ import { Messages } from "../../src/oracles/wormhole/external/wormhole/Messages.
 import { Setters } from "../../src/oracles/wormhole/external/wormhole/Setters.sol";
 import { Structs } from "../../src/oracles/wormhole/external/wormhole/Structs.sol";
 
+import { LibAddress } from "../../src/libs/LibAddress.sol";
 import { AlwaysYesOracle } from "../mocks/AlwaysYesOracle.sol";
 import { MockERC20 } from "../mocks/MockERC20.sol";
-import { LibAddress } from "../utils/LibAddress.sol";
 
 interface EIP712 {
     function DOMAIN_SEPARATOR() external view returns (bytes32);
@@ -189,7 +189,7 @@ contract InputSettlerCompactTestCrossChain is Test {
                     abi.encode(
                         keccak256(
                             bytes(
-                                "BatchCompact(address arbiter,address sponsor,uint256 nonce,uint256 expires,Lock[] commitments,Mandate mandate)Lock(bytes12 lockTag,address token,uint256 amount)Mandate(uint32 fillDeadline,address localOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 filler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
+                                "BatchCompact(address arbiter,address sponsor,uint256 nonce,uint256 expires,Lock[] commitments,Mandate mandate)Lock(bytes12 lockTag,address token,uint256 amount)Mandate(uint32 fillDeadline,address localOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
                             )
                         ),
                         arbiter,
@@ -214,7 +214,7 @@ contract InputSettlerCompactTestCrossChain is Test {
             abi.encode(
                 keccak256(
                     bytes(
-                        "Mandate(uint32 fillDeadline,address localOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 filler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
+                        "Mandate(uint32 fillDeadline,address localOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
                     )
                 ),
                 order.fillDeadline,
@@ -234,7 +234,7 @@ contract InputSettlerCompactTestCrossChain is Test {
                 abi.encode(
                     keccak256(
                         bytes(
-                            "MandateOutput(bytes32 oracle,bytes32 filler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
+                            "MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
                         )
                     ),
                     output.oracle,

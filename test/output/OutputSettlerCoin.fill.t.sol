@@ -16,7 +16,9 @@ contract OutputSettlerCoinTestFill is Test {
     error NotImplemented();
     error SlopeStopped();
 
-    event OutputFilled(bytes32 indexed orderId, bytes32 solver, uint32 timestamp, MandateOutput output);
+    event OutputFilled(
+        bytes32 indexed orderId, bytes32 solver, uint32 timestamp, MandateOutput output, uint256 finalAmount
+    );
 
     OutputSettlerCoin outputSettlerCoin;
 
@@ -66,7 +68,7 @@ contract OutputSettlerCoinTestFill is Test {
 
         vm.prank(sender);
         vm.expectEmit();
-        emit OutputFilled(orderId, filler, uint32(block.timestamp), output);
+        emit OutputFilled(orderId, filler, uint32(block.timestamp), output, output.amount);
 
         vm.expectCall(
             outputTokenAddress,
@@ -172,7 +174,7 @@ contract OutputSettlerCoinTestFill is Test {
         );
 
         vm.expectEmit();
-        emit OutputFilled(orderId, filler, uint32(block.timestamp), outputs[0]);
+        emit OutputFilled(orderId, filler, uint32(block.timestamp), outputs[0], outputs[0].amount);
 
         outputSettlerCoin.fill(type(uint32).max, orderId, outputs[0], filler);
 
@@ -236,7 +238,7 @@ contract OutputSettlerCoinTestFill is Test {
         vm.prank(sender);
 
         vm.expectEmit();
-        emit OutputFilled(orderId, filler, uint32(block.timestamp), outputs[0]);
+        emit OutputFilled(orderId, filler, uint32(block.timestamp), outputs[0], finalAmount);
 
         vm.expectCall(
             outputTokenAddress,
@@ -309,7 +311,7 @@ contract OutputSettlerCoinTestFill is Test {
         vm.prank(sender);
 
         vm.expectEmit();
-        emit OutputFilled(orderId, exclusiveFor, uint32(block.timestamp), outputs[0]);
+        emit OutputFilled(orderId, exclusiveFor, uint32(block.timestamp), outputs[0], finalAmount);
 
         vm.expectCall(
             outputTokenAddress,
