@@ -174,12 +174,10 @@ contract MandateOutputEncodingLibTest is Test {
         bytes memory encodedOutputFromOutput = this.encodeFillDescriptionHarness(solver, orderId, timestamp, output);
         bytes memory encodedOutputFromOutputMemory =
             this.encodeFillDescriptionMemoryHarness(solver, orderId, timestamp, output);
-        bytes memory encodedOutput = this.encodeFillDescriptionHarness(
-            solver, orderId, timestamp, token, amount, recipient, remoteCall, fulfillmentContext
-        );
-        bytes memory encodedOutputMemory = this.encodeFillDescriptionMemoryHarness(
-            solver, orderId, timestamp, token, amount, recipient, remoteCall, fulfillmentContext
-        );
+        bytes memory encodedOutput =
+            this.encodeFillDescriptionHarness(solver, orderId, timestamp, token, amount, recipient, call, context);
+        bytes memory encodedOutputMemory =
+            this.encodeFillDescriptionMemoryHarness(solver, orderId, timestamp, token, amount, recipient, call, context);
         assertEq(encodedOutputFromOutput, encodedOutputFromOutputMemory);
         assertEq(encodedOutputFromOutput, encodedOutput);
         assertEq(encodedOutput, encodedOutputMemory);
@@ -197,12 +195,10 @@ contract MandateOutputEncodingLibTest is Test {
 
         encodedOutputFromOutput = this.encodeFillDescriptionHarness(solver, orderId, timestamp, output);
         encodedOutputFromOutputMemory = this.encodeFillDescriptionMemoryHarness(solver, orderId, timestamp, output);
-        encodedOutput = this.encodeFillDescriptionHarness(
-            solver, orderId, timestamp, token, amount, recipient, call, context
-        );
-        encodedOutputMemory = this.encodeFillDescriptionMemoryHarness(
-            solver, orderId, timestamp, token, amount, recipient, call, context
-        );
+        encodedOutput =
+            this.encodeFillDescriptionHarness(solver, orderId, timestamp, token, amount, recipient, call, context);
+        encodedOutputMemory =
+            this.encodeFillDescriptionMemoryHarness(solver, orderId, timestamp, token, amount, recipient, call, context);
         assertEq(encodedOutputFromOutput, encodedOutputFromOutputMemory);
         assertEq(encodedOutputFromOutput, encodedOutput);
         assertEq(encodedOutput, encodedOutputMemory);
@@ -235,12 +231,8 @@ contract MandateOutputEncodingLibTest is Test {
 
         this.encodeFillDescriptionHarness(solver, orderId, timestamp, output);
         this.encodeFillDescriptionMemoryHarness(solver, orderId, timestamp, output);
-        this.encodeFillDescriptionHarness(
-            solver, orderId, timestamp, token, amount, recipient, call, context
-        );
-        this.encodeFillDescriptionMemoryHarness(
-            solver, orderId, timestamp, token, amount, recipient, call, context
-        );
+        this.encodeFillDescriptionHarness(solver, orderId, timestamp, token, amount, recipient, call, context);
+        this.encodeFillDescriptionMemoryHarness(solver, orderId, timestamp, token, amount, recipient, call, context);
 
         call = new bytes(65536);
         output.call = call;
@@ -250,13 +242,9 @@ contract MandateOutputEncodingLibTest is Test {
         vm.expectRevert(abi.encodeWithSignature("CallOutOfRange()"));
         this.encodeFillDescriptionMemoryHarness(solver, orderId, timestamp, output);
         vm.expectRevert(abi.encodeWithSignature("CallOutOfRange()"));
-        this.encodeFillDescriptionHarness(
-            solver, orderId, timestamp, token, amount, recipient, call, context
-        );
+        this.encodeFillDescriptionHarness(solver, orderId, timestamp, token, amount, recipient, call, context);
         vm.expectRevert(abi.encodeWithSignature("CallOutOfRange()"));
-        this.encodeFillDescriptionMemoryHarness(
-            solver, orderId, timestamp, token, amount, recipient, call, context
-        );
+        this.encodeFillDescriptionMemoryHarness(solver, orderId, timestamp, token, amount, recipient, call, context);
     }
 
     function test_revert_encodeFillDescription_ContextCallOutOfRange() external {
@@ -282,12 +270,8 @@ contract MandateOutputEncodingLibTest is Test {
 
         this.encodeFillDescriptionHarness(solver, orderId, timestamp, output);
         this.encodeFillDescriptionMemoryHarness(solver, orderId, timestamp, output);
-        this.encodeFillDescriptionHarness(
-            solver, orderId, timestamp, token, amount, recipient, call, context
-        );
-        this.encodeFillDescriptionMemoryHarness(
-            solver, orderId, timestamp, token, amount, recipient, call, context
-        );
+        this.encodeFillDescriptionHarness(solver, orderId, timestamp, token, amount, recipient, call, context);
+        this.encodeFillDescriptionMemoryHarness(solver, orderId, timestamp, token, amount, recipient, call, context);
 
         context = new bytes(65536);
         output.context = context;
@@ -297,12 +281,8 @@ contract MandateOutputEncodingLibTest is Test {
         vm.expectRevert(abi.encodeWithSignature("ContextOutOfRange()"));
         this.encodeFillDescriptionMemoryHarness(solver, orderId, timestamp, output);
         vm.expectRevert(abi.encodeWithSignature("ContextOutOfRange()"));
-        this.encodeFillDescriptionHarness(
-            solver, orderId, timestamp, token, amount, recipient, call, context
-        );
+        this.encodeFillDescriptionHarness(solver, orderId, timestamp, token, amount, recipient, call, context);
         vm.expectRevert(abi.encodeWithSignature("ContextOutOfRange()"));
-        this.encodeFillDescriptionMemoryHarness(
-            solver, orderId, timestamp, token, amount, recipient, call, context
-        );
+        this.encodeFillDescriptionMemoryHarness(solver, orderId, timestamp, token, amount, recipient, call, context);
     }
 }

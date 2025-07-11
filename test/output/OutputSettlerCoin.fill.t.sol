@@ -515,12 +515,12 @@ contract OutputSettlerCoinTestFill is Test {
         bytes32 filler,
         bytes32 orderId,
         uint256 amount,
-        bytes memory fulfillmentContext
+        bytes memory outputContext
     ) public {
-        vm.assume(bytes1(fulfillmentContext) != 0x00 && fulfillmentContext.length != 1);
-        vm.assume(bytes1(fulfillmentContext) != 0x01 && fulfillmentContext.length != 41);
-        vm.assume(bytes1(fulfillmentContext) != 0xe0 && fulfillmentContext.length != 37);
-        vm.assume(bytes1(fulfillmentContext) != 0xe1 && fulfillmentContext.length != 73);
+        vm.assume(bytes1(outputContext) != 0x00 && outputContext.length != 1);
+        vm.assume(bytes1(outputContext) != 0x01 && outputContext.length != 41);
+        vm.assume(bytes1(outputContext) != 0xe0 && outputContext.length != 37);
+        vm.assume(bytes1(outputContext) != 0xe1 && outputContext.length != 73);
         vm.assume(filler != bytes32(0));
 
         outputToken.mint(sender, amount);
@@ -537,7 +537,7 @@ contract OutputSettlerCoinTestFill is Test {
             amount: amount,
             recipient: bytes32(uint256(uint160(swapper))),
             call: bytes(""),
-            context: fulfillmentContext
+            context: outputContext
         });
 
         vm.prank(sender);
