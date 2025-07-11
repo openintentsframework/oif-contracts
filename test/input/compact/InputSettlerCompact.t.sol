@@ -69,7 +69,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
                 MandateOutputs[i].oracle,
                 MandateOutputs[i].settler,
                 keccak256(
-                    MandateOutputEncodingLib.encodeFillDescriptionM(
+                    MandateOutputEncodingLib.encodeFillDescriptionMemory(
                         solverIdentifier, orderId, timestamps[i], MandateOutputs[i]
                     )
                 )
@@ -122,7 +122,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
                 MandateOutputs[i].oracle,
                 MandateOutputs[i].settler,
                 keccak256(
-                    MandateOutputEncodingLib.encodeFillDescriptionM(
+                    MandateOutputEncodingLib.encodeFillDescriptionMemory(
                         solvers[i], orderId, timestamps[i], MandateOutputs[i]
                     )
                 )
@@ -217,7 +217,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
 
         assertEq(token.balanceOf(solver), 0);
 
-        bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionM(
+        bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionMemory(
             solverIdentifier,
             IInputSettlerCompactHarness(inputSettlerCompact).orderIdentifier(order),
             uint32(block.timestamp),

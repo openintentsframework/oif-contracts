@@ -121,6 +121,36 @@ library MandateOutputEncodingLib {
         bytes32 token,
         uint256 amount,
         bytes32 recipient,
+        bytes calldata call,
+        bytes calldata context
+    ) internal pure returns (bytes memory encodedOutput) {
+        if (call.length > type(uint16).max) revert CallOutOfRange();
+        if (context.length > type(uint16).max) revert ContextOutOfRange();
+
+        return encodedOutput = abi.encodePacked(
+            solver,
+            orderId,
+            timestamp,
+            token,
+            amount,
+            recipient,
+            uint16(call.length), // To protect against data collisions
+            call,
+            uint16(context.length), // To protect against data collisions
+            context
+        );
+    }
+
+    /**
+     * @notice Memory version of encodeFillDescription
+     */
+    function encodeFillDescriptionMemory(
+        bytes32 solver,
+        bytes32 orderId,
+        uint32 timestamp,
+        bytes32 token,
+        uint256 amount,
+        bytes32 recipient,
         bytes memory call,
         bytes memory context
     ) internal pure returns (bytes memory encodedOutput) {
@@ -162,13 +192,13 @@ library MandateOutputEncodingLib {
         );
     }
 
-    function encodeFillDescriptionM(
+    function encodeFillDescriptionMemory(
         bytes32 solver,
         bytes32 orderId,
         uint32 timestamp,
         MandateOutput memory mandateOutput
     ) internal pure returns (bytes memory encodedOutput) {
-        return encodedOutput = encodeFillDescription(
+        return encodedOutput = encodeFillDescriptionMemory(
             solver,
             orderId,
             timestamp,

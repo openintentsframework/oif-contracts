@@ -88,8 +88,9 @@ contract WormholeOracleTestSubmit is Test {
             call: hex"",
             context: hex""
         });
-        bytes memory payload =
-            MandateOutputEncodingLib.encodeFillDescriptionM(solverIdentifier, orderId, uint32(block.timestamp), output);
+        bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionMemory(
+            solverIdentifier, orderId, uint32(block.timestamp), output
+        );
         bytes[] memory payloads = new bytes[](1);
         payloads[0] = payload;
 

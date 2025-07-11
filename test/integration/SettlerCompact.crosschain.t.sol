@@ -399,7 +399,7 @@ contract InputSettlerCompactTestCrossChain is Test {
         vm.snapshotGasLastCall("inputSettler", "IntegrationCoinFill");
 
         bytes[] memory payloads = new bytes[](1);
-        payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionM(
+        payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
             solverIdentifier, orderId, uint32(block.timestamp), outputs[0]
         );
 
@@ -495,10 +495,10 @@ contract InputSettlerCompactTestCrossChain is Test {
             outputSettlerCoin.fill(type(uint32).max, orderId, outputs[1], solverIdentifier2);
 
             bytes[] memory payloads = new bytes[](2);
-            payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionM(
+            payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
                 solverIdentifier, orderId, uint32(block.timestamp), outputs[0]
             );
-            payloads[1] = MandateOutputEncodingLib.encodeFillDescriptionM(
+            payloads[1] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
                 solverIdentifier2, orderId, uint32(block.timestamp), outputs[1]
             );
 

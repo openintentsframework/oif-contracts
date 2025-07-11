@@ -900,7 +900,7 @@ contract BitcoinOracleTest is Test {
 
         // Output oracle (as filler)
         bytes memory payload =
-            MandateOutputEncodingLib.encodeFillDescriptionM(solver, orderId, uint32(BLOCK_TIME), output);
+            MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, uint32(BLOCK_TIME), output);
         bytes32[] memory payloadHashes = new bytes32[](1);
         payloadHashes[0] = keccak256(payload);
         bool fillerValid = bitcoinOracle.arePayloadsValid(payloadHashes);
@@ -989,7 +989,7 @@ contract BitcoinOracleTest is Test {
 
         // Output oracle (as filler)
         bytes memory payload =
-            MandateOutputEncodingLib.encodeFillDescriptionM(solver, orderId, uint32(BLOCK_TIME), output);
+            MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, uint32(BLOCK_TIME), output);
         bytes32[] memory payloadHashes = new bytes32[](1);
         payloadHashes[0] = keccak256(payload);
         bool fillerValid = bitcoinOracle.arePayloadsValid(payloadHashes);
@@ -1138,7 +1138,7 @@ contract BitcoinOracleTest is Test {
 
         // Output oracle (as filler)
         bytes memory payload =
-            MandateOutputEncodingLib.encodeFillDescriptionM(solver, orderId, uint32(BLOCK_TIME), output);
+            MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, uint32(BLOCK_TIME), output);
         bytes32[] memory payloadHashes = new bytes32[](1);
         payloadHashes[0] = keccak256(payload);
         bool fillerValid = bitcoinOracle.arePayloadsValid(payloadHashes);
@@ -1292,7 +1292,7 @@ contract BitcoinOracleTest is Test {
 
         // Output oracle (as filler)
         bytes memory payload =
-            MandateOutputEncodingLib.encodeFillDescriptionM(solver, orderId, uint32(PREV_BLOCK_TIME), output);
+            MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, uint32(PREV_BLOCK_TIME), output);
         bytes32[] memory payloadHashes = new bytes32[](1);
         payloadHashes[0] = keccak256(payload);
         bool fillerValid = bitcoinOracle.arePayloadsValid(payloadHashes);
@@ -1390,7 +1390,7 @@ contract BitcoinOracleTest is Test {
 
         // Output oracle (as filler)
         bytes memory payload =
-            MandateOutputEncodingLib.encodeFillDescriptionM(solver, orderId, uint32(BLOCK_TIME), output);
+            MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, uint32(BLOCK_TIME), output);
         bytes32[] memory payloadHashes = new bytes32[](1);
         payloadHashes[0] = keccak256(payload);
         bool fillerValid = bitcoinOracle.arePayloadsValid(payloadHashes);
