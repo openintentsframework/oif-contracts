@@ -34,7 +34,7 @@ contract ExportedMessages is Messages, Setters {
 contract WormholeOracleTestSubmit is Test {
     WormholeOracle oracle;
     ExportedMessages messages;
-    OutputSettlerCoin filler;
+    OutputSettlerCoin outputSettler;
     MockERC20 token;
 
     uint256 expectedValueOnCall;
@@ -43,7 +43,7 @@ contract WormholeOracleTestSubmit is Test {
     function setUp() external {
         messages = new ExportedMessages();
         oracle = new WormholeOracle(address(this), address(messages));
-        filler = new OutputSettlerCoin();
+        outputSettler = new OutputSettlerCoin();
 
         token = new MockERC20("TEST", "TEST", 18);
     }
@@ -76,11 +76,11 @@ contract WormholeOracleTestSubmit is Test {
 
         token.mint(sender, amount);
         vm.prank(sender);
-        token.approve(address(filler), amount);
+        token.approve(address(outputSettler), amount);
 
         MandateOutput memory output = MandateOutput({
             oracle: bytes32(uint256(uint160(address(oracle)))),
-            settler: bytes32(uint256(uint160(address(filler)))),
+            settler: bytes32(uint256(uint160(address(outputSettler)))),
             token: bytes32(abi.encode(address(token))),
             amount: amount,
             recipient: bytes32(abi.encode(recipient)),
@@ -96,7 +96,7 @@ contract WormholeOracleTestSubmit is Test {
 
         // Fill without submitting
         vm.expectRevert(abi.encodeWithSignature("NotAllPayloadsValid()"));
-        oracle.submit(address(filler), payloads);
+        oracle.submit(address(outputSettler), payloads);
 
         vm.expectCall(
             address(token),
@@ -104,13 +104,13 @@ contract WormholeOracleTestSubmit is Test {
         );
 
         vm.prank(sender);
-        filler.fill(type(uint32).max, orderId, output, solverIdentifier);
+        outputSettler.fill(type(uint32).max, orderId, output, solverIdentifier);
 
         bytes memory expectedPayload = this.encodeMessageCalldata(output.settler, payloads);
 
         vm.expectEmit();
         emit PackagePublished(0, expectedPayload, 15);
-        oracle.submit(address(filler), payloads);
+        oracle.submit(address(outputSettler), payloads);
         vm.snapshotGasLastCall("oracle", "wormholeOracleSubmit");
     }
 

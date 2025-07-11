@@ -13,7 +13,7 @@
   "IntegrationCoinFill": "111536",
   "IntegrationCompactFinaliseSelf": "126001",
   "IntegrationWormholeReceiveMessage": "73550",
-  "IntegrationWormholeSubmit": "42526",
+  "IntegrationWormholeSubmit": "42483",
   "maxTimestamp1": "505",
   "minTimestamp1": "461"
 }

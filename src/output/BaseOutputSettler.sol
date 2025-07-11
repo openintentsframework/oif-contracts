@@ -33,7 +33,9 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
     /**
      * @notice Output has been filled.
      */
-    event OutputFilled(bytes32 indexed orderId, bytes32 solver, uint32 timestamp, MandateOutput output);
+    event OutputFilled(
+        bytes32 indexed orderId, bytes32 solver, uint32 timestamp, MandateOutput output, uint256 finalAmount
+    );
 
     /**
      * @dev Output Settlers are expected to implement pre-fill logic through this interface. It will be through external
@@ -95,7 +97,7 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
         SafeTransferLib.safeTransferFrom(address(uint160(uint256(output.token))), msg.sender, recipient, outputAmount);
         if (output.call.length > 0) IOIFCallback(recipient).outputFilled(output.token, outputAmount, output.call);
 
-        emit OutputFilled(orderId, proposedSolver, uint32(block.timestamp), output);
+        emit OutputFilled(orderId, proposedSolver, uint32(block.timestamp), output, outputAmount);
         return proposedSolver;
     }
 
@@ -187,12 +189,14 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
      */
     function arePayloadsValid(
         bytes32[] calldata payloadHashes
-    ) external view returns (bool) {
+    ) external view returns (bool accumulator) {
+        accumulator = true;
         uint256 numPayloads = payloadHashes.length;
-        bool accumulator = true;
         for (uint256 i; i < numPayloads; ++i) {
-            accumulator = accumulator && _isPayloadValid(payloadHashes[i]);
+            bool payloadValid = _isPayloadValid(payloadHashes[i]);
+            assembly ("memory-safe") {
+                accumulator := and(accumulator, payloadValid)
+            }
         }
-        return accumulator;
     }
 }

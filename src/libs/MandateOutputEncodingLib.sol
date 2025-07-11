@@ -8,13 +8,13 @@ import { MandateOutput } from "../input/types/MandateOutputType.sol";
  * @dev This library defines 2 payload encodings, one for internal usage and one for cross-chain communication.
  * - MandateOutput serialisation of the exact output on a output chain (encodes the entirety MandateOutput struct). This
  * encoding may be used to obtain a collision free hash to uniquely identify a MandateOutput.
- * - FillDescription serialisation to describe describe what has been filled on a remote chain. Its purpose is to
- * provide a source of truth of a remote action.
+ * - FillDescription serialisation to describe describe what has been filled on a output chain. Its purpose is to
+ * provide a source of truth of a output action.
  * The encoding scheme uses 2 bytes long length identifiers. As a result, neither call nor context exceed 65'535 bytes.
  *
  * Serialised MandateOutput
- *      REMOTE_ORACLE           0               (32 bytes)
- *      + REMOTE_FILLER         32              (32 bytes)
+ *      OUTPUT_ORACLE           0               (32 bytes)
+ *      + OUTPUT_SETTLER        32              (32 bytes)
  *      + CHAIN_ID              64              (32 bytes)
  *      + COMMON_PAYLOAD        96
  *
@@ -92,7 +92,7 @@ library MandateOutputEncodingLib {
 
     /**
      * @notice Hash of an MandateOutput intended for output identification.
-     * @dev This identifier is purely intended for the remote chain. It should never be ferried cross-chain.
+     * @dev This identifier is purely intended for the output chain. It should never be ferried cross-chain.
      * Chains or VMs may hash data differently.
      */
     function getMandateOutputHash(

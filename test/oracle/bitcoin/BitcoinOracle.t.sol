@@ -896,9 +896,9 @@ contract BitcoinOracleTest is Test {
             bitcoinOracle.verify(orderId, output, BLOCK_HEIGHT, inclusionProof, TX_OUTPUT_INDEX);
             vm.snapshotGasLastCall("oracle", "bitcoinVerify");
         }
-        // Check if the payload has been correctly stored for both a local oracle and remote oracle.
+        // Check if the payload has been correctly stored for both a input oracle and output oracle.
 
-        // Remote oracle (as filler)
+        // Output oracle (as filler)
         bytes memory payload =
             MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, uint32(BLOCK_TIME), output);
         bytes32[] memory payloadHashes = new bytes32[](1);
@@ -906,7 +906,7 @@ contract BitcoinOracleTest is Test {
         bool fillerValid = bitcoinOracle.arePayloadsValid(payloadHashes);
         assertEq(fillerValid, true);
 
-        // Local oracle (as oracle)
+        // Input oracle (as oracle)
 
         bool oracleValid =
             bitcoinOracle.isProven(block.chainid, bitcoinOracleBytes32, bitcoinOracleBytes32, keccak256(payload));
@@ -985,9 +985,9 @@ contract BitcoinOracleTest is Test {
 
         bitcoinOracle.verify(orderId, output, BLOCK_HEIGHT, inclusionProof, TX_OUTPUT_INDEX);
 
-        // Check if the payload has been correctly stored for both a local oracle and remote oracle.
+        // Check if the payload has been correctly stored for both a input oracle and output oracle.
 
-        // Remote oracle (as filler)
+        // Output oracle (as filler)
         bytes memory payload =
             MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, uint32(BLOCK_TIME), output);
         bytes32[] memory payloadHashes = new bytes32[](1);
@@ -995,7 +995,7 @@ contract BitcoinOracleTest is Test {
         bool fillerValid = bitcoinOracle.arePayloadsValid(payloadHashes);
         assertEq(fillerValid, true);
 
-        // Local oracle (as oracle)
+        // Input oracle (as oracle)
 
         bool oracleValid =
             bitcoinOracle.isProven(block.chainid, bitcoinOracleBytes32, bitcoinOracleBytes32, keccak256(payload));
@@ -1134,9 +1134,9 @@ contract BitcoinOracleTest is Test {
         bitcoinOracle.verify(orderId, output, BLOCK_HEIGHT, inclusionProof, EMBED_TX_OUTPUT_INDEX);
         vm.snapshotGasLastCall("oracle", "bitcoinVerifyWithEmbed");
 
-        // Check if the payload has been correctly stored for both a local oracle and remote oracle.
+        // Check if the payload has been correctly stored for both a input oracle and output oracle.
 
-        // Remote oracle (as filler)
+        // Output oracle (as filler)
         bytes memory payload =
             MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, uint32(BLOCK_TIME), output);
         bytes32[] memory payloadHashes = new bytes32[](1);
@@ -1144,7 +1144,7 @@ contract BitcoinOracleTest is Test {
         bool fillerValid = bitcoinOracle.arePayloadsValid(payloadHashes);
         assertEq(fillerValid, true);
 
-        // Local oracle (as oracle)
+        // Input oracle (as oracle)
 
         bool oracleValid =
             bitcoinOracle.isProven(block.chainid, bitcoinOracleBytes32, bitcoinOracleBytes32, keccak256(payload));
@@ -1290,7 +1290,7 @@ contract BitcoinOracleTest is Test {
 
         bitcoinOracle.verify(orderId, output, BLOCK_HEIGHT, inclusionProof, TX_OUTPUT_INDEX, PREV_BLOCK_HEADER);
 
-        // Remote oracle (as filler)
+        // Output oracle (as filler)
         bytes memory payload =
             MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, uint32(PREV_BLOCK_TIME), output);
         bytes32[] memory payloadHashes = new bytes32[](1);
@@ -1388,7 +1388,7 @@ contract BitcoinOracleTest is Test {
 
         bitcoinOracle.verify(orderId, output, BLOCK_HEIGHT, inclusionProof, TX_OUTPUT_INDEX);
 
-        // Remote oracle (as filler)
+        // Output oracle (as filler)
         bytes memory payload =
             MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, uint32(BLOCK_TIME), output);
         bytes32[] memory payloadHashes = new bytes32[](1);
