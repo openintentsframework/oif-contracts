@@ -77,9 +77,8 @@ contract OutputInputSettler7683 is BaseOutputSettler, IDestinationSettler {
         filledOutputs[orderId][outputHash] = proposedSolver;
 
         // Set the associated attestation as true. This allows the output settler to act as an oracle and check whether
-        // payload
-        // hashes have been filled. Note that within the payload we set the current timestamp. This
-        // timestamp needs to be collected from the event (or tx) to be able to reproduce the payload(hash)
+        // payload hashes have been filled. Note that within the payload we set the current timestamp. This timestamp
+        // needs to be collected from the event (or tx) to be able to reproduce the payload(hash)
         bytes32 dataHash = keccak256(
             MandateOutputEncodingLib.encodeFillDescriptionM(proposedSolver, orderId, uint32(block.timestamp), output)
         );
