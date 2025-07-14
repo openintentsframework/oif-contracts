@@ -25,7 +25,7 @@ import { MandateOutput } from "../types/MandateOutputType.sol";
 
 import { BaseInputSettler } from "../BaseInputSettler.sol";
 
-import { MultichainInput, MultichainOrder, MultichainOrderType } from "../types/MultichainOrderType.sol";
+import { MultichainOrderComponent, MultichainOrderComponentType } from "../types/MultichainOrderComponentType.sol";
 
 /**
  * @title OIF Input Settler using supporting multichain escrows.
@@ -67,9 +67,9 @@ contract InputSettlerMultichainEscrow is BaseInputSettler {
 
     // Generic order identifier
     function orderIdentifier(
-        MultichainOrder calldata order
+        MultichainOrderComponent calldata order
     ) public view returns (bytes32) {
-        return MultichainOrderType.orderIdentifier(order);
+        return MultichainOrderComponentType.orderIdentifier(order);
     }
 
     /**
@@ -94,7 +94,7 @@ contract InputSettlerMultichainEscrow is BaseInputSettler {
 
     function open(
         // TODO: bytes.
-        MultichainOrder calldata order
+        MultichainOrderComponent calldata order
     ) external {
         // Validate the ERC7683 structure.
         _validateDeadline(order.fillDeadline);
@@ -108,16 +108,13 @@ contract InputSettlerMultichainEscrow is BaseInputSettler {
         _deposited[orderId] = OrderStatus.Deposited;
 
         // Collect input tokens.
-        MultichainInput[] calldata inputs = order.inputs;
+        uint256[2][] calldata inputs = order.inputs;
         uint256 numInputs = inputs.length;
-        // TODO: revert if no entry for this chain.
         for (uint256 i = 0; i < numInputs; ++i) {
-            MultichainInput calldata input = inputs[i];
-            // Check if the input is for this chain.
-            if (input.inputChainId != block.chainid) continue;
+            uint256[2] calldata input = inputs[i];
 
-            address token = EfficiencyLib.asSanitizedAddress(uint256(input.token));
-            uint256 amount = input.amount;
+            address token = EfficiencyLib.asSanitizedAddress(input[0]);
+            uint256 amount = input[1];
             SafeTransferLib.safeTransferFrom(token, msg.sender, address(this), amount);
         }
 
@@ -141,7 +138,7 @@ contract InputSettlerMultichainEscrow is BaseInputSettler {
      * That means any order that has no outputs specified can be claimed.
      */
     function _validateFills(
-        MultichainOrder calldata order,
+        MultichainOrderComponent calldata order,
         bytes32 orderId,
         bytes32[] memory solvers,
         uint32[] calldata timestamps
@@ -196,7 +193,7 @@ contract InputSettlerMultichainEscrow is BaseInputSettler {
      * @param destination Destination of the inputs funds signed for by the user.
      */
     function _finalise(
-        MultichainOrder calldata order,
+        MultichainOrderComponent calldata order,
         bytes32 orderId,
         bytes32 solver,
         bytes32 destination
@@ -216,7 +213,7 @@ contract InputSettlerMultichainEscrow is BaseInputSettler {
      * @param call Optional callback data. If non-empty, will call orderFinalised on the destination
      */
     function finalise(
-        MultichainOrder calldata order,
+        MultichainOrderComponent calldata order,
         uint32[] calldata timestamps,
         bytes32[] memory solvers,
         bytes32 destination,
@@ -250,7 +247,7 @@ contract InputSettlerMultichainEscrow is BaseInputSettler {
      * @param orderOwnerSignature Signature from the order owner authorizing this external call
      */
     function finaliseWithSignature(
-        MultichainOrder calldata order,
+        MultichainOrderComponent calldata order,
         uint32[] calldata timestamps,
         bytes32[] memory solvers,
         bytes32 destination,
@@ -282,7 +279,7 @@ contract InputSettlerMultichainEscrow is BaseInputSettler {
      * @dev This function employs a local reentry guard: we check the order status and then we update it afterwards. This
      * is an important check as it is indeed to process external ERC20 transfers.
      */
-    function _resolveLock(bytes32 orderId, MultichainInput[] calldata inputs, address destination) internal virtual {
+    function _resolveLock(bytes32 orderId, uint256[2][] calldata inputs, address destination) internal virtual {
         // Check the order status:
         if (_deposited[orderId] != OrderStatus.Deposited) revert InvalidOrderStatus();
         // Mark order as deposited. If we can't make the deposit, we will
@@ -292,12 +289,11 @@ contract InputSettlerMultichainEscrow is BaseInputSettler {
         // We have now ensured that this point can only be reached once. We can now process the asset delivery.
         uint256 numInputs = inputs.length;
         for (uint256 i; i < numInputs; ++i) {
-            MultichainInput calldata input = inputs[i];
+            uint256[2] calldata input = inputs[i];
             // Check if the input is for this chain.
-            if (input.inputChainId != block.chainid) continue;
 
-            address token = EfficiencyLib.asSanitizedAddress(uint256(input.token));
-            uint256 amount = input.amount;
+            address token = EfficiencyLib.asSanitizedAddress(input[0]);
+            uint256 amount = input[1];
             SafeTransferLib.safeTransfer(token, destination, amount);
         }
     }
