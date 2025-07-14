@@ -175,20 +175,19 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         order.additionalChains = additionalChains0;
         // -- Begin Swap -- //
         // Fill swap
-        bytes32 solverIdentifier = solver.toIdentifier();
         vm.chainId(3);
         order.chainIdField = 3;
         order.chainIndex = 1;
         order.inputs = inputs1;
         order.additionalChains = additionalChains1;
         vm.prank(solver);
-        outputSettlerCoin.fill(order.fillDeadline, orderId, order.outputs[0], solverIdentifier);
+        outputSettlerCoin.fill(order.fillDeadline, orderId, order.outputs[0], solver.toIdentifier());
 
         assertEq(token.balanceOf(solver), 0);
 
         bytes[] memory payloads = new bytes[](1);
         payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionM(
-            solverIdentifier,
+            solver.toIdentifier(),
             InputSettlerMultichainEscrowHarness(inputSettlerMultichainEscrow).orderIdentifier(order),
             uint32(block.timestamp),
             outputs[0]
@@ -205,7 +204,7 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         uint32[] memory timestamps = new uint32[](1);
         timestamps[0] = uint32(block.timestamp);
         bytes32[] memory solvers = new bytes32[](1);
-        solvers[0] = solverIdentifier;
+        solvers[0] = solver.toIdentifier();
         // Open Order & finalise
         uint256 snapshotId = vm.snapshot();
 
@@ -220,7 +219,7 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         assertEq(anotherToken.balanceOf(solver), 0);
         assertEq(anotherToken.balanceOf(inputSettlerMultichainEscrow), 0);
         assertEq(token.balanceOf(solver), 0);
-        assertEq(token.balanceOf(inputSettlerMultichainEscrow), amount);
+        assertEq(token.balanceOf(inputSettlerMultichainEscrow), inputs0[0][1]);
 
         vm.prank(solver);
         InputSettlerMultichainEscrowHarness(inputSettlerMultichainEscrow).finalise(
@@ -245,7 +244,7 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         assertEq(token.balanceOf(solver), 0);
         assertEq(token.balanceOf(inputSettlerMultichainEscrow), 0);
         assertEq(anotherToken.balanceOf(solver), 0);
-        assertEq(anotherToken.balanceOf(inputSettlerMultichainEscrow), amount);
+        assertEq(anotherToken.balanceOf(inputSettlerMultichainEscrow), inputs1[0][1]);
 
         vm.prank(solver);
         InputSettlerMultichainEscrowHarness(inputSettlerMultichainEscrow).finalise(
