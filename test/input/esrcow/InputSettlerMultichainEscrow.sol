@@ -2,7 +2,10 @@
 pragma solidity ^0.8.22;
 
 import { MandateOutput, MandateOutputType } from "../../../src/input/types/MandateOutputType.sol";
-import { MultichainInput, MultichainOrder, MultichainOrderType } from "../../../src/input/types/MultichainOrderType.sol";
+import {
+    MultichainOrderComponent,
+    MultichainOrderComponentType
+} from "../../../src/input/types/MultichainOrderComponentType.sol";
 import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
 import { OutputSettlerCoin } from "../../../src/output/coin/OutputSettlerCoin.sol";
 
@@ -78,14 +81,17 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         _validProofSeries[expectedProofPayload] = true;
 
         InputSettlerMultichainEscrowHarness(inputSettlerMultichainEscrow).validateFills(
-            MultichainOrder({
+            MultichainOrderComponent({
                 user: address(0),
                 nonce: 0,
+                chainIdField: block.chainid,
+                chainIndex: 0,
                 expires: type(uint32).max,
                 fillDeadline: type(uint32).max,
                 localOracle: localOracle,
-                inputs: new MultichainInput[](0),
-                outputs: MandateOutputs
+                inputs: new uint256[2][](0),
+                outputs: MandateOutputs,
+                additionalChains: new bytes32[](0)
             }),
             orderId,
             solvers,
@@ -95,7 +101,7 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
 
     // This test works slightly differently to other tests. We will be solving the entirety of the test, then opening
     // and finalising the test, rolling back the chain, and doing it again. This is to showcase that the funds can be
-    // claimed on differnet chains.
+    // claimed on different chains.
     /// forge-config: default.isolate = true
     function test_finalise_self_2_inputs() public {
         // -- Set Up --//
@@ -112,9 +118,16 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         vm.prank(solver);
         token.approve(address(outputSettlerCoin), type(uint256).max);
 
-        MultichainInput[] memory inputs = new MultichainInput[](2);
-        inputs[0] = MultichainInput({ inputChainId: 0, token: address(token).toIdentifier(), amount: amount });
-        inputs[1] = MultichainInput({ inputChainId: 1, token: address(anotherToken).toIdentifier(), amount: amount });
+        uint256[2][] memory inputs0 = new uint256[2][](1);
+        uint256[2][] memory inputs1 = new uint256[2][](1);
+        inputs0[0] = [uint256(address(token).toIdentifier()), amount];
+        inputs1[0] = [uint256(address(anotherToken).toIdentifier()), amount];
+
+        // Get the additional chain input hashes. Note that we need the other chain's input.
+        bytes32[] memory additionalChains0 = new bytes32[](1);
+        additionalChains0[0] = keccak256(abi.encodePacked(uint256(3), inputs1));
+        bytes32[] memory additionalChains1 = new bytes32[](1);
+        additionalChains1[0] = keccak256(abi.encodePacked(uint256(0), inputs0));
 
         MandateOutput[] memory outputs = new MandateOutput[](1);
         outputs[0] = MandateOutput({
@@ -127,31 +140,54 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
             call: hex"",
             context: hex""
         });
-        MultichainOrder memory order = MultichainOrder({
+        MultichainOrderComponent memory order = MultichainOrderComponent({
             user: address(swapper),
             nonce: 0,
+            chainIdField: 0, // Selected index 0 chain.
+            chainIndex: 0,
             fillDeadline: type(uint32).max,
             expires: type(uint32).max,
             localOracle: alwaysYesOracle,
-            inputs: inputs,
-            outputs: outputs
-        });
+            inputs: new uint256[2][](0), // Shall be replaced before execution
+            outputs: outputs,
+            additionalChains: new bytes32[](0) // Shall be replaced before execution
+         });
+
+        // Check that both orders have the same chainId
+        vm.chainId(0);
+        order.chainIdField = 0;
+        order.chainIndex = 0;
+        order.inputs = inputs0;
+        order.additionalChains = additionalChains0;
+        bytes32 orderId = InputSettlerMultichainEscrowHarness(inputSettlerMultichainEscrow).orderIdentifier(order);
+        vm.chainId(3);
+        order.chainIdField = 3;
+        order.chainIndex = 1;
+        order.inputs = inputs1;
+        order.additionalChains = additionalChains1;
+        bytes32 orderId1 = InputSettlerMultichainEscrowHarness(inputSettlerMultichainEscrow).orderIdentifier(order);
+        assertEq(orderId, orderId1, "OrderId mismatch");
 
         vm.chainId(0);
-        bytes32 orderId = InputSettlerMultichainEscrowHarness(inputSettlerMultichainEscrow).orderIdentifier(order);
-
+        order.chainIdField = 0;
+        order.chainIndex = 0;
+        order.inputs = inputs0;
+        order.additionalChains = additionalChains0;
         // -- Begin Swap -- //
         // Fill swap
-        bytes32 solverIdentifier = solver.toIdentifier();
         vm.chainId(3);
+        order.chainIdField = 3;
+        order.chainIndex = 1;
+        order.inputs = inputs1;
+        order.additionalChains = additionalChains1;
         vm.prank(solver);
-        outputSettlerCoin.fill(order.fillDeadline, orderId, order.outputs[0], solverIdentifier);
+        outputSettlerCoin.fill(order.fillDeadline, orderId, order.outputs[0], solver.toIdentifier());
 
         assertEq(token.balanceOf(solver), 0);
 
         bytes[] memory payloads = new bytes[](1);
         payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionM(
-            solverIdentifier,
+            solver.toIdentifier(),
             InputSettlerMultichainEscrowHarness(inputSettlerMultichainEscrow).orderIdentifier(order),
             uint32(block.timestamp),
             outputs[0]
@@ -168,18 +204,22 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         uint32[] memory timestamps = new uint32[](1);
         timestamps[0] = uint32(block.timestamp);
         bytes32[] memory solvers = new bytes32[](1);
-        solvers[0] = solverIdentifier;
+        solvers[0] = solver.toIdentifier();
         // Open Order & finalise
         uint256 snapshotId = vm.snapshot();
 
         vm.chainId(0);
+        order.chainIdField = 0;
+        order.chainIndex = 0;
+        order.inputs = inputs0;
+        order.additionalChains = additionalChains0;
         vm.prank(swapper);
         InputSettlerMultichainEscrowHarness(inputSettlerMultichainEscrow).open(order);
 
         assertEq(anotherToken.balanceOf(solver), 0);
         assertEq(anotherToken.balanceOf(inputSettlerMultichainEscrow), 0);
         assertEq(token.balanceOf(solver), 0);
-        assertEq(token.balanceOf(inputSettlerMultichainEscrow), amount);
+        assertEq(token.balanceOf(inputSettlerMultichainEscrow), inputs0[0][1]);
 
         vm.prank(solver);
         InputSettlerMultichainEscrowHarness(inputSettlerMultichainEscrow).finalise(
@@ -189,18 +229,22 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         // Validate that we received input 0.
         assertEq(anotherToken.balanceOf(solver), 0);
         assertEq(anotherToken.balanceOf(inputSettlerMultichainEscrow), 0);
-        assertEq(token.balanceOf(solver), inputs[0].amount);
+        assertEq(token.balanceOf(solver), inputs0[0][1]);
         assertEq(token.balanceOf(inputSettlerMultichainEscrow), 0);
 
         vm.revertTo(snapshotId);
-        vm.chainId(1);
+        vm.chainId(3);
+        order.chainIdField = 3;
+        order.chainIndex = 1;
+        order.inputs = inputs1;
+        order.additionalChains = additionalChains1;
         vm.prank(swapper);
         InputSettlerMultichainEscrowHarness(inputSettlerMultichainEscrow).open(order);
 
         assertEq(token.balanceOf(solver), 0);
         assertEq(token.balanceOf(inputSettlerMultichainEscrow), 0);
         assertEq(anotherToken.balanceOf(solver), 0);
-        assertEq(anotherToken.balanceOf(inputSettlerMultichainEscrow), amount);
+        assertEq(anotherToken.balanceOf(inputSettlerMultichainEscrow), inputs1[0][1]);
 
         vm.prank(solver);
         InputSettlerMultichainEscrowHarness(inputSettlerMultichainEscrow).finalise(
@@ -210,7 +254,7 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         // Validate that we received input 1.
         assertEq(token.balanceOf(solver), 0);
         assertEq(token.balanceOf(inputSettlerMultichainEscrow), 0);
-        assertEq(anotherToken.balanceOf(solver), inputs[1].amount);
+        assertEq(anotherToken.balanceOf(solver), inputs1[0][1]);
         assertEq(anotherToken.balanceOf(inputSettlerMultichainEscrow), 0);
     }
 }

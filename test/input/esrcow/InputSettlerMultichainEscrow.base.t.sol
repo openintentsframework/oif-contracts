@@ -9,7 +9,10 @@ import { InputSettlerMultichainEscrow } from "../../../src/input/escrow/InputSet
 import { AllowOpenType } from "../../../src/input/types/AllowOpenType.sol";
 import { MandateOutput, MandateOutputType } from "../../../src/input/types/MandateOutputType.sol";
 
-import { MultichainOrder, MultichainOrderType } from "../../../src/input/types/MultichainOrderType.sol";
+import {
+    MultichainOrderComponent,
+    MultichainOrderComponentType
+} from "../../../src/input/types/MultichainOrderComponentType.sol";
 import { OrderPurchase, OrderPurchaseType } from "../../../src/input/types/OrderPurchaseType.sol";
 import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
 import { MessageEncodingLib } from "../../../src/libs/MessageEncodingLib.sol";
@@ -27,7 +30,7 @@ interface EIP712 {
 
 contract InputSettlerMultichainEscrowHarness is InputSettlerMultichainEscrow {
     function validateFills(
-        MultichainOrder calldata order,
+        MultichainOrderComponent calldata order,
         bytes32 orderId,
         bytes32[] calldata solvers,
         uint32[] calldata timestamps
