@@ -84,7 +84,7 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
             MultichainOrderComponent({
                 user: address(0),
                 nonce: 0,
-                originChainId: block.chainid,
+                chainIdField: block.chainid,
                 chainIndex: 0,
                 expires: type(uint32).max,
                 fillDeadline: type(uint32).max,
@@ -125,9 +125,9 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
 
         // Get the additional chain input hashes. Note that we need the other chain's input.
         bytes32[] memory additionalChains0 = new bytes32[](1);
-        additionalChains0[0] = keccak256(abi.encodePacked(inputs1));
+        additionalChains0[0] = keccak256(abi.encodePacked(uint256(3), inputs1));
         bytes32[] memory additionalChains1 = new bytes32[](1);
-        additionalChains1[0] = keccak256(abi.encodePacked(inputs0));
+        additionalChains1[0] = keccak256(abi.encodePacked(uint256(0), inputs0));
 
         MandateOutput[] memory outputs = new MandateOutput[](1);
         outputs[0] = MandateOutput({
@@ -143,7 +143,7 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         MultichainOrderComponent memory order = MultichainOrderComponent({
             user: address(swapper),
             nonce: 0,
-            originChainId: 0, // Selected index 0 chain.
+            chainIdField: 0, // Selected index 0 chain.
             chainIndex: 0,
             fillDeadline: type(uint32).max,
             expires: type(uint32).max,
@@ -155,11 +155,13 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
 
         // Check that both orders have the same chainId
         vm.chainId(0);
+        order.chainIdField = 0;
         order.chainIndex = 0;
         order.inputs = inputs0;
         order.additionalChains = additionalChains0;
         bytes32 orderId = InputSettlerMultichainEscrowHarness(inputSettlerMultichainEscrow).orderIdentifier(order);
         vm.chainId(3);
+        order.chainIdField = 3;
         order.chainIndex = 1;
         order.inputs = inputs1;
         order.additionalChains = additionalChains1;
@@ -167,6 +169,7 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         assertEq(orderId, orderId1, "OrderId mismatch");
 
         vm.chainId(0);
+        order.chainIdField = 0;
         order.chainIndex = 0;
         order.inputs = inputs0;
         order.additionalChains = additionalChains0;
@@ -174,6 +177,7 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         // Fill swap
         bytes32 solverIdentifier = solver.toIdentifier();
         vm.chainId(3);
+        order.chainIdField = 3;
         order.chainIndex = 1;
         order.inputs = inputs1;
         order.additionalChains = additionalChains1;
@@ -206,6 +210,7 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         uint256 snapshotId = vm.snapshot();
 
         vm.chainId(0);
+        order.chainIdField = 0;
         order.chainIndex = 0;
         order.inputs = inputs0;
         order.additionalChains = additionalChains0;
@@ -230,6 +235,7 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
 
         vm.revertTo(snapshotId);
         vm.chainId(3);
+        order.chainIdField = 3;
         order.chainIndex = 1;
         order.inputs = inputs1;
         order.additionalChains = additionalChains1;

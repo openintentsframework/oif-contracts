@@ -6,7 +6,7 @@ import { MandateOutput, MandateOutputType } from "./MandateOutputType.sol";
 struct MultichainOrderComponent {
     address user;
     uint256 nonce;
-    uint256 originChainId; // TODO: unused?
+    uint256 chainIdField;
     uint256 chainIndex;
     uint32 expires;
     uint32 fillDeadline;
@@ -23,6 +23,10 @@ struct MultichainOrderComponent {
  * TYPE: Is complete including sub-types.
  */
 library MultichainOrderComponentType {
+    /**
+     * @dev If this function is used in a context where correctness of the identifier is important, the chainIdField
+     * needs to be validated against block.chainid
+     */
     function orderIdentifier(
         MultichainOrderComponent calldata order
     ) internal view returns (bytes32) {
@@ -36,7 +40,7 @@ library MultichainOrderComponentType {
                 order.expires,
                 order.fillDeadline,
                 order.localOracle,
-                constructInputHash(order.chainIndex, order.inputs, order.additionalChains),
+                constructInputHash(order.chainIdField, order.chainIndex, order.inputs, order.additionalChains),
                 abi.encode(order.outputs)
             )
         );
@@ -45,18 +49,19 @@ library MultichainOrderComponentType {
     /**
      * @notice Generates a shared identical input hash for a list of list of inputs.
      * Assume that you have a list inputs:
-     * - a: [[1, 1], [1,2]] => ha = keccak256(abi.encodePacked(a))
-     * - b: [[2, 1], [2,2]] => hb = keccak256(abi.encodePacked(b))
-     * - c: [[3, 1], [3,2]] => hc = keccak256(abi.encodePacked(c))
+     * - a: [[1, 1], [1,2]] => ha = keccak256(abi.encodePacked("a", a))
+     * - b: [[2, 1], [2,2]] => hb = keccak256(abi.encodePacked("b", b))
+     * - c: [[3, 1], [3,2]] => hc = keccak256(abi.encodePacked("c", c))
      * And wants to compute the hash: h = keccak256(abi.encodePacked(a, b, c)))
      * Given 1, b, and [ha, hc] the function will compute h.
      */
     function constructInputHash(
+        uint256 inputsChainId,
         uint256 chainIndex,
         uint256[2][] calldata inputs,
         bytes32[] calldata additionalChains
     ) internal pure returns (bytes32) {
-        bytes32 inputHash = hashInputs(inputs);
+        bytes32 inputHash = hashInputs(inputsChainId, inputs);
         uint256 numSegments = additionalChains.length + 1;
         // TODO: chainIndex in [0, numSegments]
         // TODO: use assembly for insert.
@@ -73,11 +78,9 @@ library MultichainOrderComponentType {
         return keccak256(abi.encodePacked(claimStructure));
     }
 
-    function hashInputs(
-        uint256[2][] calldata inputs
-    ) internal pure returns (bytes32) {
+    function hashInputs(uint256 chainId, uint256[2][] calldata inputs) internal pure returns (bytes32) {
         // TODO: If we use this straight, change to assembly calldata copy.
         // TODO: Alternative is to use abi.encodePacked. Length is implicit though size.
-        return keccak256(abi.encodePacked(inputs));
+        return keccak256(abi.encodePacked(chainId, inputs));
     }
 }

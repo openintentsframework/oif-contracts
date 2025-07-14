@@ -297,8 +297,8 @@ contract InputSettlerMultiCompact is BaseInputSettler {
                     witnessTypestring: string(MultichainCompactOrderType.BATCH_COMPACT_SUB_TYPES),
                     claims: batchClaimComponents,
                     additionalChains: order.additionalChains,
-                    chainIndex: 0,
-                    notarizedChainId: 0
+                    chainIndex: order.chainIndex,
+                    notarizedChainId: order.chainIdField
                 })
             );
         }

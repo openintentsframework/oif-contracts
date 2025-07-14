@@ -8,7 +8,7 @@ import { StandardOrderType } from "./StandardOrderType.sol";
 struct MultichainOrderComponent {
     address user;
     uint256 nonce;
-    uint256 originChainId;
+    uint256 chainIdField;
     uint256 chainIndex;
     uint32 expires;
     uint32 fillDeadline;

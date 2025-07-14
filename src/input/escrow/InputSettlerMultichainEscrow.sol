@@ -100,6 +100,7 @@ contract InputSettlerMultichainEscrow is BaseInputSettler {
         _validateDeadline(order.fillDeadline);
         _validateDeadline(order.expires);
 
+        _isThisChain(order.chainIdField);
         bytes32 orderId = orderIdentifier(order);
 
         if (_deposited[orderId] != OrderStatus.None) revert InvalidOrderStatus();
@@ -221,6 +222,7 @@ contract InputSettlerMultichainEscrow is BaseInputSettler {
     ) external virtual {
         if (destination == bytes32(0)) revert NoDestination();
 
+        _isThisChain(order.chainIdField);
         bytes32 orderId = orderIdentifier(order);
         bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
         _orderOwnerIsCaller(orderOwner);
@@ -256,6 +258,7 @@ contract InputSettlerMultichainEscrow is BaseInputSettler {
     ) external virtual {
         if (destination == bytes32(0)) revert NoDestination();
 
+        _isThisChain(order.chainIdField);
         bytes32 orderId = orderIdentifier(order);
         bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
 
