@@ -101,7 +101,7 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
 
     // This test works slightly differently to other tests. We will be solving the entirety of the test, then opening
     // and finalising the test, rolling back the chain, and doing it again. This is to showcase that the funds can be
-    // claimed on differnet chains.
+    // claimed on different chains.
     /// forge-config: default.isolate = true
     function test_finalise_self_2_inputs() public {
         // -- Set Up --//
