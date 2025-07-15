@@ -30,7 +30,7 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
     /**
      * @notice Sets outputs as filled by their solver identifier, such that outputs won't be filled twice.
      */
-    mapping(bytes32 orderId => mapping(bytes32 outputHash => bytes32 payloadHash)) internal _fillRecords;
+    mapping(bytes32 orderId => mapping(bytes32 outputHash => bytes32 payloadHash)) public _fillRecords;
 
     /**
      * @notice Output has been filled.
