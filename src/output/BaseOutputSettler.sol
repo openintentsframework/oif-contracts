@@ -22,7 +22,6 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
 
     error FillDeadline();
     error AlreadyFilled();
-    error NotFilled();
     error InvalidAttestation(bytes32 storedFillRecordHash, bytes32 givenFillRecordHash);
     error ZeroValue();
     error PayloadTooSmall();
@@ -30,7 +29,7 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
     /**
      * @notice Sets outputs as filled by their solver identifier, such that outputs won't be filled twice.
      */
-    mapping(bytes32 orderId => mapping(bytes32 outputHash => bytes32 payloadHash)) public _fillRecords;
+    mapping(bytes32 orderId => mapping(bytes32 outputHash => bytes32 payloadHash)) internal _fillRecords;
 
     /**
      * @notice Output has been filled.
@@ -41,6 +40,14 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
 
     function _getFillRecordHash(bytes32 solver, uint32 timestamp) internal pure returns (bytes32 fillRecordHash) {
         fillRecordHash = keccak256(abi.encodePacked(solver, timestamp));
+    }
+
+    function getFillRecord(bytes32 orderId, bytes32 outputHash) public view returns (bytes32 payloadHash) {
+        payloadHash = _fillRecords[orderId][outputHash];
+    }
+
+    function getFillRecord(bytes32 orderId, MandateOutput calldata output) public view returns (bytes32 payloadHash) {
+        payloadHash = _fillRecords[orderId][MandateOutputEncodingLib.getMandateOutputHash(output)];
     }
 
     /**
