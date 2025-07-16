@@ -49,7 +49,7 @@ contract OutputSettlerCoinTestFill is Test {
     }
 
     function test_fill(bytes32 orderId, address sender, bytes32 filler, uint256 amount) public {
-        vm.assume(filler != bytes32(0) && swapper != sender);
+        vm.assume(filler != bytes32(0) && swapper != sender && sender != address(0));
 
         outputToken.mint(sender, amount);
         vm.prank(sender);
@@ -104,7 +104,7 @@ contract OutputSettlerCoinTestFill is Test {
         uint32 startTime,
         uint32 currentTime
     ) public {
-        vm.assume(solverIdentifier != bytes32(0) && swapper != sender);
+        vm.assume(solverIdentifier != bytes32(0) && swapper != sender && sender != address(0));
         vm.warp(currentTime);
 
         outputToken.mint(sender, amount);
@@ -138,7 +138,7 @@ contract OutputSettlerCoinTestFill is Test {
         bytes32 filler,
         bytes memory remoteCallData
     ) public {
-        vm.assume(filler != bytes32(0));
+        vm.assume(filler != bytes32(0) && sender != address(0));
         vm.assume(sender != mockCallbackExecutorAddress);
         vm.assume(remoteCallData.length != 0);
 
@@ -207,7 +207,7 @@ contract OutputSettlerCoinTestFill is Test {
         uint16 currentTime
     ) public {
         uint32 stopTime = uint32(startTime) + uint32(runTime);
-        vm.assume(filler != bytes32(0) && swapper != sender);
+        vm.assume(filler != bytes32(0) && swapper != sender && sender != address(0));
         vm.warp(currentTime);
 
         uint256 minAmount = amount;
@@ -276,7 +276,7 @@ contract OutputSettlerCoinTestFill is Test {
         bytes32 exclusiveFor
     ) public {
         uint32 stopTime = uint32(startTime) + uint32(runTime);
-        vm.assume(exclusiveFor != bytes32(0) && swapper != sender);
+        vm.assume(exclusiveFor != bytes32(0) && swapper != sender && sender != address(0));
         vm.warp(currentTime);
 
         uint256 minAmount = amount;
@@ -337,7 +337,7 @@ contract OutputSettlerCoinTestFill is Test {
         bytes32 solverIdentifier
     ) public {
         uint32 stopTime = uint32(startTime) + uint32(runTime);
-        vm.assume(solverIdentifier != bytes32(0) && swapper != sender);
+        vm.assume(solverIdentifier != bytes32(0) && swapper != sender && sender != address(0));
         vm.assume(solverIdentifier != exclusiveFor);
         vm.warp(currentTime);
 
@@ -483,7 +483,7 @@ contract OutputSettlerCoinTestFill is Test {
         bytes32 orderId,
         uint256 amount
     ) public {
-        vm.assume(filler != bytes32(0));
+        vm.assume(filler != bytes32(0) && sender != address(0));
         vm.assume(filler != differentFiller && differentFiller != bytes32(0));
 
         outputToken.mint(sender, amount);
@@ -496,7 +496,7 @@ contract OutputSettlerCoinTestFill is Test {
             chainId: block.chainid,
             token: bytes32(uint256(uint160(outputTokenAddress))),
             amount: amount,
-            recipient: bytes32(0),
+            recipient: bytes32(uint256(uint160(sender))),
             call: bytes(""),
             context: bytes("")
         });
@@ -521,7 +521,7 @@ contract OutputSettlerCoinTestFill is Test {
         vm.assume(bytes1(outputContext) != 0x01 && outputContext.length != 41);
         vm.assume(bytes1(outputContext) != 0xe0 && outputContext.length != 37);
         vm.assume(bytes1(outputContext) != 0xe1 && outputContext.length != 73);
-        vm.assume(filler != bytes32(0));
+        vm.assume(filler != bytes32(0) && sender != address(0));
 
         outputToken.mint(sender, amount);
         vm.prank(sender);

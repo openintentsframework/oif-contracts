@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { TheCompact } from "the-compact/src/TheCompact.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 import { IdLib } from "the-compact/src/lib/IdLib.sol";
@@ -46,20 +45,8 @@ contract InputSettlerCompact is BaseInputSettler, IInputSettlerCompact {
 
     constructor(
         address compact
-    ) {
+    ) BaseInputSettler("CatalystSettler", "Compact1") {
         COMPACT = TheCompact(compact);
-    }
-
-    /// @notice EIP712
-    function _domainNameAndVersion()
-        internal
-        pure
-        virtual
-        override
-        returns (string memory name, string memory version)
-    {
-        name = "CatalystSettler";
-        version = "Compact1";
     }
 
     // --- Generic order identifier --- //

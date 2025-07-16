@@ -6,16 +6,7 @@ import { Test } from "forge-std/Test.sol";
 import { BaseInputSettler } from "../../src/input/BaseInputSettler.sol";
 
 contract MockSettler is BaseInputSettler {
-    function _domainNameAndVersion()
-        internal
-        pure
-        virtual
-        override
-        returns (string memory name, string memory version)
-    {
-        name = "MockSettler";
-        version = "-1";
-    }
+    constructor() BaseInputSettler("MockSettler", "-1") { }
 
     function maxTimestamp(
         uint32[] calldata timestamps
