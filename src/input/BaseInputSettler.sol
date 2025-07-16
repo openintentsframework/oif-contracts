@@ -4,6 +4,7 @@ pragma solidity ^0.8.26;
 import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 
+import { LibAddress } from "../libs/LibAddress.sol";
 import { EIP712 } from "openzeppelin/utils/cryptography/EIP712.sol";
 import { SignatureChecker } from "openzeppelin/utils/cryptography/SignatureChecker.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
@@ -21,6 +22,9 @@ import { OrderPurchase, OrderPurchaseType } from "./types/OrderPurchaseType.sol"
  * schemes.
  */
 abstract contract BaseInputSettler is EIP712 {
+    using LibAddress for address;
+    using LibAddress for bytes32;
+
     error AlreadyPurchased();
     error Expired();
     error InvalidPurchaser();
@@ -169,7 +173,7 @@ abstract contract BaseInputSettler is EIP712 {
         }
 
         {
-            address orderSolvedByAddress = address(uint160(uint256(orderSolvedByIdentifier)));
+            address orderSolvedByAddress = orderSolvedByIdentifier.fromIdentifier();
             bytes32 digest = _hashTypedDataV4(OrderPurchaseType.hashOrderPurchase(orderPurchase));
             bool isValid = SignatureChecker.isValidSignatureNow(orderSolvedByAddress, digest, solverSignature);
             if (!isValid) revert InvalidSigner();

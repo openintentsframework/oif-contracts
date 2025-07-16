@@ -291,7 +291,7 @@ contract InputSettler7683 is BaseInputSettler, IInputSettler7683 {
         uint32 timestamp,
         MandateOutput memory output
     ) internal pure returns (bytes32 outputHash) {
-        return keccak256(MandateOutputEncodingLib.encodeFillDescriptionM(solver, orderId, timestamp, output));
+        return keccak256(MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, timestamp, output));
     }
 
     /**

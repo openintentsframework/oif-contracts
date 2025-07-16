@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity ^0.8.0;
 
+import { LibAddress } from "../libs/LibAddress.sol";
 import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 import { ReentrancyGuard } from "openzeppelin/utils/ReentrancyGuard.sol";
@@ -18,6 +19,9 @@ import { IOIFCallback } from "../interfaces/IOIFCallback.sol";
  * otherwise they will be left in the contract free to take for next the next caller.
  */
 contract CatsMulticallHandler is IOIFCallback, ReentrancyGuard {
+    using LibAddress for address;
+    using LibAddress for bytes32;
+
     struct Call {
         address target;
         bytes callData;
@@ -93,7 +97,7 @@ contract CatsMulticallHandler is IOIFCallback, ReentrancyGuard {
 
         // Set approvals base on inputs if requested.
         if (instructions.setApprovalsUsingInputsFor != address(0)) {
-            _setApproval(address(uint160(uint256(token))), amount, instructions.setApprovalsUsingInputsFor);
+            _setApproval(token.fromIdentifier(), amount, instructions.setApprovalsUsingInputsFor);
         }
 
         // Execute attached instructions
@@ -101,7 +105,7 @@ contract CatsMulticallHandler is IOIFCallback, ReentrancyGuard {
 
         if (instructions.fallbackRecipient == address(0)) return;
         // If there are leftover tokens, send them to the fallback recipient regardless of execution success.
-        _drainRemainingTokens(address(uint160(uint256(token))), payable(instructions.fallbackRecipient));
+        _drainRemainingTokens(token.fromIdentifier(), payable(instructions.fallbackRecipient));
     }
 
     /**

@@ -27,7 +27,7 @@ library MandateOutputType {
     //--- Outputs Types ---//
 
     bytes constant MANDATE_OUTPUT_TYPE_STUB = bytes(
-        "MandateOutput(bytes32 oracle,bytes32 filler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
+        "MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
     );
 
     bytes32 constant MANDATE_OUTPUT_TYPE_HASH = keccak256(MANDATE_OUTPUT_TYPE_STUB);
@@ -55,11 +55,14 @@ library MandateOutputType {
     ) internal pure returns (bytes32) {
         unchecked {
             bytes memory currentHash = new bytes(32 * outputs.length);
-
+            uint256 p;
+            assembly ("memory-safe") {
+                p := add(currentHash, 0x20)
+            }
             for (uint256 i = 0; i < outputs.length; ++i) {
                 bytes32 outputHash = hashOutput(outputs[i]);
-                assembly {
-                    mstore(add(add(currentHash, 0x20), mul(i, 0x20)), outputHash)
+                assembly ("memory-safe") {
+                    mstore(add(p, mul(i, 0x20)), outputHash)
                 }
             }
             return keccak256(currentHash);
@@ -90,11 +93,14 @@ library MandateOutputType {
     ) internal pure returns (bytes32) {
         unchecked {
             bytes memory currentHash = new bytes(32 * outputs.length);
-
+            uint256 p;
+            assembly ("memory-safe") {
+                p := add(currentHash, 0x20)
+            }
             for (uint256 i = 0; i < outputs.length; ++i) {
                 bytes32 outputHash = hashOutputM(outputs[i]);
-                assembly {
-                    mstore(add(add(currentHash, 0x20), mul(i, 0x20)), outputHash)
+                assembly ("memory-safe") {
+                    mstore(add(p, mul(i, 0x20)), outputHash)
                 }
             }
             return keccak256(currentHash);

@@ -16,7 +16,9 @@ contract OutputSettlerCoinTestFill is Test {
     error NotImplemented();
     error SlopeStopped();
 
-    event OutputFilled(bytes32 indexed orderId, bytes32 solver, uint32 timestamp, MandateOutput output);
+    event OutputFilled(
+        bytes32 indexed orderId, bytes32 solver, uint32 timestamp, MandateOutput output, uint256 finalAmount
+    );
 
     OutputSettlerCoin outputSettlerCoin;
 
@@ -66,7 +68,7 @@ contract OutputSettlerCoinTestFill is Test {
 
         vm.prank(sender);
         vm.expectEmit();
-        emit OutputFilled(orderId, filler, uint32(block.timestamp), output);
+        emit OutputFilled(orderId, filler, uint32(block.timestamp), output, output.amount);
 
         vm.expectCall(
             outputTokenAddress,
@@ -172,7 +174,7 @@ contract OutputSettlerCoinTestFill is Test {
         );
 
         vm.expectEmit();
-        emit OutputFilled(orderId, filler, uint32(block.timestamp), outputs[0]);
+        emit OutputFilled(orderId, filler, uint32(block.timestamp), outputs[0], outputs[0].amount);
 
         outputSettlerCoin.fill(type(uint32).max, orderId, outputs[0], filler);
 
@@ -236,7 +238,7 @@ contract OutputSettlerCoinTestFill is Test {
         vm.prank(sender);
 
         vm.expectEmit();
-        emit OutputFilled(orderId, filler, uint32(block.timestamp), outputs[0]);
+        emit OutputFilled(orderId, filler, uint32(block.timestamp), outputs[0], finalAmount);
 
         vm.expectCall(
             outputTokenAddress,
@@ -309,7 +311,7 @@ contract OutputSettlerCoinTestFill is Test {
         vm.prank(sender);
 
         vm.expectEmit();
-        emit OutputFilled(orderId, exclusiveFor, uint32(block.timestamp), outputs[0]);
+        emit OutputFilled(orderId, exclusiveFor, uint32(block.timestamp), outputs[0], finalAmount);
 
         vm.expectCall(
             outputTokenAddress,
@@ -504,8 +506,8 @@ contract OutputSettlerCoinTestFill is Test {
         vm.prank(sender);
         bytes32 alreadyFilledBy = outputSettlerCoin.fill(type(uint32).max, orderId, output, differentFiller);
 
-        assertNotEq(alreadyFilledBy, differentFiller);
-        assertEq(alreadyFilledBy, filler);
+        assertNotEq(alreadyFilledBy, keccak256(abi.encodePacked(differentFiller, uint32(block.timestamp))));
+        assertEq(alreadyFilledBy, keccak256(abi.encodePacked(filler, uint32(block.timestamp))));
     }
 
     function test_invalid_fulfillment_context(
@@ -513,12 +515,12 @@ contract OutputSettlerCoinTestFill is Test {
         bytes32 filler,
         bytes32 orderId,
         uint256 amount,
-        bytes memory fulfillmentContext
+        bytes memory outputContext
     ) public {
-        vm.assume(bytes1(fulfillmentContext) != 0x00 && fulfillmentContext.length != 1);
-        vm.assume(bytes1(fulfillmentContext) != 0x01 && fulfillmentContext.length != 41);
-        vm.assume(bytes1(fulfillmentContext) != 0xe0 && fulfillmentContext.length != 37);
-        vm.assume(bytes1(fulfillmentContext) != 0xe1 && fulfillmentContext.length != 73);
+        vm.assume(bytes1(outputContext) != 0x00 && outputContext.length != 1);
+        vm.assume(bytes1(outputContext) != 0x01 && outputContext.length != 41);
+        vm.assume(bytes1(outputContext) != 0xe0 && outputContext.length != 37);
+        vm.assume(bytes1(outputContext) != 0xe1 && outputContext.length != 73);
         vm.assume(filler != bytes32(0) && sender != address(0));
 
         outputToken.mint(sender, amount);
@@ -535,7 +537,7 @@ contract OutputSettlerCoinTestFill is Test {
             amount: amount,
             recipient: bytes32(uint256(uint160(swapper))),
             call: bytes(""),
-            context: fulfillmentContext
+            context: outputContext
         });
 
         vm.prank(sender);

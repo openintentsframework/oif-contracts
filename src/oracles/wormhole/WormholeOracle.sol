@@ -2,6 +2,8 @@
 pragma solidity ^0.8.26;
 
 import { IPayloadCreator } from "../../interfaces/IPayloadCreator.sol";
+
+import { LibAddress } from "../../libs/LibAddress.sol";
 import { MessageEncodingLib } from "../../libs/MessageEncodingLib.sol";
 
 import { BaseOracle } from "../BaseOracle.sol";
@@ -18,6 +20,8 @@ import { IWormhole } from "./interfaces/IWormhole.sol";
  * proper chainIds. These maps once set are immutable and trustless.
  */
 contract WormholeOracle is ChainMap, BaseOracle, WormholeVerifier {
+    using LibAddress for address;
+
     error NotAllPayloadsValid();
     error RefundFailed();
 
@@ -39,12 +43,7 @@ contract WormholeOracle is ChainMap, BaseOracle, WormholeVerifier {
      * @return refund If too much value has been sent, the excess will be returned to msg.sender.
      */
     function submit(address source, bytes[] calldata payloads) public payable returns (uint256 refund) {
-        uint256 numPayloads = payloads.length;
-        bytes32[] memory payloadHashes = new bytes32[](numPayloads);
-        for (uint256 i; i < numPayloads; ++i) {
-            payloadHashes[i] = keccak256(payloads[i]);
-        }
-        if (!IPayloadCreator(source).arePayloadsValid(payloadHashes)) revert NotAllPayloadsValid();
+        if (!IPayloadCreator(source).arePayloadsValid(payloads)) revert NotAllPayloadsValid();
         return _submit(source, payloads);
     }
 
@@ -57,7 +56,7 @@ contract WormholeOracle is ChainMap, BaseOracle, WormholeVerifier {
      * @return refund If too much value has been sent, the excess will be returned to msg.sender.
      */
     function _submit(address source, bytes[] calldata payloads) internal returns (uint256 refund) {
-        bytes memory message = MessageEncodingLib.encodeMessage(bytes32(uint256(uint160(source))), payloads);
+        bytes memory message = MessageEncodingLib.encodeMessage(source.toIdentifier(), payloads);
 
         uint256 packageCost = WORMHOLE.messageFee();
         WORMHOLE.publishMessage{ value: packageCost }(0, message, WORMHOLE_CONSISTENCY);
@@ -79,7 +78,7 @@ contract WormholeOracle is ChainMap, BaseOracle, WormholeVerifier {
     ) external {
         (uint16 remoteMessagingProtocolChainIdentifier, bytes32 remoteSenderIdentifier, bytes calldata message) =
             _verifyPacket(rawMessage);
-        (bytes32 application, bytes32[] memory payloadHashes) = MessageEncodingLib.decodeMessage(message);
+        (bytes32 application, bytes32[] memory payloadHashes) = MessageEncodingLib.getHashesOfEncodedPayloads(message);
 
         uint256 remoteChainId = _getMappedChainId(uint256(remoteMessagingProtocolChainIdentifier));
 

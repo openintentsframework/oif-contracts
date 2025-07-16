@@ -39,6 +39,7 @@ contract InputSettlerCompact is BaseInputSettler, IInputSettlerCompact {
     error InvalidTimestampLength();
     error OrderIdMismatch(bytes32 provided, bytes32 computed);
     error FilledTooLate(uint32 expected, uint32 actual);
+    error WrongChainId();
 
     TheCompact public immutable COMPACT;
 
@@ -150,13 +151,11 @@ contract InputSettlerCompact is BaseInputSettler, IInputSettlerCompact {
     /**
      * @notice Finalises an order when called directly by the solver
      * @dev The caller must be the address corresponding to the first solver in the solvers array.
-     * If destination is bytes32(0), the order owner will be used as the destination.
      * @param order StandardOrder signed in conjunction with a Compact to form an order
      * @param signatures A signature for the sponsor and the allocator. abi.encode(bytes(sponsorSignature),
      * bytes(allocatorData))
      * @param timestamps Array of timestamps when each output was filled
-     * @param solvers Array of solvers who filled each output (in order). For single solver, pass an array with only one
-     * element
+     * @param solvers Array of solvers who filled each output (in order of outputs).
      * @param destination Where to send the inputs. If the solver wants to send the inputs to themselves, they should
      * pass their address to this parameter.
      * @param call Optional callback data. If non-empty, will call orderFinalised on the destination
@@ -170,6 +169,7 @@ contract InputSettlerCompact is BaseInputSettler, IInputSettlerCompact {
         bytes calldata call
     ) external virtual {
         if (destination == bytes32(0)) revert NoDestination();
+        if (order.originChainId != block.chainid) revert WrongChainId();
 
         bytes32 orderId = _orderIdentifier(order);
         bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
@@ -191,7 +191,7 @@ contract InputSettlerCompact is BaseInputSettler, IInputSettlerCompact {
      * @param signatures A signature for the sponsor and the allocator. abi.encode(bytes(sponsorSignature),
      * bytes(allocatorData))
      * @param timestamps Array of timestamps when each output was filled
-     * @param solvers Array of solvers who filled each output (in order). For single solver, pass an array with only
+     * @param solvers Array of solvers who filled each output (in order of outputs)
      * element
      * @param destination Where to send the inputs
      * @param call Optional callback data. If non-empty, will call orderFinalised on the destination
@@ -207,6 +207,7 @@ contract InputSettlerCompact is BaseInputSettler, IInputSettlerCompact {
         bytes calldata orderOwnerSignature
     ) external virtual {
         if (destination == bytes32(0)) revert NoDestination();
+        if (order.originChainId != block.chainid) revert WrongChainId();
 
         bytes32 orderId = _orderIdentifier(order);
         bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
