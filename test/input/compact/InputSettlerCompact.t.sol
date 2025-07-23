@@ -56,21 +56,21 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
 
         bytes memory expectedProofPayload = hex"";
         uint32[] memory timestamps = new uint32[](orderFulfillmentDescription.length);
-        MandateOutput[] memory MandateOutputs = new MandateOutput[](orderFulfillmentDescription.length);
+        MandateOutput[] memory outputs = new MandateOutput[](orderFulfillmentDescription.length);
         bytes32[] memory solvers = new bytes32[](orderFulfillmentDescription.length);
         for (uint256 i; i < orderFulfillmentDescription.length; ++i) {
             solvers[i] = solverIdentifier;
             timestamps[i] = orderFulfillmentDescription[i].timestamp;
-            MandateOutputs[i] = orderFulfillmentDescription[i].MandateOutput;
+            outputs[i] = orderFulfillmentDescription[i].MandateOutput;
 
             expectedProofPayload = abi.encodePacked(
                 expectedProofPayload,
-                MandateOutputs[i].chainId,
-                MandateOutputs[i].oracle,
-                MandateOutputs[i].settler,
+                outputs[i].chainId,
+                outputs[i].oracle,
+                outputs[i].settler,
                 keccak256(
                     MandateOutputEncodingLib.encodeFillDescriptionMemory(
-                        solverIdentifier, orderId, timestamps[i], MandateOutputs[i]
+                        solverIdentifier, orderId, timestamps[i], outputs[i]
                     )
                 )
             );
@@ -78,19 +78,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
         _validProofSeries[expectedProofPayload] = true;
 
         IInputSettlerCompactHarness(inputSettlerCompact).validateFills(
-            StandardOrder({
-                user: address(0),
-                nonce: 0,
-                originChainId: 0,
-                expires: type(uint32).max,
-                fillDeadline: type(uint32).max,
-                localOracle: localOracle,
-                inputs: new uint256[2][](0),
-                outputs: MandateOutputs
-            }),
-            orderId,
-            solvers,
-            timestamps
+            type(uint32).max, localOracle, outputs, orderId, solvers, timestamps
         );
     }
 
@@ -109,41 +97,27 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
 
         bytes memory expectedProofPayload = hex"";
         uint32[] memory timestamps = new uint32[](orderFulfillmentDescriptionWithSolver.length);
-        MandateOutput[] memory MandateOutputs = new MandateOutput[](orderFulfillmentDescriptionWithSolver.length);
+        MandateOutput[] memory outputs = new MandateOutput[](orderFulfillmentDescriptionWithSolver.length);
         bytes32[] memory solvers = new bytes32[](orderFulfillmentDescriptionWithSolver.length);
         for (uint256 i; i < orderFulfillmentDescriptionWithSolver.length; ++i) {
             timestamps[i] = orderFulfillmentDescriptionWithSolver[i].timestamp;
-            MandateOutputs[i] = orderFulfillmentDescriptionWithSolver[i].MandateOutput;
+            outputs[i] = orderFulfillmentDescriptionWithSolver[i].MandateOutput;
             solvers[i] = orderFulfillmentDescriptionWithSolver[i].solver;
 
             expectedProofPayload = abi.encodePacked(
                 expectedProofPayload,
-                MandateOutputs[i].chainId,
-                MandateOutputs[i].oracle,
-                MandateOutputs[i].settler,
+                outputs[i].chainId,
+                outputs[i].oracle,
+                outputs[i].settler,
                 keccak256(
-                    MandateOutputEncodingLib.encodeFillDescriptionMemory(
-                        solvers[i], orderId, timestamps[i], MandateOutputs[i]
-                    )
+                    MandateOutputEncodingLib.encodeFillDescriptionMemory(solvers[i], orderId, timestamps[i], outputs[i])
                 )
             );
         }
         _validProofSeries[expectedProofPayload] = true;
 
         IInputSettlerCompactHarness(inputSettlerCompact).validateFills(
-            StandardOrder({
-                user: address(0),
-                nonce: 0,
-                originChainId: 0,
-                expires: type(uint32).max,
-                fillDeadline: type(uint32).max,
-                localOracle: localOracle,
-                inputs: new uint256[2][](0),
-                outputs: MandateOutputs
-            }),
-            orderId,
-            solvers,
-            timestamps
+            type(uint32).max, localOracle, outputs, orderId, solvers, timestamps
         );
     }
 

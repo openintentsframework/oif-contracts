@@ -3,14 +3,12 @@ pragma solidity ^0.8.22;
 
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
-import { InputSettler7683 } from "../../../src/input/7683/InputSettler7683.sol";
-import { MandateERC7683 } from "../../../src/input/7683/Order7683Type.sol";
+import { InputSettlerEscrow } from "../../../src/input/Escrow/InputSettlerEscrow.sol";
 import { AllowOpenType } from "../../../src/input/types/AllowOpenType.sol";
 import { MandateOutput } from "../../../src/input/types/MandateOutputType.sol";
 import { OrderPurchase } from "../../../src/input/types/OrderPurchaseType.sol";
 import { StandardOrder } from "../../../src/input/types/StandardOrderType.sol";
-import { GaslessCrossChainOrder } from "../../../src/interfaces/IERC7683.sol";
-import { IInputSettler7683 } from "../../../src/interfaces/IInputSettler7683.sol";
+import { IInputSettlerEscrow } from "../../../src/interfaces/IInputSettlerEscrow.sol";
 import { OutputSettlerCoin } from "../../../src/output/coin/OutputSettlerCoin.sol";
 
 import { AlwaysYesOracle } from "../../mocks/AlwaysYesOracle.sol";
@@ -21,44 +19,32 @@ interface EIP712 {
     function DOMAIN_SEPARATOR() external view returns (bytes32);
 }
 
-interface IInputSettler7683Harness is IInputSettler7683 {
+interface IInputSettlerEscrowHarness is IInputSettlerEscrow {
     function validateFills(
-        StandardOrder calldata order,
+        uint32 fillDeadline,
+        address localOracle,
+        MandateOutput[] calldata outputs,
         bytes32 orderId,
         bytes32[] calldata solvers,
         uint32[] calldata timestamps
     ) external view;
-
-    function validateFills(
-        StandardOrder calldata order,
-        bytes32 orderId,
-        bytes32 solver,
-        uint32[] calldata timestamps
-    ) external view;
 }
 
-contract InputSettler7683Harness is InputSettler7683, IInputSettler7683Harness {
+contract InputSettlerEscrowHarness is InputSettlerEscrow, IInputSettlerEscrowHarness {
     function validateFills(
-        StandardOrder calldata order,
+        uint32 fillDeadline,
+        address localOracle,
+        MandateOutput[] calldata outputs,
         bytes32 orderId,
         bytes32[] calldata solvers,
         uint32[] calldata timestamps
     ) external view {
-        _validateFills(order, orderId, solvers, timestamps);
-    }
-
-    function validateFills(
-        StandardOrder calldata order,
-        bytes32 orderId,
-        bytes32 solver,
-        uint32[] calldata timestamps
-    ) external view {
-        _validateFills(order, orderId, solver, timestamps);
+        _validateFills(fillDeadline, localOracle, outputs, orderId, solvers, timestamps);
     }
 }
 
-contract InputSettler7683TestBase is Permit2Test {
-    event Transfer(address from, address to, uint256 amount);
+contract InputSettlerEscrowTestBase is Permit2Test {
+    event Transfer(address from, address to, uint256 afmount);
     event Transfer(address by, address from, address to, uint256 id, uint256 amount);
     event CompactRegistered(address indexed sponsor, bytes32 claimHash, bytes32 typehash);
     event NextGovernanceFee(uint64 nextGovernanceFee, uint64 nextGovernanceFeeTime);
@@ -67,7 +53,7 @@ contract InputSettler7683TestBase is Permit2Test {
     uint64 constant GOVERNANCE_FEE_CHANGE_DELAY = 7 days;
     uint64 constant MAX_GOVERNANCE_FEE = 10 ** 18 * 0.05; // 10%
 
-    address inputsettler7683;
+    address inputSettlerEscrow;
     OutputSettlerCoin outputSettlerCoin;
 
     address alwaysYesOracle;
@@ -100,9 +86,9 @@ contract InputSettler7683TestBase is Permit2Test {
 
     function setUp() public virtual override {
         super.setUp();
-        inputsettler7683 = address(new InputSettler7683Harness());
+        inputSettlerEscrow = address(new InputSettlerEscrowHarness());
 
-        DOMAIN_SEPARATOR = EIP712(inputsettler7683).DOMAIN_SEPARATOR();
+        DOMAIN_SEPARATOR = EIP712(inputSettlerEscrow).DOMAIN_SEPARATOR();
 
         outputSettlerCoin = new OutputSettlerCoin();
 
@@ -125,36 +111,19 @@ contract InputSettler7683TestBase is Permit2Test {
     }
 
     function witnessHash(
-        GaslessCrossChainOrder memory order
+        StandardOrder memory order
     ) internal pure returns (bytes32) {
-        MandateERC7683 memory orderData = abi.decode(order.orderData, (MandateERC7683));
         return keccak256(
             abi.encode(
                 keccak256(
                     bytes(
-                        "GaslessCrossChainOrder(address originSettler,address user,uint256 nonce,uint256 originChainId,uint32 openDeadline,uint32 fillDeadline,bytes32 orderDataType,MandateERC7683 orderData)MandateERC7683(uint32 expiry,address localOracle,uint256[2][] inputs,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
+                        "Permit2Witness(uint32 expires,address localOracle,uint256[2][] inputs,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
                     )
                 ),
-                order.originSettler,
-                order.user,
-                order.nonce,
-                order.originChainId,
-                order.openDeadline,
-                order.fillDeadline,
-                order.orderDataType,
-                keccak256(
-                    abi.encode(
-                        keccak256(
-                            bytes(
-                                "MandateERC7683(uint32 expiry,address localOracle,uint256[2][] inputs,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
-                            )
-                        ),
-                        orderData.expiry,
-                        orderData.localOracle,
-                        keccak256(abi.encodePacked(orderData.inputs)),
-                        outputsHash(orderData.outputs)
-                    )
-                )
+                order.expires,
+                order.localOracle,
+                keccak256(abi.encodePacked(order.inputs)),
+                outputsHash(order.outputs)
             )
         );
     }
@@ -192,7 +161,7 @@ contract InputSettler7683TestBase is Permit2Test {
         bytes32 destination,
         bytes calldata call
     ) external view returns (bytes memory sig) {
-        bytes32 domainSeparator = EIP712(inputsettler7683).DOMAIN_SEPARATOR();
+        bytes32 domainSeparator = EIP712(inputSettlerEscrow).DOMAIN_SEPARATOR();
         bytes32 msgHash = keccak256(
             abi.encodePacked("\x19\x01", domainSeparator, AllowOpenType.hashAllowOpen(orderId, destination, call))
         );
@@ -203,11 +172,9 @@ contract InputSettler7683TestBase is Permit2Test {
 
     function getPermit2Signature(
         uint256 privateKey,
-        GaslessCrossChainOrder memory order
+        StandardOrder memory order
     ) internal view returns (bytes memory sig) {
-        MandateERC7683 memory orderData = abi.decode(order.orderData, (MandateERC7683));
-
-        uint256[2][] memory inputs = orderData.inputs;
+        uint256[2][] memory inputs = order.inputs;
         bytes memory tokenPermissionsHashes = hex"";
         for (uint256 i; i < inputs.length; ++i) {
             uint256[2] memory input = inputs[i];
@@ -226,12 +193,12 @@ contract InputSettler7683TestBase is Permit2Test {
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "PermitBatchWitnessTransferFrom(TokenPermissions[] permitted,address spender,uint256 nonce,uint256 deadline,GaslessCrossChainOrder witness)GaslessCrossChainOrder(address originSettler,address user,uint256 nonce,uint256 originChainId,uint32 openDeadline,uint32 fillDeadline,bytes32 orderDataType,MandateERC7683 orderData)MandateERC7683(uint32 expiry,address localOracle,uint256[2][] inputs,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)TokenPermissions(address token,uint256 amount)"
+                            "PermitBatchWitnessTransferFrom(TokenPermissions[] permitted,a ddress spender,uint256 nonce,uint256 deadline,GaslessCrossChainOrder witness)GaslessCrossChainOrder(address originSettler,address user,uint256 nonce,uint256 originChainId,uint32 openDeadline,uint32 fillDeadline,bytes32 orderDataType,Permit2Witness orderData)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)TokenPermissions(address token,uint256 amount)Permit2Witness(uint32 expires,address localOracle,uint256[2][] inputs,MandateOutput[] outputs)"
                         ),
                         keccak256(tokenPermissionsHashes),
-                        inputsettler7683,
+                        inputSettlerEscrow,
                         order.nonce,
-                        order.openDeadline,
+                        order.fillDeadline,
                         witnessHash(order)
                     )
                 )

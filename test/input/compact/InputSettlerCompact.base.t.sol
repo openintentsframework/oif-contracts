@@ -35,7 +35,9 @@ interface EIP712 {
 
 interface IInputSettlerCompactHarness is IInputSettlerCompact {
     function validateFills(
-        StandardOrder calldata order,
+        uint32 fillDeadline,
+        address localOracle,
+        MandateOutput[] calldata outputs,
         bytes32 orderId,
         bytes32[] calldata solvers,
         uint32[] calldata timestamps
@@ -48,12 +50,14 @@ contract InputSettlerCompactHarness is InputSettlerCompact, IInputSettlerCompact
     ) InputSettlerCompact(compact) { }
 
     function validateFills(
-        StandardOrder calldata order,
+        uint32 fillDeadline,
+        address localOracle,
+        MandateOutput[] calldata outputs,
         bytes32 orderId,
         bytes32[] calldata solvers,
         uint32[] calldata timestamps
     ) external view {
-        _validateFills(order, orderId, solvers, timestamps);
+        _validateFills(fillDeadline, localOracle, outputs, orderId, solvers, timestamps);
     }
 }
 

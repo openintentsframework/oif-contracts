@@ -15,14 +15,14 @@ import { IInputSettlerCompact } from "../../interfaces/IInputSettlerCompact.sol"
 import { BytesLib } from "../../libs/BytesLib.sol";
 import { MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 
-import { BaseInputSettler } from "../BaseInputSettler.sol";
+import { InputSettlerPurchase } from "../InputSettlerPurchase.sol";
 import { MandateOutput } from "../types/MandateOutputType.sol";
 import { OrderPurchase } from "../types/OrderPurchaseType.sol";
 import { StandardOrder, StandardOrderType } from "../types/StandardOrderType.sol";
 
 /**
- * @title Input Settler supporting `The Compact` and `StandardOrder` orders. For `ERC-7683` orders refer to
- * `InputSettler7683`
+ * @title Input Settler supporting `The Compact` and `StandardOrder` orders. For explicitly escrowed orders refer to
+ * `InputSettlerEscrow`
  * @notice This Input Settler implementation uses The Compact as the deposit scheme. It is a Output first scheme that
  * allows users with a deposit inside The Compact to execute transactions that will be paid **after** the outputs have
  * been proven. This has the advantage that failed orders can be quickly retried. These orders are also entirely gasless
@@ -33,14 +33,9 @@ import { StandardOrder, StandardOrderType } from "../types/StandardOrderType.sol
  *
  * The contract is intended to be entirely ownerless, permissionlessly deployable, and unstoppable.
  */
-contract InputSettlerCompact is BaseInputSettler, IInputSettlerCompact {
+contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
     error UserCannotBeSettler();
-    error NotOrderOwner();
-    error NoDestination();
-    error InvalidTimestampLength();
     error OrderIdMismatch(bytes32 provided, bytes32 computed);
-    error FilledTooLate(uint32 expected, uint32 actual);
-    error WrongChainId();
 
     TheCompact public immutable COMPACT;
 
@@ -58,8 +53,8 @@ contract InputSettlerCompact is BaseInputSettler, IInputSettlerCompact {
         override
         returns (string memory name, string memory version)
     {
-        name = "CatalystSettler";
-        version = "Compact1";
+        name = "OIFCompact";
+        version = "1";
     }
 
     // --- Generic order identifier --- //
@@ -76,69 +71,7 @@ contract InputSettlerCompact is BaseInputSettler, IInputSettlerCompact {
         return _orderIdentifier(order);
     }
 
-    // --- Output Proofs --- //
-
-    function _proofPayloadHash(
-        bytes32 orderId,
-        bytes32 solver,
-        uint32 timestamp,
-        MandateOutput calldata output
-    ) internal pure returns (bytes32 outputHash) {
-        return keccak256(MandateOutputEncodingLib.encodeFillDescription(solver, orderId, timestamp, output));
-    }
-
-    /**
-     * @notice Check if a series of outputs have been proven.
-     * @dev This function returns true if the order contains no outputs.
-     * That means any order that has no outputs specified can be claimed.
-     */
-    function _validateFills(
-        StandardOrder calldata order,
-        bytes32 orderId,
-        bytes32[] memory solvers,
-        uint32[] calldata timestamps
-    ) internal view {
-        MandateOutput[] calldata MandateOutputs = order.outputs;
-
-        uint256 numOutputs = MandateOutputs.length;
-        uint256 numTimestamps = timestamps.length;
-        if (numTimestamps != numOutputs) revert InvalidTimestampLength();
-
-        uint32 fillDeadline = order.fillDeadline;
-        bytes memory proofSeries = new bytes(32 * 4 * numOutputs);
-        for (uint256 i; i < numOutputs; ++i) {
-            uint32 outputFilledAt = timestamps[i];
-            if (fillDeadline < outputFilledAt) revert FilledTooLate(fillDeadline, outputFilledAt);
-
-            MandateOutput calldata output = MandateOutputs[i];
-            bytes32 payloadHash = _proofPayloadHash(orderId, solvers[i], outputFilledAt, output);
-
-            uint256 chainId = output.chainId;
-            bytes32 outputOracle = output.oracle;
-            bytes32 outputSettler = output.settler;
-            assembly ("memory-safe") {
-                let offset := add(add(proofSeries, 0x20), mul(i, 0x80))
-                mstore(offset, chainId)
-                mstore(add(offset, 0x20), outputOracle)
-                mstore(add(offset, 0x40), outputSettler)
-                mstore(add(offset, 0x60), payloadHash)
-            }
-        }
-        IOracle(order.localOracle).efficientRequireProven(proofSeries);
-    }
-
     // --- Finalise Orders --- //
-
-    /**
-     * @notice Enforces that the caller is the order owner.
-     * @dev Only reads the rightmost 20 bytes to allow solvers to opt-in to Compact transfers instead of withdrawals.
-     * @param orderOwner The order owner. The leftmost 12 bytes are not read.
-     */
-    function _orderOwnerIsCaller(
-        bytes32 orderOwner
-    ) internal view {
-        if (EfficiencyLib.asSanitizedAddress(uint256(orderOwner)) != msg.sender) revert NotOrderOwner();
-    }
 
     /**
      * @notice Finalise an order, paying the inputs to the solver.
@@ -181,14 +114,14 @@ contract InputSettlerCompact is BaseInputSettler, IInputSettlerCompact {
         bytes32 destination,
         bytes calldata call
     ) external virtual {
-        if (destination == bytes32(0)) revert NoDestination();
-        if (order.originChainId != block.chainid) revert WrongChainId();
+        _validateDestination(destination);
+        _validateInputChain(order.originChainId);
 
         bytes32 orderId = _orderIdentifier(order);
         bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
         _orderOwnerIsCaller(orderOwner);
 
-        _validateFills(order, orderId, solvers, timestamps);
+        _validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, solvers, timestamps);
 
         _finalise(order, signatures, orderId, solvers[0], destination);
 
@@ -219,8 +152,8 @@ contract InputSettlerCompact is BaseInputSettler, IInputSettlerCompact {
         bytes calldata call,
         bytes calldata orderOwnerSignature
     ) external virtual {
-        if (destination == bytes32(0)) revert NoDestination();
-        if (order.originChainId != block.chainid) revert WrongChainId();
+        _validateDestination(destination);
+        _validateInputChain(order.originChainId);
 
         bytes32 orderId = _orderIdentifier(order);
         bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
@@ -230,7 +163,7 @@ contract InputSettlerCompact is BaseInputSettler, IInputSettlerCompact {
             orderId, EfficiencyLib.asSanitizedAddress(uint256(orderOwner)), destination, call, orderOwnerSignature
         );
 
-        _validateFills(order, orderId, solvers, timestamps);
+        _validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, solvers, timestamps);
 
         _finalise(order, signatures, orderId, solvers[0], destination);
 
