@@ -13,3 +13,7 @@
 [submodule "lib/permit2"]
 	path = lib/permit2
 	url = https://github.com/Uniswap/permit2
+[submodule "lib/hyperlane-monorepo"]
+	path = lib/hyperlane-monorepo
+	url = https://github.com/hyperlane-xyz/hyperlane-monorepo
+	branch = main
