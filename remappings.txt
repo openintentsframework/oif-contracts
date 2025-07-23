@@ -4,3 +4,7 @@ bitcoinprism-evm/=lib/bitcoinprism-evm/
 the-compact/=lib/the-compact/
 permit2/=lib/permit2/
 openzeppelin/=lib/openzeppelin-contracts/contracts/
+@hyperlane-xyz/=lib/hyperlane-monorepo/solidity/contracts
+@openzeppelin-4/contracts/=lib/openzeppelin-contracts-4/contracts
+lib/hyperlane-monorepo/solidity/:@openzeppelin/contracts/=lib/openzeppelin-contracts-4/contracts
+lib/hyperlane-monorepo/solidity/:@openzeppelin/contracts-upgradeable/=lib/openzeppelin-contracts-upgradeable-4/contracts
