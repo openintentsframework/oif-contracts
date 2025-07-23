@@ -17,3 +17,6 @@
 	path = lib/hyperlane-monorepo
 	url = https://github.com/hyperlane-xyz/hyperlane-monorepo
 	branch = main
+[submodule "lib/openzeppelin-contracts-4"]
+	path = lib/openzeppelin-contracts-4
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
