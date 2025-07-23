@@ -10,8 +10,9 @@ import { TransparentUpgradeableProxy } from
 
 import { InterchainGasPaymaster } from "@hyperlane-xyz/hooks/igp/InterchainGasPaymaster.sol";
 import { TypeCasts } from "@hyperlane-xyz/libs/TypeCasts.sol";
-import { MockMailbox } from "@hyperlane-xyz/mock/MockMailbox.sol";
+
 import { MockHyperlaneEnvironment } from "@hyperlane-xyz/mock/MockHyperlaneEnvironment.sol";
+import { MockMailbox } from "@hyperlane-xyz/mock/MockMailbox.sol";
 
 import { MandateOutput } from "../../../src/input/types/MandateOutputType.sol";
 import { LibAddress } from "../../../src/libs/LibAddress.sol";

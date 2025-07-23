@@ -3,10 +3,10 @@ pragma solidity ^0.8.26;
 
 import { GasRouter } from "@hyperlane-xyz/client/GasRouter.sol";
 
-import { BaseOracle } from "../BaseOracle.sol";
 import { IPayloadCreator } from "../../interfaces/IPayloadCreator.sol";
 import { LibAddress } from "../../libs/LibAddress.sol";
 import { MessageEncodingLib } from "../../libs/MessageEncodingLib.sol";
+import { BaseOracle } from "../BaseOracle.sol";
 
 /**
  * @notice Hyperlane Oracle.
