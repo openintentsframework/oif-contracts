@@ -25,7 +25,8 @@ abstract contract InputSettlerBase is EIP712 {
     using LibAddress for address;
     using LibAddress for bytes32;
 
-    error DeadlinePassed();
+    error TimestampPassed();
+    error TimestampNotPassed();
     error WrongChain(uint256 expected, uint256 actual);
     error InvalidSigner();
     error FilledTooLate(uint32 expected, uint32 actual);
@@ -44,10 +45,20 @@ abstract contract InputSettlerBase is EIP712 {
      * @notice Checks that a timestamp has not expired.
      * @param timestamp The timestamp to validate that it is not less than block.timestamp
      */
-    function _validateDeadlineHasNotExpired(
+    function _validateTimestampHasNotPassed(
         uint32 timestamp
     ) internal view {
-        if (block.timestamp > timestamp) revert DeadlinePassed();
+        if (block.timestamp > timestamp) revert TimestampPassed();
+    }
+
+    /**
+     * @notice Checks that a timestamp has passed.
+     * @param timestamp The timestamp to validate that it is not less than block.timestamp
+     */
+    function _validateTimestampHasPassed(
+        uint32 timestamp
+    ) internal view {
+        if (block.timestamp < timestamp) revert TimestampNotPassed();
     }
 
     /**

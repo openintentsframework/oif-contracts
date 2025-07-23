@@ -84,7 +84,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         StandardOrder calldata order
     ) external {
         // Validate the order structure.
-        _validateDeadlineHasNotExpired(order.fillDeadline);
+        _validateTimestampHasNotPassed(order.fillDeadline);
 
         bytes32 orderId = StandardOrderType.orderIdentifier(order);
 
@@ -155,8 +155,8 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     ) external {
         // Validate the order structure.
         _validateInputChain(order.originChainId);
-        // _validateDeadlineHasNotExpired(order.openDeadline);
-        _validateDeadlineHasNotExpired(order.fillDeadline);
+        // _validateTimestampHasNotPassed(order.openDeadline);
+        _validateTimestampHasNotPassed(order.fillDeadline);
 
         bytes32 orderId = _orderIdentifier(order);
 
@@ -167,6 +167,19 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
         // Collect input tokens
         _openFor(order, signature, address(this));
+    }
+
+    // --- Refund --- //
+
+    function refund(
+        StandardOrder calldata order
+    ) external {
+        _validateInputChain(order.originChainId);
+        _validateTimestampHasPassed(order.expires);
+
+        bytes32 orderId = _orderIdentifier(order);
+
+        _resolveLock(orderId, order.inputs, order.user, OrderStatus.Refunded);
     }
 
     // --- Finalise Orders --- //
@@ -192,7 +205,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         bytes32 solver,
         bytes32 destination
     ) internal virtual {
-        _resolveLock(orderId, order.inputs, destination.fromIdentifier());
+        _resolveLock(orderId, order.inputs, destination.fromIdentifier(), OrderStatus.Claimed);
         emit Finalised(orderId, solver, destination);
     }
 
@@ -273,13 +286,19 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     /**
      * @dev This function employs a local reentry guard: we check the order status and then we update it afterwards. This
      * is an important check as it is indeed to process external ERC20 transfers.
+     * @param newStatus specifies the new status to set the order to. Should never be OrderStatus.Deposited.
      */
-    function _resolveLock(bytes32 orderId, uint256[2][] calldata inputs, address solvedBy) internal virtual {
+    function _resolveLock(
+        bytes32 orderId,
+        uint256[2][] calldata inputs,
+        address destination,
+        OrderStatus newStatus
+    ) internal virtual {
         // Check the order status:
         if (_deposited[orderId] != OrderStatus.Deposited) revert InvalidOrderStatus();
         // Mark order as deposited. If we can't make the deposit, we will
         // revert and it will unmark it. This acts as a reentry check.
-        _deposited[orderId] = OrderStatus.Claimed;
+        _deposited[orderId] = newStatus;
 
         // We have now ensured that this point can only be reached once. We can now process the asset delivery.
         uint256 numInputs = inputs.length;
@@ -288,7 +307,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
             address token = EfficiencyLib.asSanitizedAddress(input[0]);
             uint256 amount = input[1];
 
-            SafeTransferLib.safeTransfer(token, solvedBy, amount);
+            SafeTransferLib.safeTransfer(token, destination, amount);
         }
     }
 

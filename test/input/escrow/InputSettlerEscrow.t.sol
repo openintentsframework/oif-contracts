@@ -409,6 +409,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
     function test_finalise_signature(
         address destination
     ) public {
+        vm.assume(destination != address(0));
         vm.assume(token.balanceOf(destination) == 0);
 
         uint256 amount = 1e18 / 10;
