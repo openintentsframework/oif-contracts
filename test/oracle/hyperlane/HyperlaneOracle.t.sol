@@ -10,11 +10,8 @@ import { TransparentUpgradeableProxy } from
 
 import { InterchainGasPaymaster } from "@hyperlane-xyz/hooks/igp/InterchainGasPaymaster.sol";
 import { TypeCasts } from "@hyperlane-xyz/libs/TypeCasts.sol";
-
-import { MockHyperlaneEnvironment } from "@hyperlane-xyz/mock/MockHyperlaneEnvironment.sol";
 import { MockMailbox } from "@hyperlane-xyz/mock/MockMailbox.sol";
-
-import { HyperlaneOracle } from "../../../src/oracles/hyperlane/HyperlaneOracle.sol";
+import { MockHyperlaneEnvironment } from "@hyperlane-xyz/mock/MockHyperlaneEnvironment.sol";
 
 import { MandateOutput } from "../../../src/input/types/MandateOutputType.sol";
 import { LibAddress } from "../../../src/libs/LibAddress.sol";
@@ -23,6 +20,8 @@ import { MessageEncodingLib } from "../../../src/libs/MessageEncodingLib.sol";
 import { OutputSettlerCoin } from "../../../src/output/coin/OutputSettlerCoin.sol";
 import { OutputSettlerCoin } from "../../../src/output/coin/OutputSettlerCoin.sol";
 import { MockERC20 } from "../../mocks/MockERC20.sol";
+
+import { HyperlaneOracle } from "../../../src/oracles/hyperlane/HyperlaneOracle.sol";
 
 contract TestInterchainGasPaymaster is InterchainGasPaymaster {
     uint256 public gasPrice = 10;
@@ -194,6 +193,16 @@ contract HyperlaneOracleTest is Test {
         // Fill without submitting
         vm.expectRevert(abi.encodeWithSignature("NotAllPayloadsValid()"));
         _destinationOracle.submit{ value: _gasPaymentQuote }(_destination, address(_outputSettler), payloads);
+    }
+
+    function test_fill_work_w() external {
+        test_submit_work(
+            makeAddr("sender"),
+            10 ** 18,
+            makeAddr("recipient"),
+            keccak256(bytes("orderId")),
+            keccak256(bytes("solverIdentifier"))
+        );
     }
 
     function test_submit_work(
