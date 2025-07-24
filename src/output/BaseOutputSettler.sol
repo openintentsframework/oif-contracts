@@ -6,6 +6,8 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { IOIFCallback } from "../interfaces/IOIFCallback.sol";
 import { IPayloadCreator } from "../interfaces/IPayloadCreator.sol";
 
+import { IDestinationSettler } from "../interfaces/IERC7683.sol";
+
 import { LibAddress } from "../libs/LibAddress.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../libs/MandateOutputEncodingLib.sol";
 import { OutputVerificationLib } from "../libs/OutputVerificationLib.sol";
@@ -17,7 +19,7 @@ import { BaseOracle } from "../oracles/BaseOracle.sol";
  * Does not support native coins.
  * This base output settler implements logic to work as both a PayloadCreator (for oracles) and as an oracle itself.
  */
-abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
+abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseOracle {
     using LibAddress for address;
 
     error FillDeadline();
@@ -62,6 +64,12 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
     function _fill(
         bytes32 orderId,
         MandateOutput calldata output,
+        bytes32 proposedSolver
+    ) internal virtual returns (bytes32);
+
+    function _fill(
+        bytes32 orderId,
+        bytes calldata output,
         bytes32 proposedSolver
     ) internal virtual returns (bytes32);
 
@@ -124,6 +132,97 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
     ) external virtual returns (bytes32) {
         if (fillDeadline < block.timestamp) revert FillDeadline();
         return _fill(orderId, output, proposedSolver);
+    }
+
+    function fill(bytes32 orderId, bytes calldata originData, bytes calldata fillerData) external{ 
+        // TODO: handle fill deadline
+        bytes32 proposedSolver;
+        assembly ("memory-safe") {
+            proposedSolver := calldataload(fillerData.offset)
+        }
+
+        _fill(orderId, originData, proposedSolver);
+    }
+
+    function _parseOutput(
+        bytes calldata originData
+    ) internal pure returns (bytes32, bytes32, uint256, bytes32, uint256, bytes32) {
+        bytes32 oracle;
+        bytes32 settler;
+        uint256 chainId;
+        bytes32 token;
+        uint256 amount;
+        bytes32 recipient;
+        uint256 callDataOffset;
+        uint256 contextOffset;
+
+        assembly ("memory-safe") {
+            oracle := calldataload(originData.offset)
+            settler := calldataload(add(originData.offset, 0x20))
+            chainId := calldataload(add(originData.offset, 0x40))
+            token := calldataload(add(originData.offset, 0x60))
+            amount := calldataload(add(originData.offset, 0x80))
+            recipient := calldataload(add(originData.offset, 0xa0))
+
+            callDataOffset := calldataload(add(originData.offset, 0xc0))
+        }
+
+        return (oracle, settler, chainId, token, amount, recipient);
+    }
+
+    function _fill(
+        bytes32 orderId,
+        bytes calldata output,
+        uint256 outputAmount,
+        bytes32 proposedSolver
+    ) internal virtual returns (bytes32 existingFillRecordHash) {
+
+        bytes32 oracle;
+        bytes32 settler;
+        uint256 chainId;
+        bytes32 token;
+        uint256 amount;
+        bytes32 recipientBytes;
+
+        assembly ("memory-safe") {
+            oracle := calldataload(output.offset)
+            settler := calldataload(add(output.offset, 0x20))
+            chainId := calldataload(add(output.offset, 0x40))
+            token := calldataload(add(output.offset, 0x60))
+            amount := calldataload(add(output.offset, 0x80))
+            recipientBytes := calldataload(add(output.offset, 0xa0))
+        }
+        
+
+        if (proposedSolver == bytes32(0)) revert ZeroValue();
+        OutputVerificationLib._isThisChain(chainId);
+        OutputVerificationLib._isThisOutputSettler(settler);
+
+        bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHashFromBytes(output);
+        existingFillRecordHash = _fillRecords[orderId][outputHash];
+        if (existingFillRecordHash != bytes32(0)) return existingFillRecordHash; // Early return if already solved.
+        
+        // The above and below lines act as a local re-entry check.
+        uint32 fillTimestamp = uint32(block.timestamp);
+        _fillRecords[orderId][outputHash] = _getFillRecordHash(proposedSolver, fillTimestamp);
+
+        // Storage has been set. Fill the output.
+        address recipient = address(uint160(uint256(recipientBytes)));
+        SafeTransferLib.safeTransferFrom(address(uint160(uint256(token))), msg.sender, recipient, outputAmount);
+
+        uint256 callDataLength;
+        assembly ("memory-safe") {
+            callDataLength := calldataload(add(output.offset, 0xc0))
+        }
+
+        if(callDataLength > 0) {
+            bytes calldata callData = output[0xc0:0xc0 + callDataLength];
+            IOIFCallback(recipient).outputFilled(token, outputAmount, callData);
+
+        }
+
+        //emit OutputFilled(orderId, proposedSolver, fillTimestamp, output, outputAmount);
+
     }
 
     // -- Batch Solving -- //

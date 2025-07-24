@@ -4,6 +4,7 @@ pragma solidity ^0.8.26;
 import { MandateOutput, MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 import { BaseOutputSettler } from "../BaseOutputSettler.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
+import { console } from "forge-std/console.sol";
 
 /**
  * @notice Output Settler for ERC20 tokens.
@@ -109,6 +110,59 @@ contract OutputSettlerCoin is BaseOutputSettler {
         revert NotImplemented();
     }
 
+    function _orderType(bytes calldata output, bytes32 solver) internal view returns (uint256 amount) {
+
+        console.log("AAAAAAA");
+
+        console.logBytes(output);
+
+        uint16 callDataLength = uint16(bytes2(output[0xc0: 0xc2]));
+
+        uint16 fulfillmentLength = uint16(bytes2(output[0xc2 + callDataLength: 0xc4 + callDataLength]));
+
+        assembly ("memory-safe") {
+            amount := calldataload(add(output.offset, 0x80))
+        }
+        if (fulfillmentLength == 0) return amount;
+
+        //bytes1 orderType = bytes1(output.context);
+
+        uint256 fullfillmentOffset = 0xc0 + callDataLength;
+
+        console.log("fullfillmentOffset", fullfillmentOffset);
+
+        bytes1 orderType = bytes1(output[fullfillmentOffset]);
+
+        console.logBytes1(orderType);
+
+        
+
+
+        if (orderType == 0x00 && fulfillmentLength == 1) return amount;
+        if (orderType == 0x01 && fulfillmentLength == 41) {
+            uint32 startTime = uint32(bytes4(output[fullfillmentOffset + 1: fullfillmentOffset + 5]));
+            uint32 stopTime = uint32(bytes4(output[fullfillmentOffset + 5: fullfillmentOffset + 9]));
+            uint256 slope = uint256(bytes32(output[fullfillmentOffset + 9: fullfillmentOffset + 41]));
+            return _dutchAuctionSlope(amount, slope, startTime, stopTime);
+        }
+
+        if (orderType == 0xe0 && fulfillmentLength == 37) {
+            bytes32 exclusiveFor = bytes32(output[fullfillmentOffset + 1: fullfillmentOffset + 33]);
+            uint32 startTime = uint32(bytes4(output[fullfillmentOffset + 33: fullfillmentOffset + 37]));
+            if (startTime > block.timestamp && exclusiveFor != solver) revert ExclusiveTo(exclusiveFor);
+            return amount;
+        }
+        if (orderType == 0xe1 && fulfillmentLength == 73) {
+            bytes32 exclusiveFor = bytes32(output[fullfillmentOffset + 1: fullfillmentOffset + 33]);
+            uint32 startTime = uint32(bytes4(output[fullfillmentOffset + 33: fullfillmentOffset + 37]));
+            uint32 stopTime = uint32(bytes4(output[fullfillmentOffset + 37: fullfillmentOffset + 41]));
+            uint256 slope = uint256(bytes32(output[fullfillmentOffset + 41: fullfillmentOffset + 73]));
+            if (startTime > block.timestamp && exclusiveFor != solver) revert ExclusiveTo(exclusiveFor);
+            return _dutchAuctionSlope(amount, slope, startTime, stopTime);
+        }
+        revert NotImplemented();
+    }
+
     /**
      * @dev Hands off parsed output type to BaseOutputSettler execute fill logic.
      * @param orderId Input chain order identifier.
@@ -124,4 +178,16 @@ contract OutputSettlerCoin is BaseOutputSettler {
         uint256 amount = _orderType(output, proposedSolver);
         return _fill(orderId, output, amount, proposedSolver);
     }
+
+    function _fill(
+        bytes32 orderId,
+        bytes calldata output,
+        bytes32 proposedSolver
+    ) internal override returns (bytes32) {
+
+        uint256 amount = _orderType(output, proposedSolver);
+        return _fill(orderId, output, amount, proposedSolver);
+        
+    }
 }
+

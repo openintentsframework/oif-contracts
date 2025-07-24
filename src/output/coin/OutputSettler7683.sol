@@ -3,7 +3,6 @@ pragma solidity ^0.8.26;
 
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
-import { IDestinationSettler } from "../../interfaces/IERC7683.sol";
 import { IOIFCallback } from "../../interfaces/IOIFCallback.sol";
 
 import { LibAddress } from "../../libs/LibAddress.sol";
@@ -12,12 +11,14 @@ import { OutputVerificationLib } from "../../libs/OutputVerificationLib.sol";
 
 import { BaseOutputSettler } from "../BaseOutputSettler.sol";
 
+import { console } from "forge-std/console.sol";
+
 /**
  * @dev Solvers use Oracles to pay outputs. This allows us to record the payment.
  * Tokens never touch this contract but goes directly from solver to user.
  * This output settler contract only supports limit orders.
  */
-contract OutputInputSettler7683 is BaseOutputSettler, IDestinationSettler {
+contract OutputInputSettler7683 is BaseOutputSettler {
     using LibAddress for address;
 
     error NotImplemented();
@@ -32,17 +33,18 @@ contract OutputInputSettler7683 is BaseOutputSettler, IDestinationSettler {
         if (recordedSolver != proposedSolver) revert AlreadyFilled();
     }
 
-    function fill(bytes32 orderId, bytes calldata originData, bytes calldata fillerData) external {
-        bytes32 proposedSolver;
+    function _fill(
+        bytes32 orderId,
+        bytes calldata output,
+        bytes32 proposedSolver
+    ) internal override returns (bytes32) {
+        uint256 amount;
         assembly ("memory-safe") {
-            proposedSolver := calldataload(fillerData.offset)
+            amount := calldataload(add(output.offset, 0x80))
         }
 
-        MandateOutput memory output = abi.decode(originData, (MandateOutput));
+        return _fill(orderId, output, amount, proposedSolver);
 
-        uint256 amount = _getAmountMemory(output);
-        bytes32 existingFillRecordHash = _fillMemory(orderId, output, amount, proposedSolver);
-        if (existingFillRecordHash != bytes32(0)) revert AlreadyFilled();
     }
 
     function _getAmountMemory(
