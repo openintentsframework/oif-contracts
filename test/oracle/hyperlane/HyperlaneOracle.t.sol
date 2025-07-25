@@ -14,7 +14,8 @@ import { OutputSettlerCoin } from "../../../src/output/coin/OutputSettlerCoin.so
 import { MockERC20 } from "../../mocks/MockERC20.sol";
 
 import { HyperlaneOracle } from "../../../src/oracles/hyperlane/HyperlaneOracle.sol";
-import { IPostDispatchHook } from "../../../src/oracles/hyperlane/external/hyperlane/interfaces/hooks/IPostDispatchHook.sol";
+import { IPostDispatchHook } from
+    "../../../src/oracles/hyperlane/external/hyperlane/interfaces/hooks/IPostDispatchHook.sol";
 import { StandardHookMetadata } from "../../../src/oracles/hyperlane/external/hyperlane/libs/StandardHookMetadata.sol";
 
 event OutputProven(uint256 chainid, bytes32 remoteIdentifier, bytes32 application, bytes32 payloadHash);
@@ -27,10 +28,10 @@ contract MailboxMock {
     }
 
     function dispatch(
-        uint32 ,
-        bytes32 ,
-        bytes calldata ,
-        bytes calldata ,
+        uint32,
+        bytes32,
+        bytes calldata,
+        bytes calldata,
         IPostDispatchHook
     ) external payable returns (bytes32 messageId) {
         dispatchCounter += 1;
@@ -38,10 +39,10 @@ contract MailboxMock {
     }
 
     function quoteDispatch(
-        uint32 ,
-        bytes32 ,
-        bytes calldata ,
-        bytes calldata ,
+        uint32,
+        bytes32,
+        bytes calldata,
+        bytes calldata,
         IPostDispatchHook
     ) external pure returns (uint256 fee) {
         return 1e18;
@@ -127,7 +128,9 @@ contract HyperlaneOracleTest is Test {
 
         // Fill without submitting
         vm.expectRevert(abi.encodeWithSignature("NotAllPayloadsValid()"));
-        _oracle.submit{ value: _gasPaymentQuote }(_destination, _recipientOracle, _gasLimit, bytes("customMetadata"), address(_outputSettler), payloads);
+        _oracle.submit{ value: _gasPaymentQuote }(
+            _destination, _recipientOracle, _gasLimit, bytes("customMetadata"), address(_outputSettler), payloads
+        );
     }
 
     function test_fill_work_w() external {
@@ -175,7 +178,9 @@ contract HyperlaneOracleTest is Test {
             )
         );
 
-        _oracle.submit{ value: _gasPaymentQuote }(_destination, _recipientOracle, _gasLimit, customMetadata, address(_outputSettler), payloads);
+        _oracle.submit{ value: _gasPaymentQuote }(
+            _destination, _recipientOracle, _gasLimit, customMetadata, address(_outputSettler), payloads
+        );
         vm.snapshotGasLastCall("oracle", "hyperlaneOracleSubmit");
     }
 
@@ -223,8 +228,7 @@ contract HyperlaneOracleTest is Test {
 
         bytes memory message = this.encodeMessageCalldata(output.settler, payloads);
 
-        (bytes32 application, bytes32[] memory payloadHashes) =
-            this.getHashesOfEncodedPayloads(message);
+        (bytes32 application, bytes32[] memory payloadHashes) = this.getHashesOfEncodedPayloads(message);
 
         bytes32 messageSender = makeAddr("messageSender").toIdentifier();
 
@@ -256,7 +260,9 @@ contract HyperlaneOracleTest is Test {
             )
         );
 
-        _oracle.quoteGasPayment(_destination, _recipientOracle, _gasLimit, customMetadata, address(_outputSettler), payloads);
+        _oracle.quoteGasPayment(
+            _destination, _recipientOracle, _gasLimit, customMetadata, address(_outputSettler), payloads
+        );
     }
 
     receive() external payable { }
