@@ -6,7 +6,7 @@ pragma solidity ^0.8.22;
 /// @dev Provides functions for converting addresses to cross-chain identifiers
 library LibAddress {
     /// @notice Converts an Ethereum address to a bytes32 identifier that can be used across chains
-    /// @dev Uses the address's numeric value as a bytes32 identifier by casting through uint256
+    /// @dev Uses the address's numeric value as a bytes32 identifier by casting type in-place.
     /// @param addr The address to convert
     /// @return identifier The bytes32 identifier representation of the address
     function toIdentifier(

@@ -11,50 +11,23 @@ import { AlwaysOKAllocator } from "the-compact/src/test/AlwaysOKAllocator.sol";
 import { ResetPeriod } from "the-compact/src/types/ResetPeriod.sol";
 import { Scope } from "the-compact/src/types/Scope.sol";
 
-import { OutputSettlerCoin } from "../../../src/output/coin/OutputSettlerCoin.sol";
-
 import { InputSettlerCompact } from "../../../src/input/compact/InputSettlerCompact.sol";
 import { AllowOpenType } from "../../../src/input/types/AllowOpenType.sol";
-import { MandateOutput, MandateOutputType } from "../../../src/input/types/MandateOutputType.sol";
+import { MandateOutput } from "../../../src/input/types/MandateOutputType.sol";
 import { OrderPurchase, OrderPurchaseType } from "../../../src/input/types/OrderPurchaseType.sol";
-import { StandardOrder, StandardOrderType } from "../../../src/input/types/StandardOrderType.sol";
-import { IInputSettlerCompact } from "../../../src/interfaces/IInputSettlerCompact.sol";
-import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
+import { StandardOrder } from "../../../src/input/types/StandardOrderType.sol";
 import { MessageEncodingLib } from "../../../src/libs/MessageEncodingLib.sol";
 import { WormholeOracle } from "../../../src/oracles/wormhole/WormholeOracle.sol";
 import { Messages } from "../../../src/oracles/wormhole/external/wormhole/Messages.sol";
 import { Setters } from "../../../src/oracles/wormhole/external/wormhole/Setters.sol";
 import { Structs } from "../../../src/oracles/wormhole/external/wormhole/Structs.sol";
+import { OutputSettlerCoin } from "../../../src/output/coin/OutputSettlerCoin.sol";
 
 import { AlwaysYesOracle } from "../../mocks/AlwaysYesOracle.sol";
 import { MockERC20 } from "../../mocks/MockERC20.sol";
 
 interface EIP712 {
     function DOMAIN_SEPARATOR() external view returns (bytes32);
-}
-
-interface IInputSettlerCompactHarness is IInputSettlerCompact {
-    function validateFills(
-        StandardOrder calldata order,
-        bytes32 orderId,
-        bytes32[] calldata solvers,
-        uint32[] calldata timestamps
-    ) external view;
-}
-
-contract InputSettlerCompactHarness is InputSettlerCompact, IInputSettlerCompactHarness {
-    constructor(
-        address compact
-    ) InputSettlerCompact(compact) { }
-
-    function validateFills(
-        StandardOrder calldata order,
-        bytes32 orderId,
-        bytes32[] calldata solvers,
-        uint32[] calldata timestamps
-    ) external view {
-        _validateFills(order, orderId, solvers, timestamps);
-    }
 }
 
 event PackagePublished(uint32 nonce, bytes payload, uint8 consistencyLevel);
@@ -116,7 +89,7 @@ contract InputSettlerCompactTestBase is Test {
 
         DOMAIN_SEPARATOR = EIP712(address(theCompact)).DOMAIN_SEPARATOR();
 
-        inputSettlerCompact = address(new InputSettlerCompactHarness(address(theCompact)));
+        inputSettlerCompact = address(new InputSettlerCompact(address(theCompact)));
         outputSettlerCoin = new OutputSettlerCoin();
         alwaysYesOracle = address(new AlwaysYesOracle());
 

@@ -14,21 +14,22 @@ import { AllowOpenType } from "./types/AllowOpenType.sol";
 import { MandateOutput } from "./types/MandateOutputType.sol";
 import { OrderPurchase, OrderPurchaseType } from "./types/OrderPurchaseType.sol";
 
+import { InputSettlerBase } from "./InputSettlerBase.sol";
+
 /**
  * @title Base Input Settler
  * @notice Defines common logic that can be reused by other input settlers to support a variety of asset management
  * schemes.
  */
-abstract contract BaseInputSettler is EIP712 {
+abstract contract InputSettlerPurchase is InputSettlerBase {
     using LibAddress for address;
     using LibAddress for bytes32;
 
     error AlreadyPurchased();
     error Expired();
     error InvalidPurchaser();
-    error InvalidSigner();
+    error NotOrderOwner();
 
-    event Finalised(bytes32 indexed orderId, bytes32 solver, bytes32 destination);
     event OrderPurchased(bytes32 indexed orderId, bytes32 solver, bytes32 purchaser);
 
     uint256 constant DISCOUNT_DENOM = 10 ** 18;
@@ -40,68 +41,18 @@ abstract contract BaseInputSettler is EIP712 {
 
     mapping(bytes32 solver => mapping(bytes32 orderId => Purchased)) public purchasedOrders;
 
-    function DOMAIN_SEPARATOR() external view returns (bytes32) {
-        return _domainSeparator();
-    }
-
-    // --- Timestamp Helpers --- //
-
-    /**
-     * @param timestamps Array of uint32s.
-     * @return timestamp Largest element of timestamps.
-     */
-    function _maxTimestamp(
-        uint32[] calldata timestamps
-    ) internal pure returns (uint256 timestamp) {
-        timestamp = timestamps[0];
-
-        uint256 numTimestamps = timestamps.length;
-        for (uint256 i = 1; i < numTimestamps; ++i) {
-            uint32 nextTimestamp = timestamps[i];
-            if (timestamp < nextTimestamp) timestamp = nextTimestamp;
-        }
-    }
-
-    /**
-     * @param timestamps Array of uint32s.
-     * @return timestamp Smallest element of timestamps.
-     */
-    function _minTimestamp(
-        uint32[] calldata timestamps
-    ) internal pure returns (uint256 timestamp) {
-        timestamp = timestamps[0];
-
-        uint256 numTimestamps = timestamps.length;
-        for (uint256 i = 1; i < numTimestamps; ++i) {
-            uint32 nextTimestamp = timestamps[i];
-            if (timestamp > nextTimestamp) timestamp = nextTimestamp;
-        }
-    }
-
-    // --- External Claimant --- //
-
-    /**
-     * @notice Check for a signed message by an order owner to allow someone else to redeem an order.
-     * @dev See AllowOpenType.sol
-     * @param orderId A unique identifier for an order.
-     * @param orderOwner Owner of the order, and signer of orderOwnerSignature.
-     * @param nextDestination New destination.
-     * @param call An external call required by orderOwner.
-     * @param orderOwnerSignature EIP712 Signature of AllowOpen by orderOwner.
-     */
-    function _allowExternalClaimant(
-        bytes32 orderId,
-        address orderOwner,
-        bytes32 nextDestination,
-        bytes calldata call,
-        bytes calldata orderOwnerSignature
-    ) internal view {
-        bytes32 digest = _hashTypedData(AllowOpenType.hashAllowOpen(orderId, nextDestination, call));
-        bool isValid = SignatureCheckerLib.isValidSignatureNowCalldata(orderOwner, digest, orderOwnerSignature);
-        if (!isValid) revert InvalidSigner();
-    }
-
     // --- Order Purchase Helpers --- //
+
+    /**
+     * @notice Enforces that the caller is the order owner.
+     * @dev Only reads the rightmost 20 bytes to allow solvers to opt-in to Compact transfers instead of withdrawals.
+     * @param orderOwner The order owner. The leftmost 12 bytes are not read.
+     */
+    function _orderOwnerIsCaller(
+        bytes32 orderOwner
+    ) internal view {
+        if (EfficiencyLib.asSanitizedAddress(uint256(orderOwner)) != msg.sender) revert NotOrderOwner();
+    }
 
     /**
      * @notice Helper function to get the owner of order incase it may have been bought. In case an order has been

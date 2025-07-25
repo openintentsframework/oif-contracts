@@ -5,14 +5,19 @@ import { Test } from "forge-std/Test.sol";
 
 import { MockERC20 } from "../mocks/MockERC20.sol";
 
-import { BaseInputSettler } from "../../src/input/BaseInputSettler.sol";
+import { InputSettlerPurchase } from "../../src/input/InputSettlerPurchase.sol";
+
+import { MandateOutput } from "../../src/input/types/MandateOutputType.sol";
 import { OrderPurchase, OrderPurchaseType } from "../../src/input/types/OrderPurchaseType.sol";
+import { StandardOrder } from "../../src/input/types/StandardOrderType.sol";
+import { LibAddress } from "../../src/libs/LibAddress.sol";
+import { MandateOutputEncodingLib } from "../../src/libs/MandateOutputEncodingLib.sol";
 
 interface EIP712 {
     function DOMAIN_SEPARATOR() external view returns (bytes32);
 }
 
-contract MockSettler is BaseInputSettler {
+contract MockSettler is InputSettlerPurchase {
     function _domainNameAndVersion()
         internal
         pure
@@ -42,9 +47,23 @@ contract MockSettler is BaseInputSettler {
     ) external {
         _purchaseOrder(orderPurchase, inputs, orderSolvedByIdentifier, purchaser, expiryTimestamp, solverSignature);
     }
+
+    function validateFills(
+        uint32 fillDeadline,
+        address localOracle,
+        MandateOutput[] calldata outputs,
+        bytes32 orderId,
+        uint32[] calldata timestamps,
+        bytes32[] calldata solvers
+    ) external view {
+        _validateFills(fillDeadline, localOracle, outputs, orderId, timestamps, solvers);
+    }
 }
 
 contract BaseInputSettlerTest is Test {
+    using LibAddress for address;
+    using LibAddress for bytes32;
+
     MockSettler settler;
     bytes32 DOMAIN_SEPARATOR;
 
@@ -79,6 +98,186 @@ contract BaseInputSettlerTest is Test {
         (solver, solverPrivateKey) = makeAddrAndKey("swapper");
     }
 
+    //--- Fill Validation ---//
+
+    error InvalidProofSeries();
+
+    mapping(bytes proofSeries => bool valid) _validProofSeries;
+
+    function efficientRequireProven(
+        bytes calldata proofSeries
+    ) external view {
+        if (!_validProofSeries[proofSeries]) revert InvalidProofSeries();
+    }
+
+    struct OrderFulfillmentDescription {
+        uint32 timestamp;
+        MandateOutput MandateOutput;
+    }
+
+    /// forge-config: default.isolate = true
+    function test_validate_fills_one_solver_gas() external {
+        OrderFulfillmentDescription[] memory fds = new OrderFulfillmentDescription[](2);
+        fds[0] = OrderFulfillmentDescription({
+            timestamp: 10001,
+            MandateOutput: MandateOutput({
+                oracle: keccak256(bytes("remoteOracle")),
+                settler: keccak256(bytes("outputSettler")),
+                chainId: 123,
+                token: keccak256(bytes("token")),
+                amount: 10 ** 18,
+                recipient: keccak256(bytes("recipient")),
+                call: hex"",
+                context: hex""
+            })
+        });
+        fds[1] = OrderFulfillmentDescription({
+            timestamp: 10001,
+            MandateOutput: MandateOutput({
+                oracle: keccak256(bytes("remoteOracle")),
+                settler: keccak256(bytes("outputSettler")),
+                chainId: 321,
+                token: keccak256(bytes("token1")),
+                amount: 10 ** 12,
+                recipient: keccak256(bytes("recipient")),
+                call: hex"",
+                context: hex""
+            })
+        });
+
+        test_validate_fills_one_solver(keccak256(bytes("solverIdentifier")), keccak256(bytes("orderId")), fds);
+    }
+
+    function test_validate_fills_one_solver(
+        bytes32 solverIdentifier,
+        bytes32 orderId,
+        OrderFulfillmentDescription[] memory orderFulfillmentDescription
+    ) public {
+        vm.assume(orderFulfillmentDescription.length > 0);
+
+        bytes memory expectedProofPayload = hex"";
+        uint32[] memory timestamps = new uint32[](orderFulfillmentDescription.length);
+        MandateOutput[] memory MandateOutputs = new MandateOutput[](orderFulfillmentDescription.length);
+        bytes32[] memory solvers = new bytes32[](orderFulfillmentDescription.length);
+        for (uint256 i; i < orderFulfillmentDescription.length; ++i) {
+            solvers[i] = solverIdentifier;
+            timestamps[i] = orderFulfillmentDescription[i].timestamp;
+            MandateOutputs[i] = orderFulfillmentDescription[i].MandateOutput;
+
+            expectedProofPayload = abi.encodePacked(
+                expectedProofPayload,
+                MandateOutputs[i].chainId,
+                MandateOutputs[i].oracle,
+                MandateOutputs[i].settler,
+                keccak256(
+                    MandateOutputEncodingLib.encodeFillDescriptionMemory(
+                        solverIdentifier, orderId, timestamps[i], MandateOutputs[i]
+                    )
+                )
+            );
+        }
+        _validProofSeries[expectedProofPayload] = true;
+
+        StandardOrder memory order = StandardOrder({
+            user: address(0), // not used
+            nonce: 0, // not used
+            originChainId: 0, // not used.
+            expires: 0, // not used
+            fillDeadline: type(uint32).max,
+            localOracle: address(this),
+            inputs: new uint256[2][](0), // not used
+            outputs: MandateOutputs
+        });
+
+        settler.validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, timestamps, solvers);
+        vm.snapshotGasLastCall("inputSettler", "validate2Fills");
+    }
+
+    struct OrderFulfillmentDescriptionWithSolver {
+        uint32 timestamp;
+        bytes32 solver;
+        MandateOutput MandateOutput;
+    }
+
+    /// forge-config: default.isolate = true
+    function test_validate_fills_multiple_solvers_gas() external {
+        OrderFulfillmentDescriptionWithSolver[] memory fds = new OrderFulfillmentDescriptionWithSolver[](2);
+        fds[0] = OrderFulfillmentDescriptionWithSolver({
+            timestamp: 10001,
+            solver: keccak256(bytes("solverIdentifier1")),
+            MandateOutput: MandateOutput({
+                oracle: keccak256(bytes("remoteOracle")),
+                settler: keccak256(bytes("outputSettler")),
+                chainId: 123,
+                token: keccak256(bytes("token")),
+                amount: 10 ** 18,
+                recipient: keccak256(bytes("recipient")),
+                call: hex"",
+                context: hex""
+            })
+        });
+        fds[1] = OrderFulfillmentDescriptionWithSolver({
+            timestamp: 10001,
+            solver: keccak256(bytes("solverIdentifier2")),
+            MandateOutput: MandateOutput({
+                oracle: keccak256(bytes("remoteOracle")),
+                settler: keccak256(bytes("outputSettler")),
+                chainId: 321,
+                token: keccak256(bytes("token1")),
+                amount: 10 ** 12,
+                recipient: keccak256(bytes("recipient")),
+                call: hex"",
+                context: hex""
+            })
+        });
+
+        test_validate_fills_multiple_solvers(keccak256(bytes("orderId")), fds);
+    }
+
+    function test_validate_fills_multiple_solvers(
+        bytes32 orderId,
+        OrderFulfillmentDescriptionWithSolver[] memory orderFulfillmentDescriptionWithSolver
+    ) public {
+        vm.assume(orderFulfillmentDescriptionWithSolver.length > 0);
+
+        bytes memory expectedProofPayload = hex"";
+        uint32[] memory timestamps = new uint32[](orderFulfillmentDescriptionWithSolver.length);
+        MandateOutput[] memory MandateOutputs = new MandateOutput[](orderFulfillmentDescriptionWithSolver.length);
+        bytes32[] memory solvers = new bytes32[](orderFulfillmentDescriptionWithSolver.length);
+        for (uint256 i; i < orderFulfillmentDescriptionWithSolver.length; ++i) {
+            timestamps[i] = orderFulfillmentDescriptionWithSolver[i].timestamp;
+            MandateOutputs[i] = orderFulfillmentDescriptionWithSolver[i].MandateOutput;
+            solvers[i] = orderFulfillmentDescriptionWithSolver[i].solver;
+
+            expectedProofPayload = abi.encodePacked(
+                expectedProofPayload,
+                MandateOutputs[i].chainId,
+                MandateOutputs[i].oracle,
+                MandateOutputs[i].settler,
+                keccak256(
+                    MandateOutputEncodingLib.encodeFillDescriptionMemory(
+                        solvers[i], orderId, timestamps[i], MandateOutputs[i]
+                    )
+                )
+            );
+        }
+        _validProofSeries[expectedProofPayload] = true;
+
+        StandardOrder memory order = StandardOrder({
+            user: address(0), // not used
+            nonce: 0, // not used
+            originChainId: 0, // not used.
+            expires: 0, // not used
+            fillDeadline: type(uint32).max,
+            localOracle: address(this),
+            inputs: new uint256[2][](0), // not used
+            outputs: MandateOutputs
+        });
+
+        settler.validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, timestamps, solvers);
+        vm.snapshotGasLastCall("inputSettler", "validate2FillsMultipleSolvers");
+    }
+
     //--- Order Purchase ---//
 
     /// forge-config: default.isolate = true
@@ -100,7 +299,7 @@ contract BaseInputSettlerTest is Test {
         inputs[1][0] = uint256(uint160(address(anotherToken)));
         inputs[1][1] = amount;
 
-        bytes32 orderSolvedByIdentifier = bytes32(uint256(uint160(solver)));
+        bytes32 orderSolvedByIdentifier = solver.toIdentifier();
 
         OrderPurchase memory orderPurchase =
             OrderPurchase({ orderId: orderId, destination: solver, call: hex"", discount: 0, timeToBuy: 1000 });
@@ -135,12 +334,7 @@ contract BaseInputSettlerTest is Test {
 
         vm.prank(purchaser);
         settler.purchaseOrder(
-            orderPurchase,
-            inputs,
-            orderSolvedByIdentifier,
-            bytes32(uint256(uint160(purchaser))),
-            expiryTimestamp,
-            solverSignature
+            orderPurchase, inputs, orderSolvedByIdentifier, purchaser.toIdentifier(), expiryTimestamp, solverSignature
         );
         vm.snapshotGasLastCall("inputSettler", "BasePurchaseOrder");
 
@@ -150,18 +344,13 @@ contract BaseInputSettlerTest is Test {
 
         (storageLastOrderTimestamp, storagePurchaser) = settler.purchasedOrders(orderSolvedByIdentifier, orderId);
         assertEq(storageLastOrderTimestamp, currentTime - orderPurchase.timeToBuy);
-        assertEq(storagePurchaser, bytes32(uint256(uint160(purchaser))));
+        assertEq(storagePurchaser, purchaser.toIdentifier());
 
         // Try to purchase the same order again
         vm.expectRevert(abi.encodeWithSignature("AlreadyPurchased()"));
         vm.prank(purchaser);
         settler.purchaseOrder(
-            orderPurchase,
-            inputs,
-            orderSolvedByIdentifier,
-            bytes32(uint256(uint160(purchaser))),
-            expiryTimestamp,
-            solverSignature
+            orderPurchase, inputs, orderSolvedByIdentifier, purchaser.toIdentifier(), expiryTimestamp, solverSignature
         );
     }
 
@@ -175,7 +364,7 @@ contract BaseInputSettlerTest is Test {
 
         uint256[2][] memory inputs = new uint256[2][](0);
 
-        bytes32 orderSolvedByIdentifier = bytes32(uint256(uint160(solver)));
+        bytes32 orderSolvedByIdentifier = solver.toIdentifier();
 
         OrderPurchase memory orderPurchase =
             OrderPurchase({ orderId: orderId, destination: solver, call: hex"", discount: 0, timeToBuy: 1000 });
@@ -194,12 +383,7 @@ contract BaseInputSettlerTest is Test {
         vm.expectRevert(abi.encodeWithSignature("Expired()"));
         vm.prank(purchaser);
         settler.purchaseOrder(
-            orderPurchase,
-            inputs,
-            orderSolvedByIdentifier,
-            bytes32(uint256(uint160(purchaser))),
-            currentTime - 1,
-            solverSignature
+            orderPurchase, inputs, orderSolvedByIdentifier, purchaser.toIdentifier(), currentTime - 1, solverSignature
         );
     }
 
@@ -211,7 +395,7 @@ contract BaseInputSettlerTest is Test {
 
         uint256[2][] memory inputs = new uint256[2][](0);
 
-        bytes32 orderSolvedByIdentifier = bytes32(uint256(uint160(solver)));
+        bytes32 orderSolvedByIdentifier = solver.toIdentifier();
 
         OrderPurchase memory orderPurchase =
             OrderPurchase({ orderId: orderId, destination: solver, call: hex"", discount: 0, timeToBuy: 1000 });
@@ -223,12 +407,7 @@ contract BaseInputSettlerTest is Test {
         vm.expectRevert(abi.encodeWithSignature("InvalidSigner()"));
         vm.prank(purchaser);
         settler.purchaseOrder(
-            orderPurchase,
-            inputs,
-            orderSolvedByIdentifier,
-            bytes32(uint256(uint160(purchaser))),
-            expiryTimestamp,
-            solverSignature
+            orderPurchase, inputs, orderSolvedByIdentifier, purchaser.toIdentifier(), expiryTimestamp, solverSignature
         );
     }
 
@@ -245,7 +424,7 @@ contract BaseInputSettlerTest is Test {
         inputs[1][0] = uint256(uint160(address(anotherToken)));
         inputs[1][1] = amount;
 
-        bytes32 orderSolvedByIdentifier = bytes32(uint256(uint160(solver)));
+        bytes32 orderSolvedByIdentifier = solver.toIdentifier();
 
         OrderPurchase memory orderPurchase =
             OrderPurchase({ orderId: orderId, destination: address(this), call: call, discount: 0, timeToBuy: 1000 });
@@ -262,12 +441,7 @@ contract BaseInputSettlerTest is Test {
 
         vm.prank(purchaser);
         settler.purchaseOrder(
-            orderPurchase,
-            inputs,
-            orderSolvedByIdentifier,
-            bytes32(uint256(uint160(purchaser))),
-            expiryTimestamp,
-            solverSignature
+            orderPurchase, inputs, orderSolvedByIdentifier, purchaser.toIdentifier(), expiryTimestamp, solverSignature
         );
 
         assertEq(abi.encodePacked(_inputs), abi.encodePacked(inputs));
@@ -284,7 +458,7 @@ contract BaseInputSettlerTest is Test {
         inputs[0][0] = uint256(uint160(address(token)));
         inputs[0][1] = amount;
 
-        bytes32 orderSolvedByIdentifier = bytes32(uint256(uint160(solver)));
+        bytes32 orderSolvedByIdentifier = solver.toIdentifier();
 
         OrderPurchase memory orderPurchase =
             OrderPurchase({ orderId: orderId, destination: address(this), call: call, discount: 0, timeToBuy: 1000 });
@@ -302,12 +476,7 @@ contract BaseInputSettlerTest is Test {
 
         vm.prank(purchaser);
         settler.purchaseOrder(
-            orderPurchase,
-            inputs,
-            orderSolvedByIdentifier,
-            bytes32(uint256(uint160(purchaser))),
-            expiryTimestamp,
-            solverSignature
+            orderPurchase, inputs, orderSolvedByIdentifier, purchaser.toIdentifier(), expiryTimestamp, solverSignature
         );
     }
 
@@ -337,7 +506,7 @@ contract BaseInputSettlerTest is Test {
         inputs[0][0] = uint256(uint160(address(token)));
         inputs[0][1] = amount;
 
-        bytes32 orderSolvedByIdentifier = bytes32(uint256(uint160(solver)));
+        bytes32 orderSolvedByIdentifier = solver.toIdentifier();
 
         OrderPurchase memory orderPurchase =
             OrderPurchase({ orderId: orderId, destination: solver, call: hex"", discount: 0, timeToBuy: 1000 });
@@ -354,19 +523,14 @@ contract BaseInputSettlerTest is Test {
 
         vm.prank(purchaser);
         settler.purchaseOrder(
-            orderPurchase,
-            inputs,
-            orderSolvedByIdentifier,
-            bytes32(uint256(uint160(purchaser))),
-            expiryTimestamp,
-            solverSignature
+            orderPurchase, inputs, orderSolvedByIdentifier, purchaser.toIdentifier(), expiryTimestamp, solverSignature
         );
 
         uint32[] memory timestamps = new uint32[](1);
         timestamps[0] = currentTime;
 
         bytes32 collectedPurchaser = settler.purchaseGetOrderOwner(orderId, orderSolvedByIdentifier, timestamps);
-        assertEq(collectedPurchaser, bytes32(uint256(uint160(purchaser))));
+        assertEq(collectedPurchaser, purchaser.toIdentifier());
     }
 
     function test_purchase_order_then_resolve_early_first_fill_late_last(
@@ -380,7 +544,7 @@ contract BaseInputSettlerTest is Test {
         inputs[0][0] = uint256(uint160(address(token)));
         inputs[0][1] = amount;
 
-        bytes32 orderSolvedByIdentifier = bytes32(uint256(uint160(solver)));
+        bytes32 orderSolvedByIdentifier = solver.toIdentifier();
 
         uint256 expiryTimestamp = type(uint256).max;
         address newDestination = solver;
@@ -406,12 +570,7 @@ contract BaseInputSettlerTest is Test {
 
         vm.prank(purchaser);
         settler.purchaseOrder(
-            orderPurchase,
-            inputs,
-            orderSolvedByIdentifier,
-            bytes32(uint256(uint160(purchaser))),
-            expiryTimestamp,
-            solverSignature
+            orderPurchase, inputs, orderSolvedByIdentifier, purchaser.toIdentifier(), expiryTimestamp, solverSignature
         );
 
         uint32[] memory timestamps = new uint32[](2);
@@ -419,7 +578,7 @@ contract BaseInputSettlerTest is Test {
         timestamps[1] = 0;
 
         bytes32 collectedPurchaser = settler.purchaseGetOrderOwner(orderId, orderSolvedByIdentifier, timestamps);
-        assertEq(collectedPurchaser, bytes32(uint256(uint160(purchaser))));
+        assertEq(collectedPurchaser, purchaser.toIdentifier());
     }
 
     function test_purchase_order_then_resolve_too_late_purchase(
@@ -433,7 +592,7 @@ contract BaseInputSettlerTest is Test {
         inputs[0][0] = uint256(uint160(address(token)));
         inputs[0][1] = amount;
 
-        bytes32 orderSolvedByIdentifier = bytes32(uint256(uint160(solver)));
+        bytes32 orderSolvedByIdentifier = solver.toIdentifier();
 
         OrderPurchase memory orderPurchase =
             OrderPurchase({ orderId: orderId, destination: solver, call: hex"", discount: 0, timeToBuy: 1000 });
@@ -450,12 +609,7 @@ contract BaseInputSettlerTest is Test {
 
         vm.prank(purchaser);
         settler.purchaseOrder(
-            orderPurchase,
-            inputs,
-            orderSolvedByIdentifier,
-            bytes32(uint256(uint160(purchaser))),
-            expiryTimestamp,
-            solverSignature
+            orderPurchase, inputs, orderSolvedByIdentifier, purchaser.toIdentifier(), expiryTimestamp, solverSignature
         );
 
         uint32[] memory timestamps = new uint32[](2);
