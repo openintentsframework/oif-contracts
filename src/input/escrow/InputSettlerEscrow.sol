@@ -184,14 +184,6 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
     // --- Finalise Orders --- //
 
-    function _validateOrderOwner(
-        bytes32 orderOwner
-    ) internal view {
-        // We need to cast orderOwner down. This is important to ensure that
-        // the solver can opt-in to an compact transfer instead of withdrawal.
-        if (EfficiencyLib.asSanitizedAddress(uint256(orderOwner)) != msg.sender) revert NotOrderOwner();
-    }
-
     /**
      * @notice Finalise an order, paying the inputs to the solver.
      * @param order that has been filled.
@@ -233,7 +225,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
         _orderOwnerIsCaller(orderOwner);
 
-        _validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, solvers, timestamps);
+        _validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, timestamps, solvers);
 
         _finalise(order, orderId, solvers[0], destination);
 
@@ -265,14 +257,17 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         _validateInputChain(order.originChainId);
 
         bytes32 orderId = _orderIdentifier(order);
-        bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
 
-        // Validate the external claimant with signature
-        _allowExternalClaimant(
-            orderId, EfficiencyLib.asSanitizedAddress(uint256(orderOwner)), destination, call, orderOwnerSignature
-        );
+        {
+            bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
 
-        _validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, solvers, timestamps);
+            // Validate the external claimant with signature
+            _allowExternalClaimant(
+                orderId, EfficiencyLib.asSanitizedAddress(uint256(orderOwner)), destination, call, orderOwnerSignature
+            );
+        }
+
+        _validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, timestamps, solvers);
 
         _finalise(order, orderId, solvers[0], destination);
 

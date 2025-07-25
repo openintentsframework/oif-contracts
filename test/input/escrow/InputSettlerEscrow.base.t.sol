@@ -19,30 +19,6 @@ interface EIP712 {
     function DOMAIN_SEPARATOR() external view returns (bytes32);
 }
 
-interface IInputSettlerEscrowHarness is IInputSettlerEscrow {
-    function validateFills(
-        uint32 fillDeadline,
-        address localOracle,
-        MandateOutput[] calldata outputs,
-        bytes32 orderId,
-        bytes32[] calldata solvers,
-        uint32[] calldata timestamps
-    ) external view;
-}
-
-contract InputSettlerEscrowHarness is InputSettlerEscrow, IInputSettlerEscrowHarness {
-    function validateFills(
-        uint32 fillDeadline,
-        address localOracle,
-        MandateOutput[] calldata outputs,
-        bytes32 orderId,
-        bytes32[] calldata solvers,
-        uint32[] calldata timestamps
-    ) external view {
-        _validateFills(fillDeadline, localOracle, outputs, orderId, solvers, timestamps);
-    }
-}
-
 contract InputSettlerEscrowTestBase is Permit2Test {
     event Transfer(address from, address to, uint256 afmount);
     event Transfer(address by, address from, address to, uint256 id, uint256 amount);
@@ -86,7 +62,7 @@ contract InputSettlerEscrowTestBase is Permit2Test {
 
     function setUp() public virtual override {
         super.setUp();
-        inputSettlerEscrow = address(new InputSettlerEscrowHarness());
+        inputSettlerEscrow = address(new InputSettlerEscrow());
 
         DOMAIN_SEPARATOR = EIP712(inputSettlerEscrow).DOMAIN_SEPARATOR();
 

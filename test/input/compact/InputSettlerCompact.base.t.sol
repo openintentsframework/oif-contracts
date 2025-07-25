@@ -33,34 +33,6 @@ interface EIP712 {
     function DOMAIN_SEPARATOR() external view returns (bytes32);
 }
 
-interface IInputSettlerCompactHarness is IInputSettlerCompact {
-    function validateFills(
-        uint32 fillDeadline,
-        address localOracle,
-        MandateOutput[] calldata outputs,
-        bytes32 orderId,
-        bytes32[] calldata solvers,
-        uint32[] calldata timestamps
-    ) external view;
-}
-
-contract InputSettlerCompactHarness is InputSettlerCompact, IInputSettlerCompactHarness {
-    constructor(
-        address compact
-    ) InputSettlerCompact(compact) { }
-
-    function validateFills(
-        uint32 fillDeadline,
-        address localOracle,
-        MandateOutput[] calldata outputs,
-        bytes32 orderId,
-        bytes32[] calldata solvers,
-        uint32[] calldata timestamps
-    ) external view {
-        _validateFills(fillDeadline, localOracle, outputs, orderId, solvers, timestamps);
-    }
-}
-
 event PackagePublished(uint32 nonce, bytes payload, uint8 consistencyLevel);
 
 contract ExportedMessages is Messages, Setters {
@@ -120,7 +92,7 @@ contract InputSettlerCompactTestBase is Test {
 
         DOMAIN_SEPARATOR = EIP712(address(theCompact)).DOMAIN_SEPARATOR();
 
-        inputSettlerCompact = address(new InputSettlerCompactHarness(address(theCompact)));
+        inputSettlerCompact = address(new InputSettlerCompact(address(theCompact)));
         outputSettlerCoin = new OutputSettlerCoin();
         alwaysYesOracle = address(new AlwaysYesOracle());
 

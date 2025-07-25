@@ -121,7 +121,7 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
         bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
         _orderOwnerIsCaller(orderOwner);
 
-        _validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, solvers, timestamps);
+        _validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, timestamps, solvers);
 
         _finalise(order, signatures, orderId, solvers[0], destination);
 
@@ -163,7 +163,7 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
             orderId, EfficiencyLib.asSanitizedAddress(uint256(orderOwner)), destination, call, orderOwnerSignature
         );
 
-        _validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, solvers, timestamps);
+        _validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, timestamps, solvers);
 
         _finalise(order, signatures, orderId, solvers[0], destination);
 

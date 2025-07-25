@@ -162,8 +162,8 @@ abstract contract InputSettlerBase is EIP712 {
         address localOracle,
         MandateOutput[] calldata outputs,
         bytes32 orderId,
-        bytes32[] memory solvers, // TODO: calldata
-        uint32[] calldata timestamps
+        uint32[] calldata timestamps,
+        bytes32[] memory solvers // TODO: calldata
     ) internal view {
         uint256 numOutputs = outputs.length;
         uint256 numTimestamps = timestamps.length;
