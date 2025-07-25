@@ -16,8 +16,9 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         test_open(10000, 10 ** 18, makeAddr("user"));
     }
 
-    function test_open(uint32 fillDeadline, uint128 amount, address user) public {
-        vm.assume(fillDeadline > block.timestamp);
+    function test_open(uint32 expires, uint128 amount, address user) public returns(StandardOrder memory order) {
+        vm.assume(expires < type(uint32).max);
+        vm.assume(expires > block.timestamp);
         vm.assume(token.balanceOf(user) == 0);
         vm.assume(user != inputSettlerEscrow);
 
@@ -30,12 +31,12 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         uint256[2][] memory inputs = new uint256[2][](1);
         inputs[0] = [uint256(uint160(address(token))), amount];
 
-        StandardOrder memory order = StandardOrder({
+        order = StandardOrder({
             user: swapper,
             nonce: 0,
             originChainId: block.chainid,
-            expires: type(uint32).max,
-            fillDeadline: fillDeadline,
+            expires: expires,
+            fillDeadline: expires,
             localOracle: address(0),
             inputs: inputs,
             outputs: outputs
@@ -91,6 +92,36 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
 
         assertEq(token.balanceOf(address(swapper)), 0);
         assertEq(token.balanceOf(inputSettlerEscrow), amount);
+    }
+
+    function test_refund(uint32 expires, uint128 amount, address user) public {
+        vm.assume(amount < type(uint128).max);
+        StandardOrder memory order = test_open(expires, amount, user);
+        // Wrap into the future of the expiry.
+        vm.warp(order.expires + 1);
+
+        bytes32 orderId = InputSettlerEscrow(inputSettlerEscrow).orderIdentifier(order);
+
+        // Check order status:
+        InputSettlerEscrow.OrderStatus status = InputSettlerEscrow(inputSettlerEscrow).orderStatus(orderId);
+        assertEq(uint8(status), uint8(InputSettlerEscrow.OrderStatus.Deposited));
+
+        // State
+        uint256 amountBeforeRefund = token.balanceOf(address(order.user));
+
+        vm.expectEmit();
+        emit InputSettlerEscrow.Refunded(orderId);
+
+        // Do the refund
+        InputSettlerEscrow(inputSettlerEscrow).refund(order);
+        vm.snapshotGasLastCall("inputSettler", "escrowRefund");
+
+        // State
+        assertEq(token.balanceOf(address(order.user)), amountBeforeRefund + amount);
+        assertEq(token.balanceOf(inputSettlerEscrow), 0);
+
+        status = InputSettlerEscrow(inputSettlerEscrow).orderStatus(orderId);
+        assertEq(uint8(status), uint8(InputSettlerEscrow.OrderStatus.Refunded));
     }
 
     // -- Larger Integration tests -- //

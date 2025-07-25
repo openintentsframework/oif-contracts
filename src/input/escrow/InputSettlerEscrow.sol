@@ -40,6 +40,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     error OrderIdMismatch(bytes32 provided, bytes32 computed);
 
     event Open(bytes32 indexed orderId, StandardOrder order);
+    event Refunded(bytes32 indexed orderId);
 
     enum OrderStatus {
         None,
@@ -48,7 +49,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         Refunded
     }
 
-    mapping(bytes32 orderId => OrderStatus) _deposited;
+    mapping(bytes32 orderId => OrderStatus) public orderStatus;
 
     // Address of the Permit2 contract.
     ISignatureTransfer constant PERMIT2 = ISignatureTransfer(0x000000000022D473030F116dDEE9F6B43aC78BA3);
@@ -86,10 +87,10 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
         bytes32 orderId = StandardOrderType.orderIdentifier(order);
 
-        if (_deposited[orderId] != OrderStatus.None) revert InvalidOrderStatus();
+        if (orderStatus[orderId] != OrderStatus.None) revert InvalidOrderStatus();
         // Mark order as deposited. If we can't make the deposit, we will
         // revert and it will unmark it. This acts as a reentry check.
-        _deposited[orderId] = OrderStatus.Deposited;
+        orderStatus[orderId] = OrderStatus.Deposited;
 
         // Collect input tokens.
         uint256[2][] memory inputs = order.inputs;
@@ -158,10 +159,10 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
         bytes32 orderId = _orderIdentifier(order);
 
-        if (_deposited[orderId] != OrderStatus.None) revert InvalidOrderStatus();
+        if (orderStatus[orderId] != OrderStatus.None) revert InvalidOrderStatus();
         // Mark order as deposited. If we can't make the deposit, we will
         // revert and it will unmark it. This acts as a reentry check.
-        _deposited[orderId] = OrderStatus.Deposited;
+        orderStatus[orderId] = OrderStatus.Deposited;
 
         // Collect input tokens
         _openFor(order, signature, address(this));
@@ -178,6 +179,8 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         bytes32 orderId = _orderIdentifier(order);
 
         _resolveLock(orderId, order.inputs, order.user, OrderStatus.Refunded);
+
+        emit Refunded(orderId);
     }
 
     // --- Finalise Orders --- //
@@ -288,10 +291,10 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         OrderStatus newStatus
     ) internal virtual {
         // Check the order status:
-        if (_deposited[orderId] != OrderStatus.Deposited) revert InvalidOrderStatus();
+        if (orderStatus[orderId] != OrderStatus.Deposited) revert InvalidOrderStatus();
         // Mark order as deposited. If we can't make the deposit, we will
         // revert and it will unmark it. This acts as a reentry check.
-        _deposited[orderId] = newStatus;
+        orderStatus[orderId] = newStatus;
 
         // We have now ensured that this point can only be reached once. We can now process the asset delivery.
         uint256 numInputs = inputs.length;
