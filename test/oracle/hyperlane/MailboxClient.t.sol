@@ -56,7 +56,11 @@ contract MailboxClientTest is Test {
   }
 
   function test_onlyMailbox_works() external {
+    uint256 counterBefore = _mailboxClient.counter();
+
     vm.prank(address(_mailbox));
     _mailboxClient.somethingOnlyMailbox();
+
+    vm.assertEq(_mailboxClient.counter(), counterBefore + 1);
   }
 }
