@@ -11,20 +11,17 @@ import { AlwaysOKAllocator } from "the-compact/src/test/AlwaysOKAllocator.sol";
 import { ResetPeriod } from "the-compact/src/types/ResetPeriod.sol";
 import { Scope } from "the-compact/src/types/Scope.sol";
 
-import { OutputSettlerCoin } from "../../../src/output/coin/OutputSettlerCoin.sol";
-
 import { InputSettlerCompact } from "../../../src/input/compact/InputSettlerCompact.sol";
 import { AllowOpenType } from "../../../src/input/types/AllowOpenType.sol";
-import { MandateOutput, MandateOutputType } from "../../../src/input/types/MandateOutputType.sol";
+import { MandateOutput } from "../../../src/input/types/MandateOutputType.sol";
 import { OrderPurchase, OrderPurchaseType } from "../../../src/input/types/OrderPurchaseType.sol";
-import { StandardOrder, StandardOrderType } from "../../../src/input/types/StandardOrderType.sol";
-import { IInputSettlerCompact } from "../../../src/interfaces/IInputSettlerCompact.sol";
-import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
+import { StandardOrder } from "../../../src/input/types/StandardOrderType.sol";
 import { MessageEncodingLib } from "../../../src/libs/MessageEncodingLib.sol";
 import { WormholeOracle } from "../../../src/oracles/wormhole/WormholeOracle.sol";
 import { Messages } from "../../../src/oracles/wormhole/external/wormhole/Messages.sol";
 import { Setters } from "../../../src/oracles/wormhole/external/wormhole/Setters.sol";
 import { Structs } from "../../../src/oracles/wormhole/external/wormhole/Structs.sol";
+import { OutputSettlerCoin } from "../../../src/output/coin/OutputSettlerCoin.sol";
 
 import { AlwaysYesOracle } from "../../mocks/AlwaysYesOracle.sol";
 import { MockERC20 } from "../../mocks/MockERC20.sol";

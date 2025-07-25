@@ -6,23 +6,20 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
 import { Output, ResolvedCrossChainOrder } from "../../interfaces/IERC7683.sol";
-
 import { IInputSettlerEscrow } from "../../interfaces/IInputSettlerEscrow.sol";
 import { IOIFCallback } from "../../interfaces/IOIFCallback.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
+
 import { BytesLib } from "../../libs/BytesLib.sol";
 import { IsContractLib } from "../../libs/IsContractLib.sol";
+import { LibAddress } from "../../libs/LibAddress.sol";
+
 import { MandateOutput } from "../types/MandateOutputType.sol";
-
-import { InputSettlerPurchase } from "../InputSettlerPurchase.sol";
-
+import { OrderPurchase } from "../types/OrderPurchaseType.sol";
 import { StandardOrder, StandardOrderType } from "../types/StandardOrderType.sol";
 
+import { InputSettlerPurchase } from "../InputSettlerPurchase.sol";
 import { Permit2WitnessType } from "./Permit2WitnessType.sol";
-
-import { LibAddress } from "../../libs/LibAddress.sol";
-import { OrderPurchase } from "../types/OrderPurchaseType.sol";
-
 /**
  * @title Catalyst Settler supporting The Compact
  * @notice This Catalyst Settler implementation uses The Compact as the deposit scheme.
@@ -34,6 +31,7 @@ import { OrderPurchase } from "../types/OrderPurchaseType.sol";
  *
  * This contract does not support fee on transfer tokens.
  */
+
 contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     using LibAddress for address;
     using LibAddress for bytes32;

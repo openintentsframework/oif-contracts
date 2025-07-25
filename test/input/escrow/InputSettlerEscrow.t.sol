@@ -2,13 +2,13 @@
 pragma solidity ^0.8.22;
 
 import { InputSettlerEscrow } from "../../../src/input/escrow/InputSettlerEscrow.sol";
-import { MandateOutput, MandateOutputType } from "../../../src/input/types/MandateOutputType.sol";
+import { MandateOutput } from "../../../src/input/types/MandateOutputType.sol";
 import { StandardOrder } from "../../../src/input/types/StandardOrderType.sol";
-import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
-
-import { IInputSettlerEscrow, InputSettlerEscrowTestBase } from "./InputSettlerEscrow.base.t.sol";
 
 import { IInputSettlerEscrow } from "../../../src/interfaces/IInputSettlerEscrow.sol";
+import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
+
+import { InputSettlerEscrowTestBase } from "./InputSettlerEscrow.base.t.sol";
 
 contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
     /// forge-config: default.isolate = true

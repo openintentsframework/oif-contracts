@@ -4,9 +4,9 @@ pragma solidity ^0.8.22;
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
 import { InputSettlerEscrow } from "../../../src/input/escrow/InputSettlerEscrow.sol";
+
 import { AllowOpenType } from "../../../src/input/types/AllowOpenType.sol";
 import { MandateOutput } from "../../../src/input/types/MandateOutputType.sol";
-import { OrderPurchase } from "../../../src/input/types/OrderPurchaseType.sol";
 import { StandardOrder } from "../../../src/input/types/StandardOrderType.sol";
 import { IInputSettlerEscrow } from "../../../src/interfaces/IInputSettlerEscrow.sol";
 import { OutputSettlerCoin } from "../../../src/output/coin/OutputSettlerCoin.sol";

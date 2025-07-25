@@ -8,17 +8,18 @@ import { IdLib } from "the-compact/src/lib/IdLib.sol";
 import { BatchClaim } from "the-compact/src/types/BatchClaims.sol";
 import { BatchClaimComponent, Component } from "the-compact/src/types/Components.sol";
 
+import { IInputSettlerCompact } from "../../interfaces/IInputSettlerCompact.sol";
 import { IOIFCallback } from "../../interfaces/IOIFCallback.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
 
-import { IInputSettlerCompact } from "../../interfaces/IInputSettlerCompact.sol";
 import { BytesLib } from "../../libs/BytesLib.sol";
 import { MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 
-import { InputSettlerPurchase } from "../InputSettlerPurchase.sol";
 import { MandateOutput } from "../types/MandateOutputType.sol";
 import { OrderPurchase } from "../types/OrderPurchaseType.sol";
 import { StandardOrder, StandardOrderType } from "../types/StandardOrderType.sol";
+
+import { InputSettlerPurchase } from "../InputSettlerPurchase.sol";
 
 /**
  * @title Input Settler supporting `The Compact` and `StandardOrder` orders. For explicitly escrowed orders refer to
