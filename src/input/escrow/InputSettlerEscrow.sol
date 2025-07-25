@@ -33,15 +33,13 @@ import { Permit2WitnessType } from "./Permit2WitnessType.sol";
  * If an order is finalised / claimed before `order.expires`, anyone may call `::refund` to send `order.inputs` to
  * `order.user`. Note that if this is not done, an order finalised after `order.expires` still claims `order.inputs` for
  * the solver.
- *
- * This contract does not support fee on transfer tokens.
  */
 contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
-    using LibAddress for address;
     using LibAddress for bytes32;
 
     error InvalidOrderStatus();
     error OrderIdMismatch(bytes32 provided, bytes32 computed);
+    error InputTokenHasDirtyBits();
 
     event Open(bytes32 indexed orderId, StandardOrder order);
     event Refunded(bytes32 indexed orderId);
@@ -85,6 +83,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
     /**
      * @notice Opens an intent for `order.user`. `order.input` tokens are collected from msg.sender.
+     * @param order StandardOrder representing the intent.
      */
     function open(
         StandardOrder calldata order
@@ -138,14 +137,22 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
         // Collect input tokens
         _openFor(order, signature, address(this));
+        emit Open(orderId, order);
     }
 
+    /**
+     * @notice Helper function for using permit2 to collect assets represented by a StandardOrder.
+     * @param order StandardOrder representing the intent.
+     * @param signature 712 signature of permit2 structure with Permit2Witness representing `order` signed by
+     * `order.user`.
+     * @param to recipient of the inputs tokens. In most cases, should be address(this).
+     */
     function _openFor(StandardOrder calldata order, bytes calldata signature, address to) internal {
         ISignatureTransfer.TokenPermissions[] memory permitted;
         ISignatureTransfer.SignatureTransferDetails[] memory transferDetails;
 
         {
-            uint256[2][] memory orderInputs = order.inputs;
+            uint256[2][] calldata orderInputs = order.inputs;
             // Load the number of inputs. We need them to set the array size & convert each
             // input struct into a transferDetails struct.
             uint256 numInputs = orderInputs.length;
@@ -153,13 +160,18 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
             transferDetails = new ISignatureTransfer.SignatureTransferDetails[](numInputs);
             // Iterate through each input.
             for (uint256 i; i < numInputs; ++i) {
-                uint256[2] memory orderInput = orderInputs[i];
-                address token = EfficiencyLib.asSanitizedAddress(orderInput[0]);
+                uint256[2] calldata orderInput = orderInputs[i];
+                uint256 inputToken = orderInput[0];
                 uint256 amount = orderInput[1];
-
+                // Validate that the input token's 12 leftmost bytes are 0.
+                if ((inputToken >> 160) != 0) revert InputTokenHasDirtyBits();
+                address token;
+                assembly ("memory-safe") {
+                    // No dirty bits exist.
+                    token := inputToken
+                }
                 // Check if input tokens are contracts.
                 IsContractLib.checkCodeSize(token);
-
                 // Set the allowance. This is the explicit max allowed amount approved by the user.
                 permitted[i] = ISignatureTransfer.TokenPermissions({ token: token, amount: amount });
                 // Set our requested transfer. This has to be less than or equal to the allowance
@@ -179,16 +191,14 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
             Permit2WitnessType.PERMIT2_PERMIT2_TYPESTRING,
             signature
         );
-        // emit Open(orderId, _resolve(order.openDeadline, orderId, order));
     }
 
     // --- Refund --- //
 
     /**
-     * @notice
-     * Refunds an order that has not been finalised before it expired. This order may have been filled but finalise has
-     * not been called yet.
-     * @param order Standard Order associated with the intent.
+     * @notice Refunds an order that has not been finalised before it expired. This order may have been filled but
+     * finalise has not been called yet.
+     * @param order StandardOrder description of the intent.
      */
     function refund(
         StandardOrder calldata order
@@ -224,11 +234,11 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
      * @notice Finalises an order when called directly by the solver
      * @dev Finalise is not blocked after the expiry of orders.
      * The caller must be the address corresponding to the first solver in the solvers array.
-     * @param order StandardOrder signed in conjunction with a Compact to form an order.
+     * @param order StandardOrder description of the intent.
      * @param timestamps Array of timestamps when each output was filled
      * @param solvers Array of solvers who filled each output (in order of outputs).
-     * @param destination Where to send the inputs. If the solver wants to send the inputs to themselves, they should
-     * pass their address to this parameter.
+     * @param destination Address to send the inputs to. If the solver wants to send the inputs to themselves, they
+     * should pass their address to this parameter.
      * @param call Optional callback data. If non-empty, will call orderFinalised on the destination
      */
     function finalise(
@@ -258,11 +268,10 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
      * @notice Finalises a cross-chain order on behalf of someone else using their signature
      * @dev Finalise is not blocked after the expiry of orders.
      * This function serves to finalise intents on the origin chain with proper authorization from the order owner.
-     * @param order StandardOrder signed in conjunction with a Compact to form an order
+     * @param order StandardOrder description of the intent.
      * @param timestamps Array of timestamps when each output was filled
-     * @param solvers Array of solvers who filled each output (in order of outputs)
-     * element
-     * @param destination Where to send the inputs
+     * @param solvers Array of solvers who filled each output (in order of outputs) element
+     * @param destination Address to send the inputs to.
      * @param call Optional callback data. If non-empty, will call orderFinalised on the destination
      * @param orderOwnerSignature Signature from the order owner authorizing this external call
      */
@@ -297,11 +306,11 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         }
     }
 
-    //--- The Compact & Resource Locks ---//
+    //--- Asset Lock & Escrow ---//
 
     /**
-     * @dev This function employs a local reentry guard: we check the order status and then we update it afterwards. This
-     * is an important check as it is indeed to process external ERC20 transfers.
+     * @dev This function employs a local reentry guard: we check the order status and then we update it afterwards.
+     * This is an important check as it is indeed to process external ERC20 transfers.
      * @param newStatus specifies the new status to set the order to. Should never be OrderStatus.Deposited.
      */
     function _resolveLock(

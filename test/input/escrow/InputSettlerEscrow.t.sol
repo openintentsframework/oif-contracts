@@ -6,11 +6,15 @@ import { MandateOutput } from "../../../src/input/types/MandateOutputType.sol";
 import { StandardOrder } from "../../../src/input/types/StandardOrderType.sol";
 
 import { IInputSettlerEscrow } from "../../../src/interfaces/IInputSettlerEscrow.sol";
+import { LibAddress } from "../../../src/libs/LibAddress.sol";
 import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
 
 import { InputSettlerEscrowTestBase } from "./InputSettlerEscrow.base.t.sol";
 
 contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
+    using LibAddress for address;
+    using LibAddress for bytes32;
+
     /// forge-config: default.isolate = true
     function test_open_gas() external {
         test_open(10000, 10 ** 18, makeAddr("user"));
@@ -140,12 +144,12 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
 
         MandateOutput[] memory outputs = new MandateOutput[](1);
         outputs[0] = MandateOutput({
-            settler: bytes32(uint256(uint160(address(outputSettlerCoin)))),
-            oracle: bytes32(uint256(uint160(alwaysYesOracle))),
+            settler: address(outputSettlerCoin).toIdentifier(),
+            oracle: alwaysYesOracle.toIdentifier(),
             chainId: block.chainid,
-            token: bytes32(uint256(uint160(address(anotherToken)))),
+            token: address(anotherToken).toIdentifier(),
             amount: amount,
-            recipient: bytes32(uint256(uint160(swapper))),
+            recipient: swapper.toIdentifier(),
             call: hex"",
             context: hex""
         });
@@ -173,21 +177,19 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         timestamps[0] = uint32(block.timestamp);
 
         bytes32[] memory solvers = new bytes32[](1);
-        solvers[0] = bytes32(uint256(uint160((solver))));
+        solvers[0] = solver.toIdentifier();
 
         // Other callers are disallowed:
         vm.prank(non_solver);
 
         vm.expectRevert(abi.encodeWithSignature("NotOrderOwner()"));
-        IInputSettlerEscrow(inputSettlerEscrow).finalise(
-            order, timestamps, solvers, bytes32(uint256(uint160((solver)))), hex""
-        );
+        IInputSettlerEscrow(inputSettlerEscrow).finalise(order, timestamps, solvers, solver.toIdentifier(), hex"");
 
         assertEq(token.balanceOf(solver), 0);
 
         bytes32 orderId = IInputSettlerEscrow(inputSettlerEscrow).orderIdentifier(order);
         bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionMemory(
-            bytes32(uint256(uint160((solver)))), orderId, uint32(block.timestamp), outputs[0]
+            solver.toIdentifier(), orderId, uint32(block.timestamp), outputs[0]
         );
         bytes32 payloadHash = keccak256(payload);
 
@@ -202,9 +204,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         );
 
         vm.prank(solver);
-        IInputSettlerEscrow(inputSettlerEscrow).finalise(
-            order, timestamps, solvers, bytes32(uint256(uint160(solver))), hex""
-        );
+        IInputSettlerEscrow(inputSettlerEscrow).finalise(order, timestamps, solvers, solver.toIdentifier(), hex"");
         vm.snapshotGasLastCall("inputSettler", "EscrowFinalise");
 
         assertEq(token.balanceOf(solver), amount);
@@ -219,12 +219,12 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
 
         MandateOutput[] memory outputs = new MandateOutput[](1);
         outputs[0] = MandateOutput({
-            settler: bytes32(uint256(uint160(address(outputSettlerCoin)))),
-            oracle: bytes32(uint256(uint160(alwaysYesOracle))),
+            settler: address(outputSettlerCoin).toIdentifier(),
+            oracle: alwaysYesOracle.toIdentifier(),
             chainId: block.chainid,
-            token: bytes32(uint256(uint160(address(anotherToken)))),
+            token: address(anotherToken).toIdentifier(),
             amount: amount,
-            recipient: bytes32(uint256(uint160(swapper))),
+            recipient: swapper.toIdentifier(),
             call: hex"",
             context: hex""
         });
@@ -252,13 +252,11 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         timestamps[0] = filledAt;
 
         bytes32[] memory solvers = new bytes32[](1);
-        solvers[0] = bytes32(uint256(uint160(solver)));
+        solvers[0] = solver.toIdentifier();
 
         vm.prank(solver);
         vm.expectRevert(abi.encodeWithSignature("FilledTooLate(uint32,uint32)", fillDeadline, filledAt));
-        IInputSettlerEscrow(inputSettlerEscrow).finalise(
-            order, timestamps, solvers, bytes32(uint256(uint160(solver))), hex""
-        );
+        IInputSettlerEscrow(inputSettlerEscrow).finalise(order, timestamps, solvers, solver.toIdentifier(), hex"");
     }
 
     /// forge-config: default.isolate = true
@@ -276,12 +274,12 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
 
         MandateOutput[] memory outputs = new MandateOutput[](1);
         outputs[0] = MandateOutput({
-            settler: bytes32(uint256(uint160(address(outputSettlerCoin)))),
-            oracle: bytes32(uint256(uint160(alwaysYesOracle))),
+            settler: address(outputSettlerCoin).toIdentifier(),
+            oracle: alwaysYesOracle.toIdentifier(),
             chainId: block.chainid,
-            token: bytes32(uint256(uint160(address(anotherToken)))),
+            token: address(anotherToken).toIdentifier(),
             amount: amount,
-            recipient: bytes32(uint256(uint160(swapper))),
+            recipient: swapper.toIdentifier(),
             call: hex"",
             context: hex""
         });
@@ -311,7 +309,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         bytes32 orderId = IInputSettlerEscrow(inputSettlerEscrow).orderIdentifier(order);
         {
             bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionMemory(
-                bytes32(uint256(uint160((solver)))), orderId, uint32(block.timestamp), outputs[0]
+                solver.toIdentifier(), orderId, uint32(block.timestamp), outputs[0]
             );
             bytes32 payloadHash = keccak256(payload);
 
@@ -327,13 +325,13 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         }
 
         bytes32[] memory solvers = new bytes32[](1);
-        solvers[0] = bytes32(uint256(uint160((solver))));
+        solvers[0] = solver.toIdentifier();
 
         bytes memory orderOwnerSignature =
-            this.getOrderOpenSignature(solverPrivateKey, orderId, bytes32(uint256(uint160((destination)))), hex"");
+            this.getOrderOpenSignature(solverPrivateKey, orderId, destination.toIdentifier(), hex"");
 
         IInputSettlerEscrow(inputSettlerEscrow).finaliseWithSignature(
-            order, timestamps, solvers, bytes32(uint256(uint160((destination)))), hex"", orderOwnerSignature
+            order, timestamps, solvers, destination.toIdentifier(), hex"", orderOwnerSignature
         );
         vm.snapshotGasLastCall("inputSettler", "escrowFinaliseWithSignature");
 
