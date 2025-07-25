@@ -28,7 +28,10 @@ contract OutputInputSettler7683 is BaseOutputSettler, IDestinationSettler {
      * @param proposedSolver The proposed solver to check exclusivity against.
      * @return amount The computed amount for the output.
      */
-    function _resolveOutput(MandateOutput calldata output, bytes32 proposedSolver) internal pure override returns (uint256 amount) {
+    function _resolveOutput(
+        MandateOutput calldata output,
+        bytes32 proposedSolver
+    ) internal pure override returns (uint256 amount) {
         uint256 fulfillmentLength = output.context.length;
         if (fulfillmentLength == 0) return output.amount;
         bytes1 orderType = bytes1(output.context);
@@ -46,7 +49,7 @@ contract OutputInputSettler7683 is BaseOutputSettler, IDestinationSettler {
 
         // For memory outputs, we need to use the internal _fillMemory function
         uint256 outputAmount = _resolveOutputMemory(output, proposedSolver);
-        
+
         bytes32 existingFillRecordHash = _fillMemory(orderId, output, outputAmount, proposedSolver);
         if (existingFillRecordHash != bytes32(0)) revert AlreadyFilled();
     }
@@ -54,7 +57,10 @@ contract OutputInputSettler7683 is BaseOutputSettler, IDestinationSettler {
     /**
      * @dev Memory version of _resolveOutput for internal use with memory outputs
      */
-    function _resolveOutputMemory(MandateOutput memory output, bytes32 proposedSolver) internal pure returns (uint256 amount) {
+    function _resolveOutputMemory(
+        MandateOutput memory output,
+        bytes32 proposedSolver
+    ) internal pure returns (uint256 amount) {
         uint256 fulfillmentLength = output.context.length;
         if (fulfillmentLength == 0) return output.amount;
         bytes1 orderType = bytes1(output.context);

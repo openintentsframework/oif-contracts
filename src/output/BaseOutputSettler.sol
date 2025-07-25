@@ -57,7 +57,10 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
      * @param proposedSolver The proposed solver to check exclusivity against.
      * @return amount The computed amount for the output.
      */
-    function _resolveOutput(MandateOutput calldata output, bytes32 proposedSolver) internal view virtual returns (uint256 amount) {
+    function _resolveOutput(
+        MandateOutput calldata output,
+        bytes32 proposedSolver
+    ) internal view virtual returns (uint256 amount) {
         // Default implementation returns the output amount
         return output.amount;
     }
@@ -75,7 +78,8 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
      * @param orderId Input chain order identifier. Is used as is, not checked for validity.
      * @param output The given output to fill. Is expected to belong to a greater order identified by orderId
      * @param proposedSolver Solver identifier to be sent to input chain.
-     * @return fillRecordHash Hash of the fill record. Returns existing hash if already filled, new hash if successfully filled.
+     * @return fillRecordHash Hash of the fill record. Returns existing hash if already filled, new hash if successfully
+     * filled.
      */
     function _fill(
         bytes32 orderId,
@@ -90,7 +94,8 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
 
         bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHash(output);
         bytes32 existingFillRecordHash = _fillRecords[orderId][outputHash];
-        if (existingFillRecordHash != bytes32(0)) return existingFillRecordHash; // Return existing record hash if already solved.
+        if (existingFillRecordHash != bytes32(0)) return existingFillRecordHash; // Return existing record hash if
+            // already solved.
         // The above and below lines act as a local re-entry check.
         uint32 fillTimestamp = uint32(block.timestamp);
         bytes32 newFillRecordHash = _getFillRecordHash(proposedSolver, fillTimestamp);
@@ -122,7 +127,7 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
         bytes32 proposedSolver
     ) external virtual returns (bytes32) {
         if (fillDeadline < block.timestamp) revert FillDeadline();
-        
+
         // Check if already filled before calling _fill
         bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHash(output);
         bytes32 existingFillRecordHash = _fillRecords[orderId][outputHash];
@@ -130,7 +135,7 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
             // Already filled, return the existing fill record hash
             return existingFillRecordHash;
         }
-        
+
         // Not filled yet, call _fill and return bytes32(0) for successful new fills
         _fill(orderId, output, proposedSolver);
         return bytes32(0);

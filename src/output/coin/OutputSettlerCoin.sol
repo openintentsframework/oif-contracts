@@ -56,7 +56,10 @@ contract OutputSettlerCoin is BaseOutputSettler {
      * @param proposedSolver Solver identifier to be compared against exclusiveFor for exclusive orders.
      * @return amount The computed amount for the output.
      */
-    function _resolveOutput(MandateOutput calldata output, bytes32 proposedSolver) internal view override returns (uint256 amount) {
+    function _resolveOutput(
+        MandateOutput calldata output,
+        bytes32 proposedSolver
+    ) internal view override returns (uint256 amount) {
         uint256 fulfillmentLength = output.context.length;
         if (fulfillmentLength == 0) return output.amount;
         bytes1 orderType = bytes1(output.context);
