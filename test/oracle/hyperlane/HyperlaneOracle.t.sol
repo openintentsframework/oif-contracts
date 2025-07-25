@@ -1,271 +1,263 @@
-// // SPDX-License-Identifier: Apache 2
+// SPDX-License-Identifier: Apache 2
 
-// pragma solidity ^0.8.22;
+pragma solidity ^0.8.22;
 
-// import { Test } from "forge-std/Test.sol";
-// import { console2 } from "forge-std/console2.sol";
+import { Test } from "forge-std/Test.sol";
+import { console2 } from "forge-std/console2.sol";
 
-// import { TransparentUpgradeableProxy } from
-//     "@openzeppelin-4/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import { MandateOutput } from "../../../src/input/types/MandateOutputType.sol";
+import { LibAddress } from "../../../src/libs/LibAddress.sol";
+import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
+import { MessageEncodingLib } from "../../../src/libs/MessageEncodingLib.sol";
+import { OutputSettlerCoin } from "../../../src/output/coin/OutputSettlerCoin.sol";
+import { OutputSettlerCoin } from "../../../src/output/coin/OutputSettlerCoin.sol";
+import { MockERC20 } from "../../mocks/MockERC20.sol";
 
-// import { InterchainGasPaymaster } from "@hyperlane-xyz/hooks/igp/InterchainGasPaymaster.sol";
-// import { TypeCasts } from "@hyperlane-xyz/libs/TypeCasts.sol";
+import { HyperlaneOracle } from "../../../src/oracles/hyperlane/HyperlaneOracle.sol";
+import { IPostDispatchHook } from "../../../src/oracles/hyperlane/external/hyperlane/interfaces/hooks/IPostDispatchHook.sol";
+import { StandardHookMetadata } from "../../../src/oracles/hyperlane/external/hyperlane/libs/StandardHookMetadata.sol";
 
-// import { MockHyperlaneEnvironment } from "@hyperlane-xyz/mock/MockHyperlaneEnvironment.sol";
-// import { MockMailbox } from "@hyperlane-xyz/mock/MockMailbox.sol";
+event OutputProven(uint256 chainid, bytes32 remoteIdentifier, bytes32 application, bytes32 payloadHash);
 
-// import { MandateOutput } from "../../../src/input/types/MandateOutputType.sol";
-// import { LibAddress } from "../../../src/libs/LibAddress.sol";
-// import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
-// import { MessageEncodingLib } from "../../../src/libs/MessageEncodingLib.sol";
-// import { OutputSettlerCoin } from "../../../src/output/coin/OutputSettlerCoin.sol";
-// import { OutputSettlerCoin } from "../../../src/output/coin/OutputSettlerCoin.sol";
-// import { MockERC20 } from "../../mocks/MockERC20.sol";
+contract MailboxMock {
+    uint256 public dispatchCounter;
 
-// import { HyperlaneOracle } from "../../../src/oracles/hyperlane/HyperlaneOracle.sol";
+    function localDomain() external pure returns (uint32) {
+        return uint32(1);
+    }
 
-// contract TestInterchainGasPaymaster is InterchainGasPaymaster {
-//     uint256 public gasPrice = 10;
+    function dispatch(
+        uint32 ,
+        bytes32 ,
+        bytes calldata ,
+        bytes calldata ,
+        IPostDispatchHook
+    ) external payable returns (bytes32 messageId) {
+        dispatchCounter += 1;
+        return keccak256(abi.encode(dispatchCounter));
+    }
 
-//     constructor() {
-//         initialize(msg.sender, msg.sender);
-//     }
+    function quoteDispatch(
+        uint32 ,
+        bytes32 ,
+        bytes calldata ,
+        bytes calldata ,
+        IPostDispatchHook
+    ) external pure returns (uint256 fee) {
+        return 1e18;
+    }
+}
 
-//     function quoteGasPayment(uint32, uint256 gasAmount) public view override returns (uint256) {
-//         return gasPrice * gasAmount;
-//     }
+contract HyperlaneOracleTest is Test {
+    using LibAddress for address;
 
-//     function setGasPrice(
-//         uint256 _gasPrice
-//     ) public {
-//         gasPrice = _gasPrice;
-//     }
+    MailboxMock internal _mailbox;
+    HyperlaneOracle internal _oracle;
 
-//     function getDefaultGasUsage() public pure returns (uint256) {
-//         return DEFAULT_GAS_USAGE;
-//     }
-// }
+    OutputSettlerCoin _outputSettler;
+    MockERC20 _token;
 
-// event Dispatch(address indexed sender, uint32 indexed destination, bytes32 indexed recipient, bytes message);
+    uint256 internal _gasPaymentQuote = 1e18;
+    uint256 internal _gasLimit = 60000;
+    uint32 internal _destination = 1;
+    uint32 internal _origin = 2;
+    address internal _recipientOracle = makeAddr("vegeta");
 
-// contract HyperlaneOracleTest is Test {
-//     using TypeCasts for address;
-//     using LibAddress for address;
+    function setUp() public {
+        _outputSettler = new OutputSettlerCoin();
+        _token = new MockERC20("TEST", "TEST", 18);
 
-//     MockHyperlaneEnvironment internal _environment;
+        _mailbox = new MailboxMock();
+        _oracle = new HyperlaneOracle(address(_mailbox), makeAddr("kakaroto"), makeAddr("karpincho"));
+    }
 
-//     TestInterchainGasPaymaster internal _igp;
+    function _getMandatePayload(
+        address sender,
+        uint256 amount,
+        address recipient,
+        bytes32 orderId,
+        bytes32 solverIdentifier
+    ) internal returns (MandateOutput memory, bytes memory) {
+        _token.mint(sender, amount);
+        vm.prank(sender);
+        _token.approve(address(_outputSettler), amount);
 
-//     HyperlaneOracle internal _originOracle;
-//     HyperlaneOracle internal _destinationOracle;
+        MandateOutput memory output = MandateOutput({
+            oracle: address(_oracle).toIdentifier(),
+            settler: address(_outputSettler).toIdentifier(),
+            token: bytes32(abi.encode(address(_token))),
+            amount: amount,
+            recipient: bytes32(abi.encode(recipient)),
+            chainId: uint32(block.chainid),
+            call: hex"",
+            context: hex""
+        });
+        bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionMemory(
+            solverIdentifier, orderId, uint32(block.timestamp), output
+        );
 
-//     bytes32 internal _originOracleB32;
-//     bytes32 internal _destinationOracleB32;
+        return (output, payload);
+    }
 
-//     uint256 _gasPaymentQuote;
-//     uint256 internal constant GAS_LIMIT = 60_000;
+    function encodeMessageCalldata(
+        bytes32 identifier,
+        bytes[] calldata payloads
+    ) external pure returns (bytes memory) {
+        return MessageEncodingLib.encodeMessage(identifier, payloads);
+    }
 
-//     address internal _admin = makeAddr("admin");
-//     address internal _owner = makeAddr("owner");
-//     address internal _sender = makeAddr("sender");
+    function getHashesOfEncodedPayloads(
+        bytes calldata encodedMessage
+    ) external pure returns (bytes32 application, bytes32[] memory payloadHashes) {
+        (application, payloadHashes) = MessageEncodingLib.getHashesOfEncodedPayloads(encodedMessage);
+    }
 
-//     uint32 internal _origin = 1;
-//     uint32 internal _destination = 2;
+    function test_submit_NotAllPayloadsValid(
+        address sender,
+        uint256 amount,
+        address recipient,
+        bytes32 orderId,
+        bytes32 solverIdentifier
+    ) public {
+        vm.assume(solverIdentifier != bytes32(0) && sender != address(0) && recipient != address(0));
 
-//     OutputSettlerCoin _outputSettler;
-//     MockERC20 _token;
+        MandateOutput memory output;
+        bytes[] memory payloads = new bytes[](1);
+        (output, payloads[0]) = _getMandatePayload(sender, amount, recipient, orderId, solverIdentifier);
 
-//     function _deployProxiedRouter(MockMailbox mailbox, address owner) internal returns (HyperlaneOracle) {
-//         HyperlaneOracle implementation = new HyperlaneOracle(address(mailbox));
+        // Fill without submitting
+        vm.expectRevert(abi.encodeWithSignature("NotAllPayloadsValid()"));
+        _oracle.submit{ value: _gasPaymentQuote }(_destination, _recipientOracle, _gasLimit, bytes("customMetadata"), address(_outputSettler), payloads);
+    }
 
-//         TransparentUpgradeableProxy proxy = new TransparentUpgradeableProxy(
-//             address(implementation),
-//             _admin,
-//             abi.encodeWithSelector(HyperlaneOracle.initialize.selector, address(0), address(0), owner)
-//         );
+    function test_fill_work_w() external {
+        test_submit_work(
+            makeAddr("sender"),
+            10 ** 18,
+            makeAddr("recipient"),
+            keccak256(bytes("orderId")),
+            keccak256(bytes("solverIdentifier"))
+        );
+    }
 
-//         return HyperlaneOracle(address(proxy));
-//     }
+    function test_submit_work(
+        address sender,
+        uint256 amount,
+        address recipient,
+        bytes32 orderId,
+        bytes32 solverIdentifier
+    ) public {
+        vm.assume(solverIdentifier != bytes32(0) && sender != address(0) && recipient != address(0));
 
-//     function setUp() public {
-//         _environment = new MockHyperlaneEnvironment(_origin, _destination);
+        MandateOutput memory output;
+        bytes[] memory payloads = new bytes[](1);
+        (output, payloads[0]) = _getMandatePayload(sender, amount, recipient, orderId, solverIdentifier);
 
-//         _igp = new TestInterchainGasPaymaster();
+        vm.expectCall(
+            address(_token),
+            abi.encodeWithSignature("transferFrom(address,address,uint256)", address(sender), recipient, amount)
+        );
 
-//         _gasPaymentQuote = _igp.quoteGasPayment(_destination, GAS_LIMIT);
+        vm.prank(sender);
+        _outputSettler.fill(type(uint32).max, orderId, output, solverIdentifier);
 
-//         _originOracle = _deployProxiedRouter(_environment.mailboxes(_origin), _owner);
-//         _destinationOracle = _deployProxiedRouter(_environment.mailboxes(_destination), _owner);
+        bytes memory customMetadata = bytes("customMetadata");
 
-//         _environment.mailboxes(_origin).setDefaultHook(address(_igp));
-//         _environment.mailboxes(_destination).setDefaultHook(address(_igp));
+        vm.expectCall(
+            address(_mailbox),
+            abi.encodeWithSelector(
+                MailboxMock.dispatch.selector,
+                _destination,
+                _recipientOracle.toIdentifier(),
+                this.encodeMessageCalldata(output.settler, payloads),
+                StandardHookMetadata.formatMetadata(0, _gasLimit, address(this), customMetadata),
+                _oracle.hook()
+            )
+        );
 
-//         _originOracleB32 = TypeCasts.addressToBytes32(address(_originOracle));
-//         _destinationOracleB32 = TypeCasts.addressToBytes32(address(_destinationOracle));
+        _oracle.submit{ value: _gasPaymentQuote }(_destination, _recipientOracle, _gasLimit, customMetadata, address(_outputSettler), payloads);
+        vm.snapshotGasLastCall("oracle", "hyperlaneOracleSubmit");
+    }
 
-//         vm.startPrank(_owner);
-//         _originOracle.enrollRemoteRouter(_destination, _destinationOracleB32);
-//         _originOracle.setDestinationGas(_destination, GAS_LIMIT);
+    function test_handle_onlyMailbox(
+        address sender,
+        uint256 amount,
+        address recipient,
+        bytes32 orderId,
+        bytes32 solverIdentifier
+    ) external {
+        vm.assume(solverIdentifier != bytes32(0) && sender != address(0) && recipient != address(0));
 
-//         _destinationOracle.enrollRemoteRouter(_origin, _originOracleB32);
-//         _destinationOracle.setDestinationGas(_origin, GAS_LIMIT);
+        MandateOutput memory output;
+        bytes[] memory payloads = new bytes[](1);
+        (output, payloads[0]) = _getMandatePayload(sender, amount, recipient, orderId, solverIdentifier);
 
-//         vm.stopPrank();
+        bytes memory message = this.encodeMessageCalldata(output.settler, payloads);
 
-//         _outputSettler = new OutputSettlerCoin();
+        vm.expectRevert(abi.encodeWithSignature("SenderNotMailbox()"));
+        _oracle.handle(_origin, makeAddr("messageSender").toIdentifier(), message);
+    }
 
-//         _token = new MockERC20("TEST", "TEST", 18);
-//     }
+    function test_handle_work_w() external {
+        test_handle_work(
+            makeAddr("sender"),
+            10 ** 18,
+            makeAddr("recipient"),
+            keccak256(bytes("orderId")),
+            keccak256(bytes("solverIdentifier"))
+        );
+    }
 
-//     function encodeMessageCalldata(
-//         bytes32 identifier,
-//         bytes[] calldata payloads
-//     ) external pure returns (bytes memory) {
-//         return MessageEncodingLib.encodeMessage(identifier, payloads);
-//     }
+    function test_handle_work(
+        address sender,
+        uint256 amount,
+        address recipient,
+        bytes32 orderId,
+        bytes32 solverIdentifier
+    ) public {
+        vm.assume(solverIdentifier != bytes32(0) && sender != address(0) && recipient != address(0));
 
-//     function getHashesOfEncodedPayloads(
-//         bytes calldata encodedMessage
-//     ) external pure returns (bytes32 application, bytes32[] memory payloadHashes) {
-//         (application, payloadHashes) = MessageEncodingLib.getHashesOfEncodedPayloads(encodedMessage);
-//     }
+        MandateOutput memory output;
+        bytes[] memory payloads = new bytes[](1);
+        (output, payloads[0]) = _getMandatePayload(sender, amount, recipient, orderId, solverIdentifier);
 
-//     function hyperlaneMessage(
-//         uint32 originChain,
-//         bytes32 sender,
-//         uint32 destinationChain,
-//         bytes32 recipient,
-//         bytes32 application,
-//         bytes[] calldata payloads
-//     ) external view returns (bytes memory) {
-//         bytes memory encodedPayload = this.encodeMessageCalldata(application, payloads);
-//         return abi.encodePacked(
-//             _environment.mailboxes(originChain).VERSION(),
-//             _environment.mailboxes(originChain).nonce(),
-//             originChain,
-//             sender,
-//             destinationChain,
-//             recipient,
-//             encodedPayload
-//         );
-//     }
+        bytes memory message = this.encodeMessageCalldata(output.settler, payloads);
 
-//     function getMandatePayload(
-//         address sender,
-//         uint256 amount,
-//         address recipient,
-//         bytes32 orderId,
-//         bytes32 solverIdentifier
-//     ) internal returns (MandateOutput memory, bytes memory) {
-//         _token.mint(sender, amount);
-//         vm.prank(sender);
-//         _token.approve(address(_outputSettler), amount);
+        (bytes32 application, bytes32[] memory payloadHashes) =
+            this.getHashesOfEncodedPayloads(message);
 
-//         MandateOutput memory output = MandateOutput({
-//             oracle: address(_originOracle).toIdentifier(),
-//             settler: address(_outputSettler).toIdentifier(),
-//             token: bytes32(abi.encode(address(_token))),
-//             amount: amount,
-//             recipient: bytes32(abi.encode(recipient)),
-//             chainId: uint32(block.chainid),
-//             call: hex"",
-//             context: hex""
-//         });
-//         bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionMemory(
-//             solverIdentifier, orderId, uint32(block.timestamp), output
-//         );
+        bytes32 messageSender = makeAddr("messageSender").toIdentifier();
 
-//         return (output, payload);
-//     }
+        vm.expectEmit();
+        emit OutputProven(_origin, messageSender, application, payloadHashes[0]);
 
-//     function test_submit_NotAllPayloadsValid(
-//         address sender,
-//         uint256 amount,
-//         address recipient,
-//         bytes32 orderId,
-//         bytes32 solverIdentifier
-//     ) public {
-//         vm.assume(solverIdentifier != bytes32(0) && sender != address(0) && recipient != address(0));
+        vm.prank(address(_mailbox));
+        _oracle.handle(_origin, messageSender, message);
+        vm.snapshotGasLastCall("oracle", "hyperlaneOracleHandle");
 
-//         MandateOutput memory output;
-//         bytes[] memory payloads = new bytes[](1);
-//         (output, payloads[0]) = getMandatePayload(sender, amount, recipient, orderId, solverIdentifier);
+        assertTrue(_oracle.isProven(_origin, messageSender, application, payloadHashes[0]));
+    }
 
-//         // Fill without submitting
-//         vm.expectRevert(abi.encodeWithSignature("NotAllPayloadsValid()"));
-//         _destinationOracle.submit{ value: _gasPaymentQuote }(_destination, address(_outputSettler), payloads);
-//     }
+    function test_quoteGasPayment_work() public {
+        bytes memory customMetadata = bytes("customMetadata");
 
-//     function test_fill_work_w() external {
-//         test_submit_work(
-//             makeAddr("sender"),
-//             10 ** 18,
-//             makeAddr("recipient"),
-//             keccak256(bytes("orderId")),
-//             keccak256(bytes("solverIdentifier"))
-//         );
-//     }
+        bytes[] memory payloads = new bytes[](1);
+        payloads[0] = bytes("some payload");
 
-//     function test_submit_work(
-//         address sender,
-//         uint256 amount,
-//         address recipient,
-//         bytes32 orderId,
-//         bytes32 solverIdentifier
-//     ) public {
-//         vm.assume(solverIdentifier != bytes32(0) && sender != address(0) && recipient != address(0));
+        vm.expectCall(
+            address(_mailbox),
+            abi.encodeWithSelector(
+                MailboxMock.quoteDispatch.selector,
+                _destination,
+                _recipientOracle.toIdentifier(),
+                this.encodeMessageCalldata(address(_outputSettler).toIdentifier(), payloads),
+                StandardHookMetadata.formatMetadata(0, _gasLimit, address(this), customMetadata),
+                _oracle.hook()
+            )
+        );
 
-//         MandateOutput memory output;
-//         bytes[] memory payloads = new bytes[](1);
-//         (output, payloads[0]) = getMandatePayload(sender, amount, recipient, orderId, solverIdentifier);
+        _oracle.quoteGasPayment(_destination, _recipientOracle, _gasLimit, customMetadata, address(_outputSettler), payloads);
+    }
 
-//         vm.expectCall(
-//             address(_token),
-//             abi.encodeWithSignature("transferFrom(address,address,uint256)", address(sender), recipient, amount)
-//         );
-
-//         vm.prank(sender);
-//         _outputSettler.fill(type(uint32).max, orderId, output, solverIdentifier);
-
-//         bytes memory expectedMessage = this.hyperlaneMessage(
-//             _origin, _originOracleB32, _destination, _destinationOracleB32, output.settler, payloads
-//         );
-
-//         vm.expectEmit();
-//         emit Dispatch(address(_originOracle), _destination, _destinationOracleB32, expectedMessage);
-//         _originOracle.submit{ value: _gasPaymentQuote }(_destination, address(_outputSettler), payloads);
-//         vm.snapshotGasLastCall("oracle", "hyperlaneOracleSubmit");
-//     }
-
-//     function test_handle_work(
-//         address sender,
-//         uint256 amount,
-//         address recipient,
-//         bytes32 orderId,
-//         bytes32 solverIdentifier
-//     ) public {
-//         vm.assume(solverIdentifier != bytes32(0) && sender != address(0) && recipient != address(0));
-
-//         MandateOutput memory output;
-//         bytes[] memory payloads = new bytes[](1);
-//         (output, payloads[0]) = getMandatePayload(sender, amount, recipient, orderId, solverIdentifier);
-
-//         vm.expectCall(
-//             address(_token),
-//             abi.encodeWithSignature("transferFrom(address,address,uint256)", address(sender), recipient, amount)
-//         );
-
-//         vm.prank(sender);
-//         _outputSettler.fill(type(uint32).max, orderId, output, solverIdentifier);
-//         _originOracle.submit{ value: _gasPaymentQuote }(_destination, address(_outputSettler), payloads);
-
-//         _environment.processNextPendingMessage();
-
-//         (bytes32 application, bytes32[] memory payloadHashes) =
-//             this.getHashesOfEncodedPayloads(this.encodeMessageCalldata(output.settler, payloads));
-
-//         assertTrue(_destinationOracle.isProven(_origin, _originOracleB32, application, payloadHashes[0]));
-//     }
-
-//     receive() external payable { }
-// }
+    receive() external payable { }
+}
