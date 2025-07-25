@@ -51,48 +51,47 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         assertEq(token.balanceOf(inputSettlerEscrow), amount);
     }
 
-    ///// forge-config: default.isolate = true
-    // function test_open_for_gas() external {
-    //     test_open_for(10 ** 18, 251251);
-    // }
+    /// forge-config: default.isolate = true
+    function test_open_for_gas() external {
+        test_open_for(10 ** 18, 251251);
+    }
 
-    // TODO: reenable
-    // function test_open_for(uint128 amountMint, uint256 nonce) public {
-    //     token.mint(swapper, amountMint);
+    function test_open_for(uint128 amountMint, uint256 nonce) public {
+        token.mint(swapper, amountMint);
 
-    //     uint256 amount = token.balanceOf(swapper);
+        uint256 amount = token.balanceOf(swapper);
 
-    //     // Permit2 has default infinite allowance. (Solady erc20)
-    //     // vm.prank(swapper);
-    //     // token.approve(address(permit2), amount);
+        // Permit2 has default infinite allowance. (Solady erc20)
+        // vm.prank(swapper);
+        // token.approve(address(permit2), amount);
 
-    //     MandateOutput[] memory outputs = new MandateOutput[](0);
+        MandateOutput[] memory outputs = new MandateOutput[](0);
 
-    //     uint256[2][] memory inputs = new uint256[2][](1);
-    //     inputs[0] = [uint256(uint160(address(token))), amount];
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
 
-    //     StandardOrder memory order = StandardOrder({
-    //         user: swapper,
-    //         nonce: nonce,
-    //         originChainId: block.chainid,
-    //         expires: type(uint32).max,
-    //         fillDeadline: type(uint32).max,
-    //         localOracle: address(0),
-    //         inputs: inputs,
-    //         outputs: outputs
-    //     });
+        StandardOrder memory order = StandardOrder({
+            user: swapper,
+            nonce: nonce,
+            originChainId: block.chainid,
+            expires: type(uint32).max,
+            fillDeadline: type(uint32).max,
+            localOracle: address(0),
+            inputs: inputs,
+            outputs: outputs
+        });
 
-    //     bytes memory signature = getPermit2Signature(swapperPrivateKey, order);
+        bytes memory signature = getPermit2Signature(swapperPrivateKey, order);
 
-    //     assertEq(token.balanceOf(address(swapper)), amount);
+        assertEq(token.balanceOf(address(swapper)), amount);
 
-    //     vm.prank(swapper);
-    //     IInputSettlerEscrow(inputSettlerEscrow).openFor(order, signature, hex"");
-    //     vm.snapshotGasLastCall("inputSettler", "escrowOpenFor");
+        vm.prank(swapper);
+        IInputSettlerEscrow(inputSettlerEscrow).openFor(order, signature, hex"");
+        vm.snapshotGasLastCall("inputSettler", "escrowOpenFor");
 
-    //     assertEq(token.balanceOf(address(swapper)), 0);
-    //     assertEq(token.balanceOf(inputSettlerEscrow), amount);
-    // }
+        assertEq(token.balanceOf(address(swapper)), 0);
+        assertEq(token.balanceOf(inputSettlerEscrow), amount);
+    }
 
     // -- Larger Integration tests -- //
 

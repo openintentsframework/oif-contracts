@@ -135,14 +135,14 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         ISignatureTransfer.PermitBatchTransferFrom memory permitBatch = ISignatureTransfer.PermitBatchTransferFrom({
             permitted: permitted,
             nonce: order.nonce,
-            deadline: order.fillDeadline // TODO: Open??
+            deadline: order.fillDeadline // TODO: What should the open deadline be?
          });
         PERMIT2.permitWitnessTransferFrom(
             permitBatch,
             transferDetails,
             order.user,
             Permit2WitnessType.Permit2WitnessHash(order),
-            string(Permit2WitnessType.PERMIT2_WITNESS_TYPE),
+            string(Permit2WitnessType.PERMIT2_PERMIT2_TYPESTRING),
             signature
         );
         // emit Open(orderId, _resolve(order.openDeadline, orderId, order));
