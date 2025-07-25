@@ -9,35 +9,36 @@ import { StandardOrder } from "../types/StandardOrderType.sol";
  */
 struct Permit2Witness {
     uint32 expires;
-    // uint32 fillDeadline;
+    // uint32 fillDeadline; // TODO: fillDeadline is the openDeadline thus is still signed.
     address localOracle;
-    uint256[2][] inputs;
     MandateOutput[] outputs;
 }
 
 /**
- * @notice Helper library for the Catalyst order type.
+ * @notice Helper library for the Permit2 Witness type for StandardOrder.
  * TYPE_PARTIAL: An incomplete type. Is missing a field.
- * TYPE_STUB: Type has no subtypes.
+ * TYPE_STUB: Type has no sub-types.
  * TYPE: Is complete including sub-types.
  */
 library Permit2WitnessType {
-    // TODO: performance testing of writing types in their entirety.
     bytes constant PERMIT2_WITNESS_TYPE_STUB = abi.encodePacked(
         "Permit2Witness(uint32 expires,address localOracle,uint256[2][] inputs,MandateOutput[] outputs)"
     );
 
     // M comes earlier than P.
     bytes constant PERMIT2_WITNESS_TYPE = abi.encodePacked(
-        "Permit2Witness(uint32 expires,address localOracle,uint256[2][] inputs,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
+        "Permit2Witness(uint32 expires,address localOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
     );
 
     bytes32 constant PERMIT2_WITNESS_TYPE_HASH = keccak256(PERMIT2_WITNESS_TYPE);
 
-    bytes constant PERMIT2_PERMIT2_TYPESTRING = abi.encodePacked(
-        "Permit2Witness witness)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)TokenPermissions(address token,uint256 amount)Permit2Witness(uint32 expires,address localOracle,uint256[2][] inputs,MandateOutput[] outputs)"
-    );
+    /// @notice Typestring for handed to Permit2.
+    string constant PERMIT2_PERMIT2_TYPESTRING =
+        "Permit2Witness witness)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)TokenPermissions(address token,uint256 amount)Permit2Witness(uint32 expires,address localOracle,MandateOutput[] outputs)";
 
+    /**
+     * @notice Computes the permit2 witness hash.
+     */
     function Permit2WitnessHash(
         StandardOrder calldata order
     ) internal pure returns (bytes32) {
@@ -46,37 +47,8 @@ library Permit2WitnessType {
                 PERMIT2_WITNESS_TYPE_HASH,
                 order.expires,
                 order.localOracle,
-                keccak256(abi.encodePacked(order.inputs)),
                 MandateOutputType.hashOutputs(order.outputs)
             )
         );
-    }
-
-    /**
-     * @notice Internal pure function for deriving the hash of ids and amounts provided.
-     * @param idsAndAmounts      An array of ids and amounts.
-     * @return idsAndAmountsHash The hash of the ids and amounts.
-     * @dev From TheCompact src/lib/HashLib.sol
-     * This function expects that the calldata of idsAndAmounts will have bounds
-     * checked elsewhere; using it without this check occurring elsewhere can result in
-     * erroneous hash values.
-     */
-    function toIdsAndAmountsHash(
-        uint256[2][] calldata idsAndAmounts
-    ) internal pure returns (bytes32 idsAndAmountsHash) {
-        assembly ("memory-safe") {
-            // Retrieve the free memory pointer; memory will be left dirtied.
-            let ptr := mload(0x40)
-
-            // Get the total length of the calldata slice.
-            // Each element of the array consists of 2 words.
-            let len := mul(idsAndAmounts.length, 0x40)
-
-            // Copy calldata into memory at the free memory pointer.
-            calldatacopy(ptr, idsAndAmounts.offset, len)
-
-            // Compute the hash of the calldata that has been copied into memory.
-            idsAndAmountsHash := keccak256(ptr, len)
-        }
     }
 }

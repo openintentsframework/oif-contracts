@@ -20,18 +20,22 @@ import { StandardOrder, StandardOrderType } from "../types/StandardOrderType.sol
 
 import { InputSettlerPurchase } from "../InputSettlerPurchase.sol";
 import { Permit2WitnessType } from "./Permit2WitnessType.sol";
+
 /**
- * @title Catalyst Settler supporting The Compact
- * @notice This Catalyst Settler implementation uses The Compact as the deposit scheme.
- * It is a delivery first, inputs second scheme that allows users with a deposit inside The Compact.
+ * @title OIF Input Settler supporting using an explicit escrow.
+ * @notice This Catalyst Settler implementation contained an escrow to manage input assets. Intents are initiated by
+ * depositing assets through either `::open` by msg.sender or `::openFor` by `order.user`. Since tokens are collected on
+ * the `::open(For)` call, it is important to wait for the `::open(For)` call to be final before filling the intent.
  *
- * Users are expected to have an existing deposit inside the Compact or purposefully deposit for the intent.
- * They then needs to either register or sign a supported claim with the intent as the witness.
- * Without the deposit extension, this contract does not have a way to emit on-chain orders.
+ * Using Permit2 to call `::openFor` with, `openDeadline` is identical to `order.fillDeadline`. Before calling
+ * `::openFor` ensure there is sufficient time to fill.
+ *
+ * If an order is finalised / claimed before `order.expires`, anyone may call `::refund` to send `order.inputs` to
+ * `order.user`. Note that if this is not done, an order finalised after `order.expires` still claims `order.inputs` for
+ * the solver.
  *
  * This contract does not support fee on transfer tokens.
  */
-
 contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     using LibAddress for address;
     using LibAddress for bytes32;
@@ -79,11 +83,15 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         return _orderIdentifier(order);
     }
 
+    /**
+     * @notice Opens an intent for `order.user`. `order.input` tokens are collected from msg.sender.
+     */
     function open(
         StandardOrder calldata order
     ) external {
         // Validate the order structure.
         _validateTimestampHasNotPassed(order.fillDeadline);
+        _validateTimestampHasNotPassed(order.expires);
 
         bytes32 orderId = StandardOrderType.orderIdentifier(order);
 
@@ -103,6 +111,33 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         }
 
         emit Open(orderId, order);
+    }
+
+    /**
+     * @notice Opens an intent for `order.user`. `order.input` tokens are collected from `order.user` through permit2.
+     * @param order StandardOrder representing the intent.
+     * @param signature Permit2 signature from `order.user` authorizing collection of `order.input`.
+     */
+    function openFor(
+        StandardOrder calldata order,
+        bytes calldata signature,
+        bytes calldata /* originFillerData */
+    ) external {
+        // Validate the order structure.
+        _validateInputChain(order.originChainId);
+        // _validateTimestampHasNotPassed(order.openDeadline);
+        _validateTimestampHasNotPassed(order.fillDeadline);
+        _validateTimestampHasNotPassed(order.expires);
+
+        bytes32 orderId = _orderIdentifier(order);
+
+        if (orderStatus[orderId] != OrderStatus.None) revert InvalidOrderStatus();
+        // Mark order as deposited. If we can't make the deposit, we will
+        // revert and it will unmark it. This acts as a reentry check.
+        orderStatus[orderId] = OrderStatus.Deposited;
+
+        // Collect input tokens
+        _openFor(order, signature, address(this));
     }
 
     function _openFor(StandardOrder calldata order, bytes calldata signature, address to) internal {
@@ -134,42 +169,27 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         ISignatureTransfer.PermitBatchTransferFrom memory permitBatch = ISignatureTransfer.PermitBatchTransferFrom({
             permitted: permitted,
             nonce: order.nonce,
-            deadline: order.fillDeadline // TODO: What should the open deadline be?
-         });
+            deadline: order.fillDeadline
+        });
         PERMIT2.permitWitnessTransferFrom(
             permitBatch,
             transferDetails,
             order.user,
             Permit2WitnessType.Permit2WitnessHash(order),
-            string(Permit2WitnessType.PERMIT2_PERMIT2_TYPESTRING),
+            Permit2WitnessType.PERMIT2_PERMIT2_TYPESTRING,
             signature
         );
         // emit Open(orderId, _resolve(order.openDeadline, orderId, order));
     }
 
-    function openFor(
-        StandardOrder calldata order,
-        bytes calldata signature,
-        bytes calldata /* originFillerData */
-    ) external {
-        // Validate the order structure.
-        _validateInputChain(order.originChainId);
-        // _validateTimestampHasNotPassed(order.openDeadline);
-        _validateTimestampHasNotPassed(order.fillDeadline);
-
-        bytes32 orderId = _orderIdentifier(order);
-
-        if (orderStatus[orderId] != OrderStatus.None) revert InvalidOrderStatus();
-        // Mark order as deposited. If we can't make the deposit, we will
-        // revert and it will unmark it. This acts as a reentry check.
-        orderStatus[orderId] = OrderStatus.Deposited;
-
-        // Collect input tokens
-        _openFor(order, signature, address(this));
-    }
-
     // --- Refund --- //
 
+    /**
+     * @notice
+     * Refunds an order that has not been finalised before it expired. This order may have been filled but finalise has
+     * not been called yet.
+     * @param order Standard Order associated with the intent.
+     */
     function refund(
         StandardOrder calldata order
     ) external {
@@ -177,9 +197,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         _validateTimestampHasPassed(order.expires);
 
         bytes32 orderId = _orderIdentifier(order);
-
         _resolveLock(orderId, order.inputs, order.user, OrderStatus.Refunded);
-
         emit Refunded(orderId);
     }
 
@@ -204,7 +222,8 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
     /**
      * @notice Finalises an order when called directly by the solver
-     * @dev The caller must be the address corresponding to the first solver in the solvers array.
+     * @dev Finalise is not blocked after the expiry of orders.
+     * The caller must be the address corresponding to the first solver in the solvers array.
      * @param order StandardOrder signed in conjunction with a Compact to form an order.
      * @param timestamps Array of timestamps when each output was filled
      * @param solvers Array of solvers who filled each output (in order of outputs).
@@ -237,7 +256,8 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
     /**
      * @notice Finalises a cross-chain order on behalf of someone else using their signature
-     * @dev This function serves to finalise intents on the origin chain with proper authorization from the order owner.
+     * @dev Finalise is not blocked after the expiry of orders.
+     * This function serves to finalise intents on the origin chain with proper authorization from the order owner.
      * @param order StandardOrder signed in conjunction with a Compact to form an order
      * @param timestamps Array of timestamps when each output was filled
      * @param solvers Array of solvers who filled each output (in order of outputs)

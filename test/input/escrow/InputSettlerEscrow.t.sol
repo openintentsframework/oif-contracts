@@ -16,7 +16,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         test_open(10000, 10 ** 18, makeAddr("user"));
     }
 
-    function test_open(uint32 expires, uint128 amount, address user) public returns(StandardOrder memory order) {
+    function test_open(uint32 expires, uint128 amount, address user) public returns (StandardOrder memory order) {
         vm.assume(expires < type(uint32).max);
         vm.assume(expires > block.timestamp);
         vm.assume(token.balanceOf(user) == 0);
