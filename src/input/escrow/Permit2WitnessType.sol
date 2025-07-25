@@ -33,8 +33,9 @@ library Permit2WitnessType {
     );
 
     // M comes earlier than P.
-    bytes constant PERMIT2_WITNESS_TYPE =
-        abi.encodePacked("Permit2Witness(uint32 expires,address localOracle,uint256[2][] inputs,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)");
+    bytes constant PERMIT2_WITNESS_TYPE = abi.encodePacked(
+        "Permit2Witness(uint32 expires,address localOracle,uint256[2][] inputs,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
+    );
 
     bytes32 constant PERMIT2_WITNESS_TYPE_HASH = keccak256(PERMIT2_WITNESS_TYPE);
 
