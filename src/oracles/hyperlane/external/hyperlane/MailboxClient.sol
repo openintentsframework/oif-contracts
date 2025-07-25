@@ -7,6 +7,7 @@ import { IPostDispatchHook } from "./interfaces/hooks/IPostDispatchHook.sol";
 
 abstract contract MailboxClient {
     error InvalidMailbox();
+    error SenderNotMailbox();
 
     IMailbox public immutable MAILBOX;
 
@@ -21,7 +22,7 @@ abstract contract MailboxClient {
      * @notice Only accept messages from a Hyperlane Mailbox contract
      */
     modifier onlyMailbox() {
-        require(msg.sender == address(MAILBOX), "MailboxClient: sender not mailbox");
+        if (msg.sender != address(MAILBOX)) revert SenderNotMailbox();
         _;
     }
 
@@ -44,17 +45,5 @@ abstract contract MailboxClient {
 
     function localDomain() public view returns (uint32) {
         return _LOCAL_DOMAIN;
-    }
-
-    function _isLatestDispatched(
-        bytes32 id
-    ) internal view returns (bool) {
-        return MAILBOX.latestDispatchedId() == id;
-    }
-
-    function _isDelivered(
-        bytes32 id
-    ) internal view returns (bool) {
-        return MAILBOX.delivered(id);
     }
 }
