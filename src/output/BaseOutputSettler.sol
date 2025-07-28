@@ -98,8 +98,8 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
         if (existingFillRecordHash != bytes32(0)) return existingFillRecordHash;
         // The above and below lines act as a local re-entry check.
         uint32 fillTimestamp = uint32(block.timestamp);
-        bytes32 newFillRecordHash = _getFillRecordHash(proposedSolver, fillTimestamp);
-        _fillRecords[orderId][outputHash] = newFillRecordHash;
+        fillRecordHash = _getFillRecordHash(proposedSolver, fillTimestamp);
+        _fillRecords[orderId][outputHash] = fillRecordHash;
 
         // Storage has been set. Fill the output.
         address recipient = address(uint160(uint256(output.recipient)));
@@ -107,7 +107,7 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
         if (output.call.length > 0) IOIFCallback(recipient).outputFilled(output.token, outputAmount, output.call);
 
         emit OutputFilled(orderId, proposedSolver, fillTimestamp, output, outputAmount);
-        return newFillRecordHash;
+        return fillRecordHash;
     }
 
     // --- External Solver Interface --- //
