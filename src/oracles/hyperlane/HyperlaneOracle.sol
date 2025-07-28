@@ -71,7 +71,14 @@ contract HyperlaneOracle is BaseOracle, MailboxClient, IMessageRecipient {
         address source,
         bytes[] calldata payloads
     ) public payable {
-        _submit(destinationDomain, recipientOracle, gasLimit, customMetadata, hook(), source, payloads);
+        _submit(
+            destinationDomain,
+            recipientOracle,
+            StandardHookMetadata.formatMetadata(0, gasLimit, msg.sender, customMetadata),
+            hook(),
+            source,
+            payloads
+        );
     }
 
     /**
@@ -94,7 +101,14 @@ contract HyperlaneOracle is BaseOracle, MailboxClient, IMessageRecipient {
         address source,
         bytes[] calldata payloads
     ) public payable {
-        _submit(destinationDomain, recipientOracle, gasLimit, customMetadata, customHook, source, payloads);
+        _submit(
+            destinationDomain,
+            recipientOracle,
+            StandardHookMetadata.formatMetadata(0, gasLimit, msg.sender, customMetadata),
+            customHook,
+            source,
+            payloads
+        );
     }
 
     /**
@@ -129,8 +143,7 @@ contract HyperlaneOracle is BaseOracle, MailboxClient, IMessageRecipient {
     function _submit(
         uint32 destinationDomain,
         address recipientOracle,
-        uint256 gasLimit,
-        bytes calldata customMetadata,
+        bytes memory hookMetadata,
         IPostDispatchHook customHook,
         address source,
         bytes[] calldata payloads
@@ -140,11 +153,7 @@ contract HyperlaneOracle is BaseOracle, MailboxClient, IMessageRecipient {
         bytes memory message = MessageEncodingLib.encodeMessage(source.toIdentifier(), payloads);
 
         MAILBOX.dispatch{ value: msg.value }(
-            destinationDomain,
-            recipientOracle.toIdentifier(),
-            message,
-            StandardHookMetadata.formatMetadata(0, gasLimit, msg.sender, customMetadata),
-            customHook
+            destinationDomain, recipientOracle.toIdentifier(), message, hookMetadata, customHook
         );
     }
 }
