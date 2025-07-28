@@ -5,6 +5,13 @@ import { IInterchainSecurityModule } from "./interfaces/IInterchainSecurityModul
 import { IMailbox } from "./interfaces/IMailbox.sol";
 import { IPostDispatchHook } from "./interfaces/hooks/IPostDispatchHook.sol";
 
+/**
+ * @notice This smart contract is a simplified version of the
+ * [Hyperlane's
+ * MailboxClient](https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/solidity/contracts/client/MailboxClient.sol)
+ * to make it non-upgradable and ownerless.
+ *
+ */
 abstract contract MailboxClient {
     error InvalidMailbox();
     error SenderNotMailbox();
