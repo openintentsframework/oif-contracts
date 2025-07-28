@@ -90,8 +90,6 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
         OutputVerificationLib._isThisChain(output.chainId);
         OutputVerificationLib._isThisOutputSettler(output.settler);
 
-        uint256 outputAmount = _resolveOutput(output, proposedSolver);
-
         bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHash(output);
         bytes32 existingFillRecordHash = _fillRecords[orderId][outputHash];
         // Return existing record hash if already solved.
@@ -102,6 +100,7 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
         _fillRecords[orderId][outputHash] = fillRecordHash;
 
         // Storage has been set. Fill the output.
+        uint256 outputAmount = _resolveOutput(output, proposedSolver);
         address recipient = address(uint160(uint256(output.recipient)));
         SafeTransferLib.safeTransferFrom(address(uint160(uint256(output.token))), msg.sender, recipient, outputAmount);
         if (output.call.length > 0) IOIFCallback(recipient).outputFilled(output.token, outputAmount, output.call);
