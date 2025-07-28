@@ -94,8 +94,8 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
 
         bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHash(output);
         bytes32 existingFillRecordHash = _fillRecords[orderId][outputHash];
-        if (existingFillRecordHash != bytes32(0)) return existingFillRecordHash; // Return existing record hash if
-            // already solved.
+        // Return existing record hash if already solved.
+        if (existingFillRecordHash != bytes32(0)) return existingFillRecordHash;
         // The above and below lines act as a local re-entry check.
         uint32 fillTimestamp = uint32(block.timestamp);
         bytes32 newFillRecordHash = _getFillRecordHash(proposedSolver, fillTimestamp);
