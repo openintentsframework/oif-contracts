@@ -7,7 +7,8 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
-import { IOIFCallback } from "../interfaces/IOIFCallback.sol";
+import { IInputCallback } from "../interfaces/IInputCallback.sol";
+import { IOutputCallback } from "../interfaces/IOutputCallback.sol";
 
 /**
  * @title Allows a user to specify a series of calls that should be made by the handler
@@ -17,7 +18,7 @@ import { IOIFCallback } from "../interfaces/IOIFCallback.sol";
  * The caller should ensure that the tokens received by the handler are completely consumed
  * otherwise they will be left in the contract free to take for next the next caller.
  */
-contract CatsMulticallHandler is IOIFCallback, ReentrancyGuard {
+contract CatsMulticallHandler is IInputCallback, IOutputCallback, ReentrancyGuard {
     using LibAddress for address;
     using LibAddress for bytes32;
 
