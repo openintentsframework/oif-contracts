@@ -118,7 +118,7 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
      * @param orderId Input chain order identifier. Is used as is, not checked for validity.
      * @param output Given output to fill. Is expected to belong to a greater order identified by orderId.
      * @param proposedSolver Solver identifier to be sent to input chain.
-     * @return bytes32 Solver that filled the order. Returns existing solver if already filled.
+     * @return bytes32 Fill record hash. Returns existing hash if already filled, new hash if successfully filled.
      */
     function fill(
         uint32 fillDeadline,
@@ -128,17 +128,8 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
     ) external virtual returns (bytes32) {
         if (fillDeadline < block.timestamp) revert FillDeadline();
 
-        // Check if already filled before calling _fill
-        bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHash(output);
-        bytes32 existingFillRecordHash = _fillRecords[orderId][outputHash];
-        if (existingFillRecordHash != bytes32(0)) {
-            // Already filled, return the existing fill record hash
-            return existingFillRecordHash;
-        }
-
-        // Not filled yet, call _fill and return bytes32(0) for successful new fills
-        _fill(orderId, output, proposedSolver);
-        return bytes32(0);
+        // Let _fill handle the hash computation and already-filled check
+        return _fill(orderId, output, proposedSolver);
     }
 
     // -- Batch Solving -- //
