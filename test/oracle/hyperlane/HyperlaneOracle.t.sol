@@ -324,5 +324,29 @@ contract HyperlaneOracleTest is Test {
         );
     }
 
+    function test_quoteGasPayment_customHook_works() public {
+        bytes memory customMetadata = bytes("customMetadata");
+        IPostDispatchHook customHook = IPostDispatchHook(makeAddr("customHook"));
+
+        bytes[] memory payloads = new bytes[](1);
+        payloads[0] = bytes("some payload");
+
+        vm.expectCall(
+            address(_mailbox),
+            abi.encodeWithSelector(
+                MailboxMock.quoteDispatch.selector,
+                _destination,
+                _recipientOracle.toIdentifier(),
+                this.encodeMessageCalldata(address(_outputSettler).toIdentifier(), payloads),
+                StandardHookMetadata.formatMetadata(0, _gasLimit, address(this), customMetadata),
+                customHook
+            )
+        );
+
+        _oracle.quoteGasPayment(
+            _destination, _recipientOracle, _gasLimit, customMetadata, customHook, address(_outputSettler), payloads
+        );
+    }
+
     receive() external payable { }
 }
