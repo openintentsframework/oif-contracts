@@ -7,7 +7,9 @@ import { MessageEncodingLib } from "../../libs/MessageEncodingLib.sol";
 import { BaseOracle } from "../BaseOracle.sol";
 
 import { MailboxClient } from "./external/hyperlane/MailboxClient.sol";
+
 import { IMessageRecipient } from "./external/hyperlane/interfaces/IMessageRecipient.sol";
+import { IPostDispatchHook } from "./external/hyperlane/interfaces/hooks/IPostDispatchHook.sol";
 import { StandardHookMetadata } from "./external/hyperlane/libs/StandardHookMetadata.sol";
 
 /**
@@ -69,17 +71,30 @@ contract HyperlaneOracle is BaseOracle, MailboxClient, IMessageRecipient {
         address source,
         bytes[] calldata payloads
     ) public payable {
-        if (!IPayloadCreator(source).arePayloadsValid(payloads)) revert NotAllPayloadsValid();
+        _submit(destinationDomain, recipientOracle, gasLimit, customMetadata, hook(), source, payloads);
+    }
 
-        bytes memory message = MessageEncodingLib.encodeMessage(source.toIdentifier(), payloads);
-
-        MAILBOX.dispatch{ value: msg.value }(
-            destinationDomain,
-            recipientOracle.toIdentifier(),
-            message,
-            StandardHookMetadata.formatMetadata(0, gasLimit, msg.sender, customMetadata),
-            hook()
-        );
+    /**
+     * @notice Takes proofs that have been marked as valid by a source and dispatches them to Hyperlane's Mailbox for
+     * broadcast.
+     * @param destinationDomain The domain to which the message is sent.
+     * @param recipientOracle The address of the oracle on the destination domain.
+     * @param gasLimit Gas limit for the message.
+     * @param customMetadata Additional metadata to include in the standard hook metadata.
+     * @param customHook Custom hook to be used instead of the one already configured in this client.
+     * @param source Application that has payloads that are marked as valid.
+     * @param payloads List of payloads to broadcast.
+     */
+    function submit(
+        uint32 destinationDomain,
+        address recipientOracle,
+        uint256 gasLimit,
+        bytes calldata customMetadata,
+        IPostDispatchHook customHook,
+        address source,
+        bytes[] calldata payloads
+    ) public payable {
+        _submit(destinationDomain, recipientOracle, gasLimit, customMetadata, customHook, source, payloads);
     }
 
     /**
@@ -108,6 +123,28 @@ contract HyperlaneOracle is BaseOracle, MailboxClient, IMessageRecipient {
             message,
             StandardHookMetadata.formatMetadata(0, gasLimit, msg.sender, customMetadata),
             hook()
+        );
+    }
+
+    function _submit(
+        uint32 destinationDomain,
+        address recipientOracle,
+        uint256 gasLimit,
+        bytes calldata customMetadata,
+        IPostDispatchHook customHook,
+        address source,
+        bytes[] calldata payloads
+    ) internal {
+        if (!IPayloadCreator(source).arePayloadsValid(payloads)) revert NotAllPayloadsValid();
+
+        bytes memory message = MessageEncodingLib.encodeMessage(source.toIdentifier(), payloads);
+
+        MAILBOX.dispatch{ value: msg.value }(
+            destinationDomain,
+            recipientOracle.toIdentifier(),
+            message,
+            StandardHookMetadata.formatMetadata(0, gasLimit, msg.sender, customMetadata),
+            customHook
         );
     }
 }

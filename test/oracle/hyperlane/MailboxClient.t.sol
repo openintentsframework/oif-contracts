@@ -45,7 +45,7 @@ contract MailboxClientTest is Test {
         new HyperlaneMailboxClient(address(0), _kakaroto, _karpincho);
     }
 
-    function test_constructor_works() external {
+    function test_constructor_works() external view {
         vm.assertEq(address(_mailboxClient.MAILBOX()), address(_mailbox));
         vm.assertEq(address(_mailboxClient.hook()), _kakaroto);
         vm.assertEq(address(_mailboxClient.interchainSecurityModule()), _karpincho);

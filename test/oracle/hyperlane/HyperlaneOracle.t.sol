@@ -133,8 +133,8 @@ contract HyperlaneOracleTest is Test {
         );
     }
 
-    function test_fill_work_w() external {
-        test_submit_work(
+    function test_fill_works_w() external {
+        test_submit_works(
             makeAddr("sender"),
             10 ** 18,
             makeAddr("recipient"),
@@ -143,7 +143,7 @@ contract HyperlaneOracleTest is Test {
         );
     }
 
-    function test_submit_work(
+    function test_submit_works(
         address sender,
         uint256 amount,
         address recipient,
@@ -184,6 +184,65 @@ contract HyperlaneOracleTest is Test {
         vm.snapshotGasLastCall("oracle", "hyperlaneOracleSubmit");
     }
 
+    function test_submit_customHook_works_w() external {
+        test_submit_customHook_works(
+            makeAddr("sender"),
+            10 ** 18,
+            makeAddr("recipient"),
+            keccak256(bytes("orderId")),
+            keccak256(bytes("solverIdentifier")),
+            makeAddr("customHook")
+        );
+    }
+
+    function test_submit_customHook_works(
+        address sender,
+        uint256 amount,
+        address recipient,
+        bytes32 orderId,
+        bytes32 solverIdentifier,
+        address customHook
+    ) public {
+        vm.assume(solverIdentifier != bytes32(0) && sender != address(0) && recipient != address(0));
+
+        MandateOutput memory output;
+        bytes[] memory payloads = new bytes[](1);
+        (output, payloads[0]) = _getMandatePayload(sender, amount, recipient, orderId, solverIdentifier);
+
+        vm.expectCall(
+            address(_token),
+            abi.encodeWithSignature("transferFrom(address,address,uint256)", address(sender), recipient, amount)
+        );
+
+        vm.prank(sender);
+        _outputSettler.fill(type(uint32).max, orderId, output, solverIdentifier);
+
+        bytes memory customMetadata = bytes("customMetadata");
+
+        vm.expectCall(
+            address(_mailbox),
+            abi.encodeWithSelector(
+                MailboxMock.dispatch.selector,
+                _destination,
+                _recipientOracle.toIdentifier(),
+                this.encodeMessageCalldata(output.settler, payloads),
+                StandardHookMetadata.formatMetadata(0, _gasLimit, address(this), customMetadata),
+                IPostDispatchHook(customHook)
+            )
+        );
+
+        _oracle.submit{ value: _gasPaymentQuote }(
+            _destination,
+            _recipientOracle,
+            _gasLimit,
+            customMetadata,
+            IPostDispatchHook(customHook),
+            address(_outputSettler),
+            payloads
+        );
+        vm.snapshotGasLastCall("oracle", "hyperlaneOracleSubmitCustomHook");
+    }
+
     function test_handle_onlyMailbox(
         address sender,
         uint256 amount,
@@ -203,8 +262,8 @@ contract HyperlaneOracleTest is Test {
         _oracle.handle(_origin, makeAddr("messageSender").toIdentifier(), message);
     }
 
-    function test_handle_work_w() external {
-        test_handle_work(
+    function test_handle_works_w() external {
+        test_handle_works(
             makeAddr("sender"),
             10 ** 18,
             makeAddr("recipient"),
@@ -213,7 +272,7 @@ contract HyperlaneOracleTest is Test {
         );
     }
 
-    function test_handle_work(
+    function test_handle_works(
         address sender,
         uint256 amount,
         address recipient,
@@ -242,7 +301,7 @@ contract HyperlaneOracleTest is Test {
         assertTrue(_oracle.isProven(_origin, messageSender, application, payloadHashes[0]));
     }
 
-    function test_quoteGasPayment_work() public {
+    function test_quoteGasPayment_works() public {
         bytes memory customMetadata = bytes("customMetadata");
 
         bytes[] memory payloads = new bytes[](1);

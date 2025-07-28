@@ -7,5 +7,8 @@
   "bitcoinVerifyWithEmbed": "138172",
   "wormholeOracleSubmit": "14037",
   "hyperlaneOracleHandle": "25901",
-  "hyperlaneOracleSubmit": "37435"
+  "hyperlaneOracleSubmit": "37435",
+  "hyperlaneOracleHandle": "25937",
+  "hyperlaneOracleSubmit": "37534",
+  "hyperlaneOracleSubmitCustomHook": "37504"
 }
