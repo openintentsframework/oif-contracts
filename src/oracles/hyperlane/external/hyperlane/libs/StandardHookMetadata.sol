@@ -22,6 +22,12 @@ pragma solidity >=0.8.0;
  * [66:86] Refund address for message (IGP)
  * [86:] Custom metadata
  */
+
+/**
+ * @notice This file is a verbatim copy of the [Hyperlane'
+ * StandardHookMetadata](https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/solidity/contracts/hooks/libs/StandardHookMetadata.sol)
+ *  Copied from commit d0d8049c13140b9230c60415a445da9048bb1caa
+ */
 library StandardHookMetadata {
     struct Metadata {
         uint16 variant;
