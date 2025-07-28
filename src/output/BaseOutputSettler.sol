@@ -16,6 +16,23 @@ import { BaseOracle } from "../oracles/BaseOracle.sol";
  * @notice Base Output Settler implementing logic for settling outputs.
  * Does not support native coins.
  * This base output settler implements logic to work as both a PayloadCreator (for oracles) and as an oracle itself.
+ * 
+ * @dev **Fill Function Patterns:**
+ * This contract provides two distinct fill patterns with different semantics:
+ * 
+ * 1. **Single Fill (`fill`)** - Idempotent Operation:
+ *    - Safe to call multiple times
+ *    - Returns existing fill record if already filled
+ *    - Suitable for retry mechanisms and concurrent filling attempts
+ *    - Use when you want graceful handling of already-filled outputs
+ * 
+ * 2. **Batch Fill (`fillOrderOutputs`)** - Atomic Competition Operation:
+ *    - Implements solver competition semantics
+ *    - Reverts if first output already filled by different solver
+ *    - Ensures atomic all-or-nothing batch filling
+ *    - Use when you need to atomically claim an entire multi-output order
+ * 
+ * Choose the appropriate pattern based on your use case requirements.
  */
 abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
     using LibAddress for address;
@@ -26,6 +43,15 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
     error ZeroValue();
     error PayloadTooSmall();
     error ExclusiveTo(bytes32 solver);
+
+    /**
+     * @dev Validates that the fill deadline has not passed.
+     * @param fillDeadline The deadline timestamp to check against.
+     */
+    modifier checkFillDeadline(uint32 fillDeadline) {
+        if (fillDeadline < block.timestamp) revert FillDeadline();
+        _;
+    }
 
     /**
      * @notice Sets outputs as filled by their solver identifier, such that outputs won't be filled twice.
@@ -112,7 +138,11 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
     // --- External Solver Interface --- //
 
     /**
-     * @dev External fill interface for filling a single order.
+     * @notice External fill interface for filling a single output (idempotent operation).
+     * @dev This function is idempotent - it can be called multiple times safely. If the output is already filled,
+     * it returns the existing fill record hash without reverting. This makes it suitable for retry mechanisms
+     * and scenarios where multiple parties might attempt to fill the same output.
+     * 
      * @param fillDeadline If the transaction is executed after this timestamp, the call will fail.
      * @param orderId Input chain order identifier. Is used as is, not checked for validity.
      * @param output Given output to fill. Is expected to belong to a greater order identified by orderId.
@@ -124,24 +154,26 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
         bytes32 orderId,
         MandateOutput calldata output,
         bytes32 proposedSolver
-    ) external virtual returns (bytes32) {
-        if (fillDeadline < block.timestamp) revert FillDeadline();
-
-        // Let _fill handle the hash computation and already-filled check
+    ) external virtual checkFillDeadline(fillDeadline) returns (bytes32) {
         return _fill(orderId, output, proposedSolver);
     }
 
     // -- Batch Solving -- //
 
     /**
-     * @dev This function aids to simplify solver selection from outputs fills.
-     * The first output of an order will determine which solver "wins" the order.
-     * This function fills the first output by proposedSolver. Otherwise reverts.
-     * Then it attempts to fill the remaining outputs. If they have already been filled, it skips.
-     * If any of the outputs fails to fill (because of tokens OR external call) the entire fill reverts.
-     *
-     * This function does not validate any part of the order but ensures multiple output orders
-     * can be filled in a safer manner.
+     * @notice Atomic batch fill interface for filling multiple outputs (non-idempotent operation).
+     * @dev This function implements atomic batch filling with solver competition semantics. Unlike the single
+     * `fill()` function, this is NOT idempotent - it will revert if the first output has already been filled
+     * by another solver. This ensures that only one solver can "win" the entire order.
+     * 
+     * **Behavioral differences from single fill():**
+     * - REVERTS with `AlreadyFilled()` if the first output is already filled (solver competition)
+     * - Subsequent outputs can be already filled (they are skipped)
+     * - All fills in the batch succeed or the entire transaction reverts (atomicity)
+     * 
+     * **Solver Selection Logic:**
+     * The first output determines which solver "wins" the entire order. This prevents solver conflicts
+     * and ensures consistent solver attribution across all outputs in a multi-output order.
      *
      * @param fillDeadline If the transaction is executed after this timestamp, the call will fail.
      * @param orderId Input chain order identifier. Is used as is, not checked for validity.
@@ -153,13 +185,13 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
         bytes32 orderId,
         MandateOutput[] calldata outputs,
         bytes32 proposedSolver
-    ) external {
-        if (fillDeadline < block.timestamp) revert FillDeadline();
-
+    ) external checkFillDeadline(fillDeadline) {
+        // Atomic check: first output must not be already filled (solver competition)
         bytes32 fillRecordHash = _fill(orderId, outputs[0], proposedSolver);
         bytes32 expectedFillRecordHash = _getFillRecordHash(proposedSolver, uint32(block.timestamp));
         if (fillRecordHash != expectedFillRecordHash) revert AlreadyFilled();
 
+        // Fill remaining outputs (can skip if already filled)
         uint256 numOutputs = outputs.length;
         for (uint256 i = 1; i < numOutputs; ++i) {
             _fill(orderId, outputs[i], proposedSolver);
