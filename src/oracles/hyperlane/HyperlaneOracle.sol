@@ -129,14 +129,62 @@ contract HyperlaneOracle is BaseOracle, MailboxClient, IMessageRecipient {
         address source,
         bytes[] calldata payloads
     ) public view returns (uint256) {
+        return _quoteGasPayment(
+            destinationDomain,
+            recipientOracle,
+            StandardHookMetadata.formatMetadata(0, gasLimit, msg.sender, customMetadata),
+            hook(),
+            source,
+            payloads
+        );
+    }
+
+    /**
+     * @notice Returns the gas payment required to dispatch a message to the given domain's oracle.
+     * @param destinationDomain The domain to which the message is sent.
+     * @param recipientOracle The address of the oracle on the destination domain.
+     * @param gasLimit Gas limit for the message.
+     * @param customMetadata Additional metadata to include in the standard hook metadata.
+     * @param customHook Custom hook to be used instead of the one already configured in this client.
+     * @param source Application that has payloads that are marked as valid.
+     * @param payloads List of payloads to broadcast.
+     * @return _gasPayment Payment computed by the registered InterchainGasPaymaster.
+     */
+    function quoteGasPayment(
+        uint32 destinationDomain,
+        address recipientOracle,
+        uint256 gasLimit,
+        bytes calldata customMetadata,
+        IPostDispatchHook customHook,
+        address source,
+        bytes[] calldata payloads
+    ) public view returns (uint256) {
+        return _quoteGasPayment(
+            destinationDomain,
+            recipientOracle,
+            StandardHookMetadata.formatMetadata(0, gasLimit, msg.sender, customMetadata),
+            customHook,
+            source,
+            payloads
+        );
+    }
+
+    function _quoteGasPayment(
+        uint32 destinationDomain,
+        address recipientOracle,
+        bytes memory hookMetadata,
+        IPostDispatchHook customHook,
+        address source,
+        bytes[] calldata payloads
+    ) internal view returns (uint256) {
         bytes memory message = MessageEncodingLib.encodeMessage(source.toIdentifier(), payloads);
 
         return MAILBOX.quoteDispatch(
             destinationDomain,
             recipientOracle.toIdentifier(),
             message,
-            StandardHookMetadata.formatMetadata(0, gasLimit, msg.sender, customMetadata),
-            hook()
+            hookMetadata,
+            customHook
         );
     }
 
