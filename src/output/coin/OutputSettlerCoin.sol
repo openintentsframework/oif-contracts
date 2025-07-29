@@ -16,6 +16,7 @@ import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
  */
 contract OutputSettlerCoin is BaseOutputSettler {
     error NotImplemented();
+    error ExclusiveTo(bytes32 solver);
 
     /**
      * @notice Computes a dutch auction slope.

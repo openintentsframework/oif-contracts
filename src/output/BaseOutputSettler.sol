@@ -42,7 +42,6 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
     error InvalidAttestation(bytes32 storedFillRecordHash, bytes32 givenFillRecordHash);
     error ZeroValue();
     error PayloadTooSmall();
-    error ExclusiveTo(bytes32 solver);
 
     /**
      * @dev Validates that the fill deadline has not passed.
