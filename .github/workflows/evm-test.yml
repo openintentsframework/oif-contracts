@@ -46,7 +46,7 @@ jobs:
 
       - name: Run Forge Coverage
         run: |
-          FOUNDRY_FUZZ_RUNS=256 forge coverage \
+          FOUNDRY_FUZZ_RUNS=256 forge coverage --ir-minimum \
             --no-match-coverage "(script|test|wormhole/external/wormhole|wormhole/external/callworm/GettersGetter)" \
             --report lcov
         id: coverage
