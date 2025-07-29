@@ -23,14 +23,21 @@ contract OutputInputSettler7683 is BaseOutputSettler {
 
     error NotImplemented();
 
-    function _fill(
-        bytes32 orderId,
+    /**
+     * @dev Virtual function for extensions to implement output resolution logic.
+     * @param output The given output to resolve.
+     * @param proposedSolver The proposed solver to check exclusivity against.
+     * @return amount The computed amount for the output.
+     */
+    function _resolveOutput(
         MandateOutput calldata output,
         bytes32 proposedSolver
-    ) internal override returns (bytes32 recordedSolver) {
-        uint256 amount = _getAmountMemory(output);
-        recordedSolver = _fillMemory(orderId, output, amount, proposedSolver);
-        if (recordedSolver != proposedSolver) revert AlreadyFilled();
+    ) internal pure override returns (uint256 amount) {
+        uint256 fulfillmentLength = output.context.length;
+        if (fulfillmentLength == 0) return output.amount;
+        bytes1 orderType = bytes1(output.context);
+        if (orderType == 0x00 && fulfillmentLength == 1) return output.amount;
+        revert NotImplemented();
     }
 
     function _fill(
@@ -47,8 +54,12 @@ contract OutputInputSettler7683 is BaseOutputSettler {
 
     }
 
-    function _getAmountMemory(
-        MandateOutput memory output
+    /**
+     * @dev Memory version of _resolveOutput for internal use with memory outputs
+     */
+    function _resolveOutputMemory(
+        MandateOutput memory output,
+        bytes32 proposedSolver
     ) internal pure returns (uint256 amount) {
         uint256 fulfillmentLength = output.context.length;
         if (fulfillmentLength == 0) return output.amount;
