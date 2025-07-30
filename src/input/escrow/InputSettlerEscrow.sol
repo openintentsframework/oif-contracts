@@ -214,7 +214,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         orderStatus[orderId] = OrderStatus.Deposited;
 
         // Collect input tokens
-        _openForWithAuthorization(orderId, order, signature);
+        _openForWithAuthorization(order, signature, orderId);
         emit Open(orderId, order);
     }
 
@@ -225,19 +225,17 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
      * @param _signature_ 712 signature of permit2 structure with Permit2Witness representing `order` signed by
      * `order.user`.
      */
-    function _openForWithAuthorization(bytes32 orderId, StandardOrder calldata order, bytes calldata _signature_) internal {
+    function _openForWithAuthorization(StandardOrder calldata order, bytes calldata _signature_, bytes32 orderId) internal {
         uint256 numInputs = order.inputs.length;
         if (numInputs == 1) {
             uint256[2] calldata input = order.inputs[0];
-            address token = EfficiencyLib.asSanitizedAddress(input[0]);
-            uint256 amount = input[1];
             // First trial using the entire signature. This is an optimisation that allows passing a smaller signature if only
             // 1 input has to be collected.
             // TODO: Convert try catch into assembly.
-            try IERC3009(token).receiveWithAuthorization({
+            try IERC3009(EfficiencyLib.asSanitizedAddress(input[0])).receiveWithAuthorization({
                 from: order.user,
                 to: address(this),
-                value: amount,
+                value: input[1],
                 validAfter: 0,
                 validBefore: order.fillDeadline,
                 nonce: orderId,
@@ -248,17 +246,15 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
                 // If an error occured, it could be because of a lot of reasons. One being the signature is actually abi.encoded as bytes[].
             }
         }
-        (bytes[] memory signatures) = abi.decode(_signature_, (bytes[]));
-        if (numInputs != signatures.length) revert SignatureAndInputsNotEqual();
+        uint256 numSignatures = BytesLib.getLengthOfBytesArray(_signature_);
+        if (numInputs != numSignatures) revert SignatureAndInputsNotEqual();
         for (uint256 i; i < numInputs; ++i) {
-            bytes memory signature = signatures[i];
+            bytes calldata signature = BytesLib.getBytesOfArray(_signature_, i);
             uint256[2] calldata input = order.inputs[i];
-            address token = EfficiencyLib.asSanitizedAddress(input[0]);
-            uint256 amount = input[1];
-            IERC3009(token).receiveWithAuthorization({
+            IERC3009(EfficiencyLib.asSanitizedAddress(input[0])).receiveWithAuthorization({
                 from: order.user,
                 to: address(this),
-                value: amount,
+                value: input[1],
                 validAfter: 0,
                 validBefore: order.fillDeadline,
                 nonce: orderId,
@@ -441,3 +437,4 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         );
     }
 }
+
