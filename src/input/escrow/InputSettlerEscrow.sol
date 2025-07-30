@@ -249,7 +249,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
             }) {
                 return;
             } catch {
-                // If an error occured, it could be because of a lot of reasons. One being the signature is actually
+                // If an error occurred, it could be because of a lot of reasons. One being the signature is actually
                 // abi.encoded as bytes[].
             }
         }
