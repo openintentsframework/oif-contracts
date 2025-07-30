@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import { console } from "forge-std/Console.sol";
 import { Test } from "forge-std/Test.sol";
 
 import { BytesLib } from "../../src/libs/BytesLib.sol";
@@ -22,7 +21,6 @@ contract BytesLibTest is Test {
 
     /// @notice Function for validation BytesLib.getBytesOfArray
     function getBytesOfArray(bytes calldata _bytes, bytes[] calldata bytesArray) external pure {
-        console.logBytes(_bytes);
         for (uint256 i; i < bytesArray.length; ++i) {
             bytes calldata bytesArraySlice = bytesArray[i];
             bytes calldata libArraySlice = BytesLib.getBytesOfArray(_bytes, i);
