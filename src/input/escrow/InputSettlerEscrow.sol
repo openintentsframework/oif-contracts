@@ -30,9 +30,9 @@ import { Permit2WitnessType } from "./Permit2WitnessType.sol";
  * Using Permit2 to call `::openFor` with, `openDeadline` is identical to `order.fillDeadline`. Before calling
  * `::openFor` ensure there is sufficient time to fill.
  *
- * If an order is finalised / claimed before `order.expires`, anyone may call `::refund` to send `order.inputs` to
- * `order.user`. Note that if this is not done, an order finalised after `order.expires` still claims `order.inputs` for
- * the solver.
+ * If an order has not been finalised / claimed before `order.expires`, anyone may call `::refund` to send
+ * `order.inputs` to `order.user`. Note that if this is not done, an order finalised after `order.expires` still claims
+ * `order.inputs` for the solver.
  */
 contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     using LibAddress for bytes32;

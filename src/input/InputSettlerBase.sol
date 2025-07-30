@@ -79,7 +79,7 @@ abstract contract InputSettlerBase is EIP712 {
         bytes32 destination
     ) internal pure {
         bool isZero;
-        // Check the rigthmost 20 bytes for 0. That is a strong check than the entire 32 bytes.
+        // Check if the rigthmost 20 bytes are not all 0. That is a stronger check than the entire 32 bytes.
         assembly ("memory-safe") {
             isZero := iszero(shl(96, destination))
         }
