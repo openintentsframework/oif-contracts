@@ -1,18 +1,21 @@
-# OIF: Intent-based cross-chain swaps
+# The Open Intents Framework (OIF): Permissionless Cross-chain Intents
 
-OIF is an intent-based cross-chain swap protocol. Users sign customizable intents describing the desired assets, delivery, validation, execution, etc which can be permissionlessly filled and delivered by solvers.
+The OIF is a full-stack developer framework that allows cross-chain intents to permissionlessly be deployed, solved, and discovered. Its comprised of two main pieces:
+- Smart contracts (this repo)
+- [Open-source solver](https://github.com/openintentsframework/oif-solvers)
 
-The goal of the OIF is to provide a base implementation that can be permissionlessly expanded while providing a foundation for more expressible intent that can be composed with OIF deployments.
+At a high-level, the OIF is a modular, intent-based cross-chain swap protocol. Users sign customizable intents describing the desired assets, delivery, validation, execution, etc., which can be permissionlessly filled and delivered by solvers.
 
+The goal of the OIF is to provide a base implementation that can be permissionlessly expanded while providing a foundation for more expressible intents that can be composed with OIF deployments.
 
-OIF is built with output-input separation. The goal is to fully separate the various system components and support different mechanisms of asset collection. Specifically, both Output First and Input Second flows are facilitated by resource locks and traditional escrows in a single system. 
+OIF is built with output-input separation. The goal is to fully separate the various system components and support different mechanisms of asset collection. Specifically, both Output First and Input Second flows are facilitated by [Resource Locks](https://docs.onebalance.io/concepts/resource-locks) and traditional escrows in a single system. 
 
 To achieve this, the system has been modularised:
 - **InputSettler**: Input collection contract on the input chain. Serves multiple proposes, but the main one is to finalise intents. This contracts is responsible for validating that the intents was filled on the validation chain(using the oracle) and unlocking input contracts to the filler.
 - **OutputSettler**: Output delivery contract on the output chain. Allows solvers to fill outputs of orders.
 - **Oracle**: Proof layer. Generally a messaging protocol but can be anything: Optimistic proofs, light clients, storage proofs, off-chain agent, etc. Generates proof of filled outputs.
 
-
+### System Diagram
 ![System Diagram](./high-level-0.svg)
 Refer to the SVG diagram chart.
 
@@ -33,7 +36,7 @@ Refer to the SVG diagram chart.
 
 Input Settlers are located in `src/input`. Currently, 2 Settlers are implemented:
 - `src/input/compact/InputSettlerCompact.sol`
-- `src/input/7683/InputSettler7683.sol`
+- `src/input/escrow/InputSettlerEscrow.sol`
 
 To implement a new lock or a different order type, the following considerations are required to make it compatible with the rest of the system:
 - **OutputSettler**: To be compatible with the `MandateOutput` OutputSettlers, implement `MandateOutput` described in `src/input/types/MandateOutputType.sol` using the encoding scheme from `src/libs/MandateOutputEncodingLib.sol`.
@@ -56,7 +59,7 @@ The OIF supports underwriting. Within the contracts, this is described as order 
 1. To speed up solver capital rotation by borrowing assets from less risk-adverse solvers.
 2. In case of the user acting as the solver, they can receive their assets faster providing an expedited and better user experience.
 
-When implementing a new Settler, you may inherit `src/input/BaseInputSettler.sol` to facilitate order purchasing.
+When implementing a new Settler, you may inherit `src/input/InputSettlerPurchase.sol` to facilitate order purchasing.
 
 ### Inputs vs Outputs
 
