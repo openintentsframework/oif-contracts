@@ -9,6 +9,7 @@ import { Output, ResolvedCrossChainOrder } from "../../interfaces/IERC7683.sol";
 import { IInputSettlerEscrow } from "../../interfaces/IInputSettlerEscrow.sol";
 import { IOIFCallback } from "../../interfaces/IOIFCallback.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
+import { IERC3009 } from "../../interfaces/IERC3009.sol";
 
 import { BytesLib } from "../../libs/BytesLib.sol";
 import { IsContractLib } from "../../libs/IsContractLib.sol";
@@ -40,6 +41,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     error InvalidOrderStatus();
     error OrderIdMismatch(bytes32 provided, bytes32 computed);
     error InputTokenHasDirtyBits();
+    error SignatureAndInputsNotEqual();
 
     event Open(bytes32 indexed orderId, StandardOrder order);
     event Refunded(bytes32 indexed orderId);
@@ -191,6 +193,78 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
             Permit2WitnessType.PERMIT2_PERMIT2_TYPESTRING,
             signature
         );
+    }
+
+    // TODO: Merge open for functions
+    function openForWithAuthorization(
+        StandardOrder calldata order,
+        bytes calldata signature,
+        bytes calldata /* originFillerData */
+    ) external {
+        // Validate the order structure
+        _validateInputChain(order.originChainId);
+        // _validateTimestampHasNotPassed(order.openDeadline);
+        _validateTimestampHasNotPassed(order.fillDeadline);
+        _validateTimestampHasNotPassed(order.expires);
+
+        bytes32 orderId = _orderIdentifier(order);
+        if (orderStatus[orderId] != OrderStatus.None) revert InvalidOrderStatus();
+        // Mark order as deposited. If we can't make the deposit, we will
+        // revert and it will unmark it. This acts as a reentry check.
+        orderStatus[orderId] = OrderStatus.Deposited;
+
+        // Collect input tokens
+        _openForWithAuthorization(orderId, order, signature);
+        emit Open(orderId, order);
+    }
+
+    /**
+     * @notice Helper function for using permit2 to collect assets represented by a StandardOrder.
+     * @dev For the `receiveWithAuthorization` call, the nonce is set as the orderId to encode the proper order for the authorization.
+     * @param order StandardOrder representing the intent.
+     * @param _signature_ 712 signature of permit2 structure with Permit2Witness representing `order` signed by
+     * `order.user`.
+     */
+    function _openForWithAuthorization(bytes32 orderId, StandardOrder calldata order, bytes calldata _signature_) internal {
+        uint256 numInputs = order.inputs.length;
+        if (numInputs == 1) {
+            uint256[2] calldata input = order.inputs[0];
+            address token = EfficiencyLib.asSanitizedAddress(input[0]);
+            uint256 amount = input[1];
+            // First trial using the entire signature. This is an optimisation that allows passing a smaller signature if only
+            // 1 input has to be collected.
+            // TODO: Convert try catch into assembly.
+            try IERC3009(token).receiveWithAuthorization({
+                from: order.user,
+                to: address(this),
+                value: amount,
+                validAfter: 0,
+                validBefore: order.fillDeadline,
+                nonce: orderId,
+                signature: _signature_
+            }) {
+                return;
+            } catch {
+                // If an error occured, it could be because of a lot of reasons. One being the signature is actually abi.encoded as bytes[].
+            }
+        }
+        (bytes[] memory signatures) = abi.decode(_signature_, (bytes[]));
+        if (numInputs != signatures.length) revert SignatureAndInputsNotEqual();
+        for (uint256 i; i < numInputs; ++i) {
+            bytes memory signature = signatures[i];
+            uint256[2] calldata input = order.inputs[i];
+            address token = EfficiencyLib.asSanitizedAddress(input[0]);
+            uint256 amount = input[1];
+            IERC3009(token).receiveWithAuthorization({
+                from: order.user,
+                to: address(this),
+                value: amount,
+                validAfter: 0,
+                validBefore: order.fillDeadline,
+                nonce: orderId,
+                signature: signature
+            });
+        }
     }
 
     // --- Refund --- //
