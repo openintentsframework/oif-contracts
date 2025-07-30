@@ -14,7 +14,7 @@ import { IOracle } from "../../interfaces/IOracle.sol";
 import { BytesLib } from "../../libs/BytesLib.sol";
 import { MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 
-import { BaseInputSettler } from "../BaseInputSettler.sol";
+import { InputSettlerBase } from "../InputSettlerBase.sol";
 import { MandateOutput } from "../types/MandateOutputType.sol";
 
 import { MultichainCompactOrderType, MultichainOrderComponent } from "../types/MultichainCompactOrderType.sol";
@@ -33,14 +33,8 @@ import { OrderPurchase } from "../types/OrderPurchaseType.sol";
  *
  * The contract is intended to be entirely ownerless, permissionlessly deployable, and unstoppable.
  */
-contract InputSettlerMultiCompact is BaseInputSettler {
+contract InputSettlerMultiCompact is InputSettlerBase {
     error UserCannotBeSettler();
-    error NotOrderOwner();
-    error NoDestination();
-    error InvalidTimestampLength();
-    error OrderIdMismatch(bytes32 provided, bytes32 computed);
-    error FilledTooLate(uint32 expected, uint32 actual);
-    error WrongChainId();
 
     TheCompact public immutable COMPACT;
 
@@ -76,69 +70,7 @@ contract InputSettlerMultiCompact is BaseInputSettler {
         return _orderIdentifier(order);
     }
 
-    // --- Output Proofs --- //
-
-    function _proofPayloadHash(
-        bytes32 orderId,
-        bytes32 solver,
-        uint32 timestamp,
-        MandateOutput calldata output
-    ) internal pure returns (bytes32 outputHash) {
-        return keccak256(MandateOutputEncodingLib.encodeFillDescription(solver, orderId, timestamp, output));
-    }
-
-    /**
-     * @notice Check if a series of outputs have been proven.
-     * @dev This function returns true if the order contains no outputs.
-     * That means any order that has no outputs specified can be claimed.
-     */
-    function _validateFills(
-        MultichainOrderComponent calldata order,
-        bytes32 orderId,
-        bytes32[] memory solvers,
-        uint32[] calldata timestamps
-    ) internal view {
-        MandateOutput[] calldata MandateOutputs = order.outputs;
-
-        uint256 numOutputs = MandateOutputs.length;
-        uint256 numTimestamps = timestamps.length;
-        if (numTimestamps != numOutputs) revert InvalidTimestampLength();
-
-        uint32 fillDeadline = order.fillDeadline;
-        bytes memory proofSeries = new bytes(32 * 4 * numOutputs);
-        for (uint256 i; i < numOutputs; ++i) {
-            uint32 outputFilledAt = timestamps[i];
-            if (fillDeadline < outputFilledAt) revert FilledTooLate(fillDeadline, outputFilledAt);
-
-            MandateOutput calldata output = MandateOutputs[i];
-            bytes32 payloadHash = _proofPayloadHash(orderId, solvers[i], outputFilledAt, output);
-
-            uint256 chainId = output.chainId;
-            bytes32 outputOracle = output.oracle;
-            bytes32 outputSettler = output.settler;
-            assembly ("memory-safe") {
-                let offset := add(add(proofSeries, 0x20), mul(i, 0x80))
-                mstore(offset, chainId)
-                mstore(add(offset, 0x20), outputOracle)
-                mstore(add(offset, 0x40), outputSettler)
-                mstore(add(offset, 0x60), payloadHash)
-            }
-        }
-        IOracle(order.localOracle).efficientRequireProven(proofSeries);
-    }
-
     // --- Finalise Orders --- //
-
-    /**
-     * @notice Enforces that the caller is the order owner.
-     * @dev Only reads the rightmost 20 bytes to allow solvers to opt-in to Compact transfers instead of withdrawals.
-     * @param orderOwner The order owner. The leftmost 12 bytes are not read.
-     */
-    function _orderOwnerIsCaller(
-        bytes32 orderOwner
-    ) internal view {
-        if (EfficiencyLib.asSanitizedAddress(uint256(orderOwner)) != msg.sender) revert NotOrderOwner();
-    }
 
     /**
      * @notice Finalise an order, paying the inputs to the solver.
@@ -181,12 +113,13 @@ contract InputSettlerMultiCompact is BaseInputSettler {
         bytes32 destination,
         bytes calldata call
     ) external virtual {
-        if (destination == bytes32(0)) revert NoDestination();
-        _orderOwnerIsCaller(solvers[0]);
+        _validateDestination(destination);
+
+        _validateIsCaller(solvers[0]);
 
         bytes32 orderId = _finalise(order, signatures, solvers[0], destination);
 
-        _validateFills(order, orderId, solvers, timestamps);
+        _validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, timestamps, solvers);
 
         if (call.length > 0) {
             IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
@@ -224,7 +157,7 @@ contract InputSettlerMultiCompact is BaseInputSettler {
             orderId, EfficiencyLib.asSanitizedAddress(uint256(solvers[0])), destination, call, orderOwnerSignature
         );
 
-        _validateFills(order, orderId, solvers, timestamps);
+        _validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, timestamps, solvers);
 
         if (call.length > 0) {
             IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);

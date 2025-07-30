@@ -32,6 +32,7 @@ abstract contract InputSettlerBase is EIP712 {
     error FilledTooLate(uint32 expected, uint32 actual);
     error InvalidTimestampLength();
     error NoDestination();
+    error UnexpectedCaller(bytes32 expected);
 
     event Finalised(bytes32 indexed orderId, bytes32 solver, bytes32 destination);
 
@@ -84,6 +85,17 @@ abstract contract InputSettlerBase is EIP712 {
             isZero := iszero(shl(96, destination))
         }
         if (isZero) revert NoDestination();
+    }
+    
+    /**
+     * @notice Enforces a specific caller
+     * @dev Only reads the rightmost 20 bytes to allow providing additional destination context
+     * @param expectedCaller Expected caller. The leftmost 12 bytes are not read.
+     */
+    function _validateIsCaller(
+        bytes32 expectedCaller
+    ) internal view {
+        if (EfficiencyLib.asSanitizedAddress(uint256(expectedCaller)) != msg.sender) revert UnexpectedCaller(expectedCaller);
     }
 
     // --- Timestamp Helpers --- //

@@ -8,13 +8,13 @@ import {
 } from "../../../src/input/types/MultichainOrderComponentType.sol";
 import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
 import { OutputSettlerCoin } from "../../../src/output/coin/OutputSettlerCoin.sol";
+import {InputSettlerMultichainEscrow} from "../../../src/input/escrow/InputSettlerMultichainEscrow.sol";
 
 import { AlwaysYesOracle } from "../../mocks/AlwaysYesOracle.sol";
 import { MockERC20 } from "../../mocks/MockERC20.sol";
 
 import { LibAddress } from "../../../src/libs/LibAddress.sol";
 import {
-    InputSettlerMultichainEscrowHarness,
     InputSettlerMultichainEscrowTestBase
 } from "./InputSettlerMultichainEscrow.base.t.sol";
 
@@ -30,74 +30,6 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
     uint64 constant MAX_GOVERNANCE_FEE = 10 ** 18 * 0.05; // 10%
 
     address owner;
-
-    // -- Units Tests -- //
-
-    error InvalidProofSeries();
-
-    mapping(bytes proofSeries => bool valid) _validProofSeries;
-
-    function efficientRequireProven(
-        bytes calldata proofSeries
-    ) external view {
-        if (!_validProofSeries[proofSeries]) revert InvalidProofSeries();
-    }
-
-    struct OrderFulfillmentDescription {
-        uint32 timestamp;
-        MandateOutput MandateOutput;
-    }
-
-    function test_validate_fills_one_solver(
-        bytes32 solverIdentifier,
-        bytes32 orderId,
-        OrderFulfillmentDescription[] calldata orderFulfillmentDescription
-    ) external {
-        vm.assume(orderFulfillmentDescription.length > 0);
-
-        address localOracle = address(this);
-
-        bytes memory expectedProofPayload = hex"";
-        uint32[] memory timestamps = new uint32[](orderFulfillmentDescription.length);
-        MandateOutput[] memory MandateOutputs = new MandateOutput[](orderFulfillmentDescription.length);
-        bytes32[] memory solvers = new bytes32[](orderFulfillmentDescription.length);
-        for (uint256 i; i < orderFulfillmentDescription.length; ++i) {
-            solvers[i] = solverIdentifier;
-            timestamps[i] = orderFulfillmentDescription[i].timestamp;
-            MandateOutputs[i] = orderFulfillmentDescription[i].MandateOutput;
-
-            expectedProofPayload = abi.encodePacked(
-                expectedProofPayload,
-                MandateOutputs[i].chainId,
-                MandateOutputs[i].oracle,
-                MandateOutputs[i].settler,
-                keccak256(
-                    MandateOutputEncodingLib.encodeFillDescriptionM(
-                        solverIdentifier, orderId, timestamps[i], MandateOutputs[i]
-                    )
-                )
-            );
-        }
-        _validProofSeries[expectedProofPayload] = true;
-
-        InputSettlerMultichainEscrowHarness(inputSettlerMultichainEscrow).validateFills(
-            MultichainOrderComponent({
-                user: address(0),
-                nonce: 0,
-                chainIdField: block.chainid,
-                chainIndex: 0,
-                expires: type(uint32).max,
-                fillDeadline: type(uint32).max,
-                localOracle: localOracle,
-                inputs: new uint256[2][](0),
-                outputs: MandateOutputs,
-                additionalChains: new bytes32[](0)
-            }),
-            orderId,
-            solvers,
-            timestamps
-        );
-    }
 
     // This test works slightly differently to other tests. We will be solving the entirety of the test, then opening
     // and finalising the test, rolling back the chain, and doing it again. This is to showcase that the funds can be
@@ -132,7 +64,7 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         MandateOutput[] memory outputs = new MandateOutput[](1);
         outputs[0] = MandateOutput({
             settler: address(outputSettlerCoin).toIdentifier(),
-            oracle: address(alwaysYesOracle).toIdentifier(),
+            oracle: address(wormholeOracle).toIdentifier(),
             chainId: 3,
             token: address(token).toIdentifier(),
             amount: amount,
@@ -147,7 +79,7 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
             chainIndex: 0,
             fillDeadline: type(uint32).max,
             expires: type(uint32).max,
-            localOracle: alwaysYesOracle,
+            localOracle: address(wormholeOracle),
             inputs: new uint256[2][](0), // Shall be replaced before execution
             outputs: outputs,
             additionalChains: new bytes32[](0) // Shall be replaced before execution
@@ -159,13 +91,13 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         order.chainIndex = 0;
         order.inputs = inputs0;
         order.additionalChains = additionalChains0;
-        bytes32 orderId = InputSettlerMultichainEscrowHarness(inputSettlerMultichainEscrow).orderIdentifier(order);
+        bytes32 orderId = InputSettlerMultichainEscrow(inputSettlerMultichainEscrow).orderIdentifier(order);
         vm.chainId(3);
         order.chainIdField = 3;
         order.chainIndex = 1;
         order.inputs = inputs1;
         order.additionalChains = additionalChains1;
-        bytes32 orderId1 = InputSettlerMultichainEscrowHarness(inputSettlerMultichainEscrow).orderIdentifier(order);
+        bytes32 orderId1 = InputSettlerMultichainEscrow(inputSettlerMultichainEscrow).orderIdentifier(order);
         assertEq(orderId, orderId1, "OrderId mismatch");
 
         vm.chainId(0);
@@ -186,9 +118,9 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         assertEq(token.balanceOf(solver), 0);
 
         bytes[] memory payloads = new bytes[](1);
-        payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionM(
+        payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
             solver.toIdentifier(),
-            InputSettlerMultichainEscrowHarness(inputSettlerMultichainEscrow).orderIdentifier(order),
+            orderId,
             uint32(block.timestamp),
             outputs[0]
         );
@@ -214,7 +146,7 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         order.inputs = inputs0;
         order.additionalChains = additionalChains0;
         vm.prank(swapper);
-        InputSettlerMultichainEscrowHarness(inputSettlerMultichainEscrow).open(order);
+        InputSettlerMultichainEscrow(inputSettlerMultichainEscrow).open(order);
 
         assertEq(anotherToken.balanceOf(solver), 0);
         assertEq(anotherToken.balanceOf(inputSettlerMultichainEscrow), 0);
@@ -222,7 +154,7 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         assertEq(token.balanceOf(inputSettlerMultichainEscrow), inputs0[0][1]);
 
         vm.prank(solver);
-        InputSettlerMultichainEscrowHarness(inputSettlerMultichainEscrow).finalise(
+        InputSettlerMultichainEscrow(inputSettlerMultichainEscrow).finalise(
             order, timestamps, solvers, solver.toIdentifier(), hex""
         );
 
@@ -239,7 +171,7 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         order.inputs = inputs1;
         order.additionalChains = additionalChains1;
         vm.prank(swapper);
-        InputSettlerMultichainEscrowHarness(inputSettlerMultichainEscrow).open(order);
+        InputSettlerMultichainEscrow(inputSettlerMultichainEscrow).open(order);
 
         assertEq(token.balanceOf(solver), 0);
         assertEq(token.balanceOf(inputSettlerMultichainEscrow), 0);
@@ -247,7 +179,7 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         assertEq(anotherToken.balanceOf(inputSettlerMultichainEscrow), inputs1[0][1]);
 
         vm.prank(solver);
-        InputSettlerMultichainEscrowHarness(inputSettlerMultichainEscrow).finalise(
+        InputSettlerMultichainEscrow(inputSettlerMultichainEscrow).finalise(
             order, timestamps, solvers, solver.toIdentifier(), hex""
         );
 

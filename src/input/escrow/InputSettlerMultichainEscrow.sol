@@ -14,18 +14,18 @@ import {
     Output,
     ResolvedCrossChainOrder
 } from "../../interfaces/IERC7683.sol";
-
-import { IInputSettler7683 } from "../../interfaces/IInputSettler7683.sol";
+import { IInputSettlerEscrow } from "../../interfaces/IInputSettlerEscrow.sol";
 import { IOIFCallback } from "../../interfaces/IOIFCallback.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
 import { BytesLib } from "../../libs/BytesLib.sol";
 import { IsContractLib } from "../../libs/IsContractLib.sol";
 import { MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 import { MandateOutput } from "../types/MandateOutputType.sol";
-
-import { BaseInputSettler } from "../BaseInputSettler.sol";
-
+import { LibAddress } from "../../libs/LibAddress.sol";
 import { MultichainOrderComponent, MultichainOrderComponentType } from "../types/MultichainOrderComponentType.sol";
+
+import { InputSettlerBase } from "../InputSettlerBase.sol";
+
 
 /**
  * @title OIF Input Settler using supporting multichain escrows.
@@ -33,14 +33,12 @@ import { MultichainOrderComponent, MultichainOrderComponentType } from "../types
  *
  * This contract does not support fee on transfer tokens.
  */
-contract InputSettlerMultichainEscrow is BaseInputSettler {
-    error NotOrderOwner();
-    error DeadlinePassed();
-    error NoDestination();
+contract InputSettlerMultichainEscrow is InputSettlerBase {
+    using LibAddress for bytes32;
+
     error InvalidOrderStatus();
-    error InvalidTimestampLength();
-    error FilledTooLate(uint32 expected, uint32 actual);
-    error WrongChain(uint256 expected, uint256 actual);
+
+    event Refunded(bytes32 indexed orderId);
 
     enum OrderStatus {
         None,
@@ -49,7 +47,7 @@ contract InputSettlerMultichainEscrow is BaseInputSettler {
         Refunded
     }
 
-    mapping(bytes32 orderId => OrderStatus) _deposited;
+    mapping(bytes32 orderId => OrderStatus) public orderStatus;
 
     // Address of the Permit2 contract.
     ISignatureTransfer constant PERMIT2 = ISignatureTransfer(0x000000000022D473030F116dDEE9F6B43aC78BA3);
@@ -65,48 +63,33 @@ contract InputSettlerMultichainEscrow is BaseInputSettler {
         version = "1";
     }
 
-    // Generic order identifier
-    function orderIdentifier(
+    // --- Generic order identifier --- //
+    function _orderIdentifier(
         MultichainOrderComponent calldata order
-    ) public view returns (bytes32) {
+    ) internal view returns (bytes32) {
         return MultichainOrderComponentType.orderIdentifier(order);
     }
 
-    /**
-     * @notice Checks that this is the right chain for the order.
-     * @param chainId Expected chainId for order. Will be checked against block.chainid
-     */
-    function _isThisChain(
-        uint256 chainId
-    ) internal view {
-        if (chainId != block.chainid) revert WrongChain(chainId, block.chainid);
-    }
-
-    /**
-     * @notice Checks that a timestamp has not expired.
-     * @param timestamp The timestamp to validate that it is not less than block.timestamp
-     */
-    function _validateDeadline(
-        uint256 timestamp
-    ) internal view {
-        if (block.timestamp > timestamp) revert DeadlinePassed();
+    function orderIdentifier(
+        MultichainOrderComponent calldata order
+    ) external view returns (bytes32) {
+        return _orderIdentifier(order);
     }
 
     function open(
-        // TODO: bytes.
         MultichainOrderComponent calldata order
     ) external {
-        // Validate the ERC7683 structure.
-        _validateDeadline(order.fillDeadline);
-        _validateDeadline(order.expires);
+        // Validate the order structure.
+        _validateTimestampHasNotPassed(order.fillDeadline);
+        _validateTimestampHasNotPassed(order.expires);
+        _validateInputChain(order.chainIdField);
 
-        _isThisChain(order.chainIdField);
-        bytes32 orderId = orderIdentifier(order);
+        bytes32 orderId = _orderIdentifier(order);
 
-        if (_deposited[orderId] != OrderStatus.None) revert InvalidOrderStatus();
+        if (orderStatus[orderId] != OrderStatus.None) revert InvalidOrderStatus();
         // Mark order as deposited. If we can't make the deposit, we will
         // revert and it will unmark it. This acts as a local-reentry check.
-        _deposited[orderId] = OrderStatus.Deposited;
+        orderStatus[orderId] = OrderStatus.Deposited;
 
         // Collect input tokens.
         uint256[2][] calldata inputs = order.inputs;
@@ -122,69 +105,26 @@ contract InputSettlerMultichainEscrow is BaseInputSettler {
         //emit Open(orderId, _resolve(uint32(0), orderId, compactOrder));
     }
 
-    // --- Output Proofs --- //
-
-    function _proofPayloadHash(
-        bytes32 orderId,
-        bytes32 solver,
-        uint32 timestamp,
-        MandateOutput calldata output
-    ) internal pure returns (bytes32 outputHash) {
-        return keccak256(MandateOutputEncodingLib.encodeFillDescription(solver, orderId, timestamp, output));
-    }
+    // --- Refund --- //
 
     /**
-     * @notice Check if a series of outputs have been proven.
-     * @dev This function returns true if the order contains no outputs.
-     * That means any order that has no outputs specified can be claimed.
+     * @notice Refunds an order that has not been finalised before it expired. This order may have been filled but
+     * finalise has not been called yet.
+     * @param order StandardOrder description of the intent.
      */
-    function _validateFills(
-        MultichainOrderComponent calldata order,
-        bytes32 orderId,
-        bytes32[] memory solvers,
-        uint32[] calldata timestamps
-    ) internal view {
-        MandateOutput[] calldata MandateOutputs = order.outputs;
+    function refund(
+        MultichainOrderComponent calldata order
+    ) external {
+        _validateInputChain(order.chainIdField);
+        _validateTimestampHasPassed(order.expires);
 
-        uint256 numOutputs = MandateOutputs.length;
-        uint256 numTimestamps = timestamps.length;
-        if (numTimestamps != numOutputs) revert InvalidTimestampLength();
-
-        uint32 fillDeadline = order.fillDeadline;
-        bytes memory proofSeries = new bytes(32 * 4 * numOutputs);
-        for (uint256 i; i < numOutputs; ++i) {
-            uint32 outputFilledAt = timestamps[i];
-            if (fillDeadline < outputFilledAt) revert FilledTooLate(fillDeadline, outputFilledAt);
-
-            MandateOutput calldata output = MandateOutputs[i];
-            bytes32 payloadHash = _proofPayloadHash(orderId, solvers[i], outputFilledAt, output);
-
-            uint256 chainId = output.chainId;
-            bytes32 outputOracle = output.oracle;
-            bytes32 outputSettler = output.settler;
-            assembly ("memory-safe") {
-                let offset := add(add(proofSeries, 0x20), mul(i, 0x80))
-                mstore(offset, chainId)
-                mstore(add(offset, 0x20), outputOracle)
-                mstore(add(offset, 0x40), outputSettler)
-                mstore(add(offset, 0x60), payloadHash)
-            }
-        }
-        IOracle(order.localOracle).efficientRequireProven(proofSeries);
+        bytes32 orderId = _orderIdentifier(order);
+        _resolveLock(orderId, order.inputs, order.user, OrderStatus.Refunded);
+        emit Refunded(orderId);
     }
+
 
     // --- Finalise Orders --- //
-
-    /**
-     * @notice Enforces that the caller is the order owner.
-     * @dev Only reads the rightmost 20 bytes to allow solvers to opt-in to Compact transfers instead of withdrawals.
-     * @param orderOwner The order owner. The leftmost 12 bytes are not read.
-     */
-    function _orderOwnerIsCaller(
-        bytes32 orderOwner
-    ) internal view {
-        if (EfficiencyLib.asSanitizedAddress(uint256(orderOwner)) != msg.sender) revert NotOrderOwner();
-    }
 
     /**
      * @notice Finalise an order, paying the inputs to the solver.
@@ -199,7 +139,7 @@ contract InputSettlerMultichainEscrow is BaseInputSettler {
         bytes32 solver,
         bytes32 destination
     ) internal virtual {
-        _resolveLock(orderId, order.inputs, EfficiencyLib.asSanitizedAddress(uint256(destination)));
+        _resolveLock(orderId, order.inputs, destination.fromIdentifier(), OrderStatus.Claimed);
         emit Finalised(orderId, solver, destination);
     }
 
@@ -220,21 +160,19 @@ contract InputSettlerMultichainEscrow is BaseInputSettler {
         bytes32 destination,
         bytes calldata call
     ) external virtual {
-        if (destination == bytes32(0)) revert NoDestination();
+        _validateDestination(destination);
+        _validateInputChain(order.chainIdField);
 
-        _isThisChain(order.chainIdField);
-        bytes32 orderId = orderIdentifier(order);
-        bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
-        _orderOwnerIsCaller(orderOwner);
+        bytes32 orderId = _orderIdentifier(order);
+        _validateIsCaller(solvers[0]);
 
-        _validateFills(order, orderId, solvers, timestamps);
+        _validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, timestamps, solvers);
 
         _finalise(order, orderId, solvers[0], destination);
 
-        // TODO:
-        // if (call.length > 0) {
-        //     IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
-        // }
+        if (call.length > 0) {
+            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
+        }
     }
 
     /**
@@ -256,47 +194,51 @@ contract InputSettlerMultichainEscrow is BaseInputSettler {
         bytes calldata call,
         bytes calldata orderOwnerSignature
     ) external virtual {
-        if (destination == bytes32(0)) revert NoDestination();
+        _validateDestination(destination);
+        _validateInputChain(order.chainIdField);
 
-        _isThisChain(order.chainIdField);
-        bytes32 orderId = orderIdentifier(order);
-        bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
+        bytes32 orderId = _orderIdentifier(order);
 
         // Validate the external claimant with signature
         _allowExternalClaimant(
-            orderId, EfficiencyLib.asSanitizedAddress(uint256(orderOwner)), destination, call, orderOwnerSignature
+            orderId, solvers[0].fromIdentifier(), destination, call, orderOwnerSignature
         );
 
-        _validateFills(order, orderId, solvers, timestamps);
+        _validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, timestamps, solvers);
 
         _finalise(order, orderId, solvers[0], destination);
 
-        // if (call.length > 0) {
-        //     IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
-        // }
+        if (call.length > 0) {
+            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
+        }
     }
 
     //--- The Compact & Resource Locks ---//
 
     /**
-     * @dev This function employs a local reentry guard: we check the order status and then we update it afterwards. This
-     * is an important check as it is indeed to process external ERC20 transfers.
+     * @dev This function employs a local reentry guard: we check the order status and then we update it afterwards.
+     * This is an important check as it is indeed to process external ERC20 transfers.
+     * @param newStatus specifies the new status to set the order to. Should never be OrderStatus.Deposited.
      */
-    function _resolveLock(bytes32 orderId, uint256[2][] calldata inputs, address destination) internal virtual {
+    function _resolveLock(
+        bytes32 orderId,
+        uint256[2][] calldata inputs,
+        address destination,
+        OrderStatus newStatus
+    ) internal virtual {
         // Check the order status:
-        if (_deposited[orderId] != OrderStatus.Deposited) revert InvalidOrderStatus();
+        if (orderStatus[orderId] != OrderStatus.Deposited) revert InvalidOrderStatus();
         // Mark order as deposited. If we can't make the deposit, we will
         // revert and it will unmark it. This acts as a reentry check.
-        _deposited[orderId] = OrderStatus.Claimed;
+        orderStatus[orderId] = newStatus;
 
         // We have now ensured that this point can only be reached once. We can now process the asset delivery.
         uint256 numInputs = inputs.length;
         for (uint256 i; i < numInputs; ++i) {
             uint256[2] calldata input = inputs[i];
-            // Check if the input is for this chain.
-
             address token = EfficiencyLib.asSanitizedAddress(input[0]);
             uint256 amount = input[1];
+
             SafeTransferLib.safeTransfer(token, destination, amount);
         }
     }

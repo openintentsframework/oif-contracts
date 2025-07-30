@@ -28,17 +28,6 @@ interface EIP712 {
     function DOMAIN_SEPARATOR() external view returns (bytes32);
 }
 
-contract InputSettlerMultichainEscrowHarness is InputSettlerMultichainEscrow {
-    function validateFills(
-        MultichainOrderComponent calldata order,
-        bytes32 orderId,
-        bytes32[] calldata solvers,
-        uint32[] calldata timestamps
-    ) external view {
-        _validateFills(order, orderId, solvers, timestamps);
-    }
-}
-
 event PackagePublished(uint32 nonce, bytes payload, uint8 consistencyLevel);
 
 contract ExportedMessages is Messages, Setters {
@@ -76,7 +65,7 @@ contract InputSettlerMultichainEscrowTestBase is Test {
     MockERC20 anotherToken;
 
     function setUp() public virtual {
-        inputSettlerMultichainEscrow = address(new InputSettlerMultichainEscrowHarness());
+        inputSettlerMultichainEscrow = address(new InputSettlerMultichainEscrow());
         outputSettlerCoin = new OutputSettlerCoin();
         alwaysYesOracle = address(new AlwaysYesOracle());
 
