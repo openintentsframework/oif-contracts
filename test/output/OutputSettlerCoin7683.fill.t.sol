@@ -9,8 +9,6 @@ import { OutputSettlerCoin } from "../../src/output/coin/OutputSettlerCoin.sol";
 import { MockCallbackExecutor } from "../mocks/MockCallbackExecutor.sol";
 import { MockERC20 } from "../mocks/MockERC20.sol";
 
-import { console } from "forge-std/console.sol";
-
 contract OutputSettlerCoinTestFill is Test {
     error ZeroValue();
     error WrongChain(uint256 expected, uint256 actual);

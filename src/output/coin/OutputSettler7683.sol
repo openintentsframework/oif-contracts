@@ -11,14 +11,12 @@ import { OutputVerificationLib } from "../../libs/OutputVerificationLib.sol";
 
 import { BaseOutputSettler } from "../BaseOutputSettler.sol";
 
-import { console } from "forge-std/console.sol";
-
 /**
  * @dev Solvers use Oracles to pay outputs. This allows us to record the payment.
  * Tokens never touch this contract but goes directly from solver to user.
  * This output settler contract only supports limit orders.
  */
-contract OutputInputSettlerEscrow is BaseOutputSettler, IDestinationSettler {
+contract OutputInputSettlerEscrow is BaseOutputSettler {
     using LibAddress for address;
 
     error NotImplemented();

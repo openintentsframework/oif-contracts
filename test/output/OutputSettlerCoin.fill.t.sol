@@ -8,7 +8,6 @@ import { OutputSettlerCoin } from "../../src/output/coin/OutputSettlerCoin.sol";
 
 import { MockCallbackExecutor } from "../mocks/MockCallbackExecutor.sol";
 import { MockERC20 } from "../mocks/MockERC20.sol";
-import { console } from "forge-std/console.sol";
 
 contract OutputSettlerCoinTestFill is Test {
     error ZeroValue();
@@ -233,9 +232,6 @@ contract OutputSettlerCoinTestFill is Test {
         outputToken.mint(sender, finalAmount);
         vm.prank(sender);
         outputToken.approve(outputSettlerCoinAddress, finalAmount);
-
-        console.log("amount sent", amount);
-        console.log("final amount expected", finalAmount);
 
         bytes memory context =
             abi.encodePacked(bytes1(0x01), bytes4(uint32(startTime)), bytes4(uint32(stopTime)), bytes32(uint256(slope)));
