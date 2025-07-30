@@ -96,11 +96,10 @@ library MultichainOrderComponentType {
      * checked elsewhere; using it without this check occurring elsewhere can result in
      * erroneous hash values.
      */
-    function hashInputs(uint256 chainId, uint256[2][] calldata idsAndAmounts)
-        internal
-        pure
-        returns (bytes32 inputHash)
-    {
+    function hashInputs(
+        uint256 chainId,
+        uint256[2][] calldata idsAndAmounts
+    ) internal pure returns (bytes32 inputHash) {
         assembly ("memory-safe") {
             // Retrieve the free memory pointer; memory will be left dirtied.
             let ptr := mload(0x40)
