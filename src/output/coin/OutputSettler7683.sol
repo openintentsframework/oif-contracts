@@ -18,7 +18,7 @@ import { console } from "forge-std/console.sol";
  * Tokens never touch this contract but goes directly from solver to user.
  * This output settler contract only supports limit orders.
  */
-contract OutputInputSettler7683 is BaseOutputSettler {
+contract OutputInputSettlerEscrow is BaseOutputSettler, IDestinationSettler {
     using LibAddress for address;
 
     error NotImplemented();
