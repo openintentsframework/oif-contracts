@@ -165,14 +165,14 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
         return _fill(orderId, output, proposedSolver);
     }
 
-    function fill(bytes32 orderId, bytes calldata originData, bytes calldata fillerData) external {
+    function fill(bytes32 orderId, bytes calldata originData, bytes calldata fillerData) external returns (bytes32) {
         // TODO: handle fill deadline
         bytes32 proposedSolver;
         assembly ("memory-safe") {
             proposedSolver := calldataload(fillerData.offset)
         }
 
-        _fill(orderId, originData, proposedSolver);
+        return _fill(orderId, originData, proposedSolver);
     }
 
     function _parseOutput(
