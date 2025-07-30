@@ -54,12 +54,13 @@ library MandateOutputType {
         MandateOutput[] calldata outputs
     ) internal pure returns (bytes32) {
         unchecked {
-            bytes memory currentHash = new bytes(32 * outputs.length);
+            uint256 numOutputs = outputs.length;
+            bytes memory currentHash = new bytes(32 * numOutputs);
             uint256 p;
             assembly ("memory-safe") {
                 p := add(currentHash, 0x20)
             }
-            for (uint256 i = 0; i < outputs.length; ++i) {
+            for (uint256 i = 0; i < numOutputs; ++i) {
                 bytes32 outputHash = hashOutput(outputs[i]);
                 assembly ("memory-safe") {
                     mstore(add(p, mul(i, 0x20)), outputHash)
@@ -92,12 +93,13 @@ library MandateOutputType {
         MandateOutput[] memory outputs
     ) internal pure returns (bytes32) {
         unchecked {
-            bytes memory currentHash = new bytes(32 * outputs.length);
+            uint256 numOutputs = outputs.length;
+            bytes memory currentHash = new bytes(32 * numOutputs);
             uint256 p;
             assembly ("memory-safe") {
                 p := add(currentHash, 0x20)
             }
-            for (uint256 i = 0; i < outputs.length; ++i) {
+            for (uint256 i = 0; i < numOutputs; ++i) {
                 bytes32 outputHash = hashOutputM(outputs[i]);
                 assembly ("memory-safe") {
                     mstore(add(p, mul(i, 0x20)), outputHash)
