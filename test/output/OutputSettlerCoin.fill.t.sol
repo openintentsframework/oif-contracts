@@ -18,7 +18,7 @@ contract OutputSettlerCoinTestFill is Test {
     error SlopeStopped();
 
     event OutputFilled(
-        bytes32 indexed orderId, bytes32 solver, uint32 timestamp, MandateOutput output, uint256 finalAmount
+        bytes32 indexed orderId, bytes32 solver, uint32 timestamp, bytes output, uint256 finalAmount
     );
 
     OutputSettlerCoin outputSettlerCoin;
@@ -72,8 +72,8 @@ contract OutputSettlerCoinTestFill is Test {
         bytes memory fillerData = abi.encodePacked(filler);
 
         vm.prank(sender);
-        // vm.expectEmit();
-        // emit OutputFilled(orderId, filler, uint32(block.timestamp), output, output.amount);
+        vm.expectEmit();
+        emit OutputFilled(orderId, filler, uint32(block.timestamp), output, amount);
 
         vm.expectCall(
             outputTokenAddress,
@@ -186,8 +186,8 @@ contract OutputSettlerCoinTestFill is Test {
             )
         );
 
-        // vm.expectEmit();
-        // emit OutputFilled(orderId, filler, uint32(block.timestamp), outputs[0], outputs[0].amount);
+        vm.expectEmit();
+        emit OutputFilled(orderId, filler, uint32(block.timestamp), output, amount);
 
         outputSettlerCoin.fill(orderId, output, fillerData);
 
@@ -257,8 +257,8 @@ contract OutputSettlerCoinTestFill is Test {
 
         vm.prank(sender);
 
-        // vm.expectEmit();
-        // emit OutputFilled(orderId, filler, uint32(block.timestamp), outputs[0], finalAmount);
+        vm.expectEmit();
+        emit OutputFilled(orderId, filler, uint32(block.timestamp), output, finalAmount);
 
         vm.expectCall(
             outputTokenAddress,
@@ -334,8 +334,8 @@ contract OutputSettlerCoinTestFill is Test {
 
         vm.prank(sender);
 
-        // vm.expectEmit();
-        // emit OutputFilled(orderId, exclusiveFor, uint32(block.timestamp), outputs[0], finalAmount);
+        vm.expectEmit();
+        emit OutputFilled(orderId, exclusiveFor, uint32(block.timestamp), output, finalAmount);
 
         vm.expectCall(
             outputTokenAddress,

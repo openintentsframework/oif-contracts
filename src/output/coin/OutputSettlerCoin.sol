@@ -4,7 +4,6 @@ pragma solidity ^0.8.26;
 import { MandateOutput, MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 import { BaseOutputSettler } from "../BaseOutputSettler.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
-import { console } from "forge-std/console.sol";
 
 /**
  * @notice Output Settler for ERC20 tokens.
@@ -115,10 +114,6 @@ contract OutputSettlerCoin is BaseOutputSettler {
 
     function _orderType(bytes calldata output, bytes32 solver) internal view returns (uint256 amount) {
 
-        console.log("AAAAAAA");
-
-        console.logBytes(output);
-
         uint16 callDataLength = uint16(bytes2(output[0xc0: 0xc2]));
 
         uint16 fulfillmentLength = uint16(bytes2(output[0xc2 + callDataLength: 0xc4 + callDataLength]));
@@ -126,8 +121,6 @@ contract OutputSettlerCoin is BaseOutputSettler {
         assembly ("memory-safe") {
             amount := calldataload(add(output.offset, 0x80))
         }
-
-        console.log("amount received", amount);
         
         if (fulfillmentLength == 0) return amount;
 
@@ -135,15 +128,7 @@ contract OutputSettlerCoin is BaseOutputSettler {
 
         uint256 fullfillmentOffset = 0xc0 + 0x2 + callDataLength + 0x2; // callData offset, 2 bytes for call size, calldata length, 2 bytes for context size
 
-        console.log("fullfillmentOffset", fullfillmentOffset);
-        console.log("fulfillmentLength", fulfillmentLength);
-
         bytes1 orderType = bytes1(output[fullfillmentOffset]);
-
-        console.logBytes1(orderType);
-
-        
-
 
         if (orderType == 0x00 && fulfillmentLength == 1) return amount;
         if (orderType == 0x01 && fulfillmentLength == 41) {
@@ -156,9 +141,6 @@ contract OutputSettlerCoin is BaseOutputSettler {
         if (orderType == 0xe0 && fulfillmentLength == 37) {
             bytes32 exclusiveFor = bytes32(output[fullfillmentOffset + 1: fullfillmentOffset + 33]);
             uint32 startTime = uint32(bytes4(output[fullfillmentOffset + 33: fullfillmentOffset + 37]));
-            console.log("solver");
-            console.logBytes32(solver);
-            console.logBytes32(exclusiveFor);
             if (startTime > block.timestamp && exclusiveFor != solver) revert ExclusiveTo(exclusiveFor);
             return amount;
         }
@@ -180,7 +162,6 @@ contract OutputSettlerCoin is BaseOutputSettler {
     ) internal override returns (bytes32) {
 
         uint256 amount = _orderType(output, proposedSolver);
-        console.log("amount", amount);
         return _fill(orderId, output, amount, proposedSolver);
         
     }

@@ -1,6 +1,3 @@
 {
-  "outputSettlerCoinFill": "55224",
-  "outputSettlerCoinFillDutchAuction": "55388",
-  "outputSettlerCoinFillExclusive": "58751",
-  "outputSettlerCoinFillExclusiveDutchAuction": "58223"
+  "outputSettlerCoinfillOrderOutputs": "86134"
 }

@@ -90,6 +90,6 @@ contract OutputInputSettler7683 is BaseOutputSettler {
         SafeTransferLib.safeTransferFrom(address(uint160(uint256(output.token))), msg.sender, recipient, outputAmount);
         if (output.call.length > 0) IOIFCallback(recipient).outputFilled(output.token, outputAmount, output.call);
 
-        emit OutputFilled(orderId, proposedSolver, fillTimestamp, output, outputAmount);
+        //emit OutputFilled(orderId, proposedSolver, fillTimestamp, output, outputAmount);
     }
 }
