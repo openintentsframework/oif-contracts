@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { IOIFCallback } from "../../src/interfaces/IOIFCallback.sol";
+import { IInputCallback } from "../../src/interfaces/IInputCallback.sol";
+import { IOutputCallback } from "../../src/interfaces/IOutputCallback.sol";
 
-contract MockCallbackExecutor is IOIFCallback {
+contract MockCallbackExecutor is IInputCallback, IOutputCallback {
     event OrderFinalised(bytes executionData);
     event ExecutorOutputFilled(bytes32 token, uint256 amount, bytes executionData);
 

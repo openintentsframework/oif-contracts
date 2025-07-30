@@ -6,8 +6,9 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
 import { Output, ResolvedCrossChainOrder } from "../../interfaces/IERC7683.sol";
+
+import { IInputCallback } from "../../interfaces/IInputCallback.sol";
 import { IInputSettlerEscrow } from "../../interfaces/IInputSettlerEscrow.sol";
-import { IOIFCallback } from "../../interfaces/IOIFCallback.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
 
 import { BytesLib } from "../../libs/BytesLib.sol";
@@ -260,7 +261,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         _finalise(order, orderId, solvers[0], destination);
 
         if (call.length > 0) {
-            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
+            IInputCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
         }
     }
 
@@ -302,7 +303,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         _finalise(order, orderId, solvers[0], destination);
 
         if (call.length > 0) {
-            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
+            IInputCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
         }
     }
 

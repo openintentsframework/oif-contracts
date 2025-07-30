@@ -7,7 +7,7 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { SignatureCheckerLib } from "solady/utils/SignatureCheckerLib.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
-import { IOIFCallback } from "../interfaces/IOIFCallback.sol";
+import { IInputCallback } from "../interfaces/IInputCallback.sol";
 import { IOracle } from "../interfaces/IOracle.sol";
 
 import { AllowOpenType } from "./types/AllowOpenType.sol";
@@ -146,7 +146,7 @@ abstract contract InputSettlerPurchase is InputSettlerBase {
         }
         {
             bytes calldata call = orderPurchase.call;
-            if (call.length > 0) IOIFCallback(newDestination).orderFinalised(inputs, call);
+            if (call.length > 0) IInputCallback(newDestination).orderFinalised(inputs, call);
         }
     }
 }
