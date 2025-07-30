@@ -11,9 +11,9 @@ struct MultichainOrderComponent {
     uint32 expires;
     uint32 fillDeadline;
     address localOracle;
-    uint256[2][] inputs; // TODO: How to ensure that this input belongs to this chain?
+    uint256[2][] inputs;
     MandateOutput[] outputs;
-    bytes32[] additionalChains;
+    bytes32[] additionalChains; // <-- Fix this?
 }
 
 /**
@@ -49,9 +49,9 @@ library MultichainOrderComponentType {
     /**
      * @notice Generates a shared identical input hash for a list of list of inputs.
      * Assume that you have a list inputs:
-     * - a: [[1, 1], [1,2]] => ha = keccak256(abi.encodePacked("a", a))
-     * - b: [[2, 1], [2,2]] => hb = keccak256(abi.encodePacked("b", b))
-     * - c: [[3, 1], [3,2]] => hc = keccak256(abi.encodePacked("c", c))
+     * - a: [a, [1, 1], [1,2]] => ha = keccak256(abi.encodePacked("a", a))
+     * - b: [b, [2, 1], [2,2]] => hb = keccak256(abi.encodePacked("b", b))
+     * - c: [c, [3, 1], [3,2]] => hc = keccak256(abi.encodePacked("c", c))
      * And wants to compute the hash: h = keccak256(abi.encodePacked(a, b, c)))
      * Given 1, b, and [ha, hc] the function will compute h.
      */
