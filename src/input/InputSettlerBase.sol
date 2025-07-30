@@ -48,7 +48,7 @@ abstract contract InputSettlerBase is EIP712 {
     function _validateTimestampHasNotPassed(
         uint32 timestamp
     ) internal view {
-        if (block.timestamp > timestamp) revert TimestampPassed();
+        if (block.timestamp >= timestamp) revert TimestampPassed();
     }
 
     /**
@@ -58,7 +58,7 @@ abstract contract InputSettlerBase is EIP712 {
     function _validateTimestampHasPassed(
         uint32 timestamp
     ) internal view {
-        if (block.timestamp < timestamp) revert TimestampNotPassed();
+        if (block.timestamp <= timestamp) revert TimestampNotPassed();
     }
 
     /**
