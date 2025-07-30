@@ -86,7 +86,7 @@ abstract contract InputSettlerBase is EIP712 {
         }
         if (isZero) revert NoDestination();
     }
-    
+
     /**
      * @notice Enforces a specific caller
      * @dev Only reads the rightmost 20 bytes to allow providing additional destination context
@@ -95,7 +95,9 @@ abstract contract InputSettlerBase is EIP712 {
     function _validateIsCaller(
         bytes32 expectedCaller
     ) internal view {
-        if (EfficiencyLib.asSanitizedAddress(uint256(expectedCaller)) != msg.sender) revert UnexpectedCaller(expectedCaller);
+        if (EfficiencyLib.asSanitizedAddress(uint256(expectedCaller)) != msg.sender) {
+            revert UnexpectedCaller(expectedCaller);
+        }
     }
 
     // --- Timestamp Helpers --- //

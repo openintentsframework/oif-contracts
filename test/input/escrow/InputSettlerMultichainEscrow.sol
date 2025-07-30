@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
+import { InputSettlerMultichainEscrow } from "../../../src/input/escrow/InputSettlerMultichainEscrow.sol";
 import { MandateOutput, MandateOutputType } from "../../../src/input/types/MandateOutputType.sol";
 import {
     MultichainOrderComponent,
@@ -8,15 +9,12 @@ import {
 } from "../../../src/input/types/MultichainOrderComponentType.sol";
 import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
 import { OutputSettlerCoin } from "../../../src/output/coin/OutputSettlerCoin.sol";
-import {InputSettlerMultichainEscrow} from "../../../src/input/escrow/InputSettlerMultichainEscrow.sol";
 
 import { AlwaysYesOracle } from "../../mocks/AlwaysYesOracle.sol";
 import { MockERC20 } from "../../mocks/MockERC20.sol";
 
 import { LibAddress } from "../../../src/libs/LibAddress.sol";
-import {
-    InputSettlerMultichainEscrowTestBase
-} from "./InputSettlerMultichainEscrow.base.t.sol";
+import { InputSettlerMultichainEscrowTestBase } from "./InputSettlerMultichainEscrow.base.t.sol";
 
 contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBase {
     using LibAddress for address;
@@ -119,10 +117,7 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
 
         bytes[] memory payloads = new bytes[](1);
         payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
-            solver.toIdentifier(),
-            orderId,
-            uint32(block.timestamp),
-            outputs[0]
+            solver.toIdentifier(), orderId, uint32(block.timestamp), outputs[0]
         );
 
         bytes memory expectedMessageEmitted = this.encodeMessage(outputs[0].settler, payloads);

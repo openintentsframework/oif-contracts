@@ -19,13 +19,13 @@ import { IOIFCallback } from "../../interfaces/IOIFCallback.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
 import { BytesLib } from "../../libs/BytesLib.sol";
 import { IsContractLib } from "../../libs/IsContractLib.sol";
+
+import { LibAddress } from "../../libs/LibAddress.sol";
 import { MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 import { MandateOutput } from "../types/MandateOutputType.sol";
-import { LibAddress } from "../../libs/LibAddress.sol";
 import { MultichainOrderComponent, MultichainOrderComponentType } from "../types/MultichainOrderComponentType.sol";
 
 import { InputSettlerBase } from "../InputSettlerBase.sol";
-
 
 /**
  * @title OIF Input Settler using supporting multichain escrows.
@@ -123,7 +123,6 @@ contract InputSettlerMultichainEscrow is InputSettlerBase {
         emit Refunded(orderId);
     }
 
-
     // --- Finalise Orders --- //
 
     /**
@@ -200,9 +199,7 @@ contract InputSettlerMultichainEscrow is InputSettlerBase {
         bytes32 orderId = _orderIdentifier(order);
 
         // Validate the external claimant with signature
-        _allowExternalClaimant(
-            orderId, solvers[0].fromIdentifier(), destination, call, orderOwnerSignature
-        );
+        _allowExternalClaimant(orderId, solvers[0].fromIdentifier(), destination, call, orderOwnerSignature);
 
         _validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, timestamps, solvers);
 
