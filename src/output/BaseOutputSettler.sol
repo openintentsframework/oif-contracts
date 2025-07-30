@@ -13,6 +13,7 @@ import { MandateOutput, MandateOutputEncodingLib } from "../libs/MandateOutputEn
 import { OutputVerificationLib } from "../libs/OutputVerificationLib.sol";
 
 import { BaseOracle } from "../oracles/BaseOracle.sol";
+import { console } from "forge-std/console.sol";
 
 /**
  * @notice Base Output Settler implementing logic for settling outputs.
@@ -120,7 +121,7 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
         bytes32 orderId,
         MandateOutput calldata output,
         bytes32 proposedSolver
-    ) internal returns (bytes32 fillRecordHash) {
+    ) internal virtual returns (bytes32 fillRecordHash) {
         if (proposedSolver == bytes32(0)) revert ZeroValue();
         OutputVerificationLib._isThisChain(output.chainId);
         OutputVerificationLib._isThisOutputSettler(output.settler);
@@ -167,7 +168,7 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
         return _fill(orderId, output, proposedSolver);
     }
 
-    function fill(bytes32 orderId, bytes calldata originData, bytes calldata fillerData) external{ 
+    function fill(bytes32 orderId, bytes calldata originData, bytes calldata fillerData) external { 
         // TODO: handle fill deadline
         bytes32 proposedSolver;
         assembly ("memory-safe") {
@@ -243,13 +244,12 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
         address recipient = address(uint160(uint256(recipientBytes)));
         SafeTransferLib.safeTransferFrom(address(uint160(uint256(token))), msg.sender, recipient, outputAmount);
 
-        uint256 callDataLength;
-        assembly ("memory-safe") {
-            callDataLength := calldataload(add(output.offset, 0xc0))
-        }
+        uint16 callDataLength = uint16(bytes2(output[0xc0: 0xc2]));
+
+        console.log("callDataLength", callDataLength);
 
         if(callDataLength > 0) {
-            bytes calldata callData = output[0xc0:0xc0 + callDataLength];
+            bytes calldata callData = output[0xc2:0xc2 + callDataLength];
             IOIFCallback(recipient).outputFilled(token, outputAmount, callData);
 
         }
@@ -388,3 +388,6 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
         _attestations[chainId][application][oracle][dataHash] = true;
     }
 }
+
+
+

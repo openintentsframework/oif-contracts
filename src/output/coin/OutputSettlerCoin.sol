@@ -126,13 +126,17 @@ contract OutputSettlerCoin is BaseOutputSettler {
         assembly ("memory-safe") {
             amount := calldataload(add(output.offset, 0x80))
         }
+
+        console.log("amount received", amount);
+        
         if (fulfillmentLength == 0) return amount;
 
         //bytes1 orderType = bytes1(output.context);
 
-        uint256 fullfillmentOffset = 0xc0 + callDataLength;
+        uint256 fullfillmentOffset = 0xc0 + 0x2 + callDataLength + 0x2; // callData offset, 2 bytes for call size, calldata length, 2 bytes for context size
 
         console.log("fullfillmentOffset", fullfillmentOffset);
+        console.log("fulfillmentLength", fulfillmentLength);
 
         bytes1 orderType = bytes1(output[fullfillmentOffset]);
 
@@ -152,6 +156,9 @@ contract OutputSettlerCoin is BaseOutputSettler {
         if (orderType == 0xe0 && fulfillmentLength == 37) {
             bytes32 exclusiveFor = bytes32(output[fullfillmentOffset + 1: fullfillmentOffset + 33]);
             uint32 startTime = uint32(bytes4(output[fullfillmentOffset + 33: fullfillmentOffset + 37]));
+            console.log("solver");
+            console.logBytes32(solver);
+            console.logBytes32(exclusiveFor);
             if (startTime > block.timestamp && exclusiveFor != solver) revert ExclusiveTo(exclusiveFor);
             return amount;
         }
@@ -166,22 +173,6 @@ contract OutputSettlerCoin is BaseOutputSettler {
         revert NotImplemented();
     }
 
-    /**
-     * @dev Hands off parsed output type to BaseOutputSettler execute fill logic.
-     * @param orderId Input chain order identifier.
-     * @param output The given output to fill.
-     * @param proposedSolver Solver identifier to be sent to origin chain.
-     * @return actualSolver may differ from proposed solver if output has already been filled.
-     */
-    function _fill(
-        bytes32 orderId,
-        MandateOutput calldata output,
-        bytes32 proposedSolver
-    ) internal override returns (bytes32) {
-        uint256 amount = _orderType(output, proposedSolver);
-        return _fill(orderId, output, amount, proposedSolver);
-    }
-
     function _fill(
         bytes32 orderId,
         bytes calldata output,
@@ -189,8 +180,8 @@ contract OutputSettlerCoin is BaseOutputSettler {
     ) internal override returns (bytes32) {
 
         uint256 amount = _orderType(output, proposedSolver);
+        console.log("amount", amount);
         return _fill(orderId, output, amount, proposedSolver);
         
     }
 }
-
