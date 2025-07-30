@@ -17,9 +17,7 @@ contract OutputSettlerCoinTestFill is Test {
     error NotImplemented();
     error SlopeStopped();
 
-    event OutputFilled(
-        bytes32 indexed orderId, bytes32 solver, uint32 timestamp, bytes output, uint256 finalAmount
-    );
+    event OutputFilled(bytes32 indexed orderId, bytes32 solver, uint32 timestamp, bytes output, uint256 finalAmount);
 
     OutputSettlerCoin outputSettlerCoin;
 
@@ -57,7 +55,7 @@ contract OutputSettlerCoinTestFill is Test {
         outputToken.approve(outputSettlerCoinAddress, amount);
 
         bytes memory output = abi.encodePacked(
-            bytes32(0), // oracle 
+            bytes32(0), // oracle
             bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
             block.chainid, // chainId
             bytes32(uint256(uint160(outputTokenAddress))), // token
@@ -119,7 +117,7 @@ contract OutputSettlerCoinTestFill is Test {
         bytes memory context = abi.encodePacked(bytes1(0xe0), exclusiveFor, startTime);
 
         bytes memory output = abi.encodePacked(
-            bytes32(0), // oracle 
+            bytes32(0), // oracle
             bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
             block.chainid, // chainId
             bytes32(uint256(uint160(outputTokenAddress))), // token
@@ -158,7 +156,7 @@ contract OutputSettlerCoinTestFill is Test {
         outputToken.approve(outputSettlerCoinAddress, amount);
 
         bytes memory output = abi.encodePacked(
-            bytes32(0), // oracle 
+            bytes32(0), // oracle
             bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
             block.chainid, // chainId
             bytes32(uint256(uint160(outputTokenAddress))), // token
@@ -176,7 +174,10 @@ contract OutputSettlerCoinTestFill is Test {
         vm.expectCall(
             mockCallbackExecutorAddress,
             abi.encodeWithSignature(
-                "outputFilled(bytes32,uint256,bytes)", bytes32(uint256(uint160(outputTokenAddress))), amount, remoteCallData
+                "outputFilled(bytes32,uint256,bytes)",
+                bytes32(uint256(uint160(outputTokenAddress))),
+                amount,
+                remoteCallData
             )
         );
         vm.expectCall(
@@ -236,12 +237,11 @@ contract OutputSettlerCoinTestFill is Test {
         console.log("amount sent", amount);
         console.log("final amount expected", finalAmount);
 
-        bytes memory context = abi.encodePacked(
-            bytes1(0x01), bytes4(uint32(startTime)), bytes4(uint32(stopTime)), bytes32(uint256(slope))
-        );
+        bytes memory context =
+            abi.encodePacked(bytes1(0x01), bytes4(uint32(startTime)), bytes4(uint32(stopTime)), bytes32(uint256(slope)));
 
         bytes memory output = abi.encodePacked(
-            bytes32(0), // oracle 
+            bytes32(0), // oracle
             bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
             block.chainid, // chainId
             bytes32(uint256(uint160(outputTokenAddress))), // token
@@ -318,7 +318,7 @@ contract OutputSettlerCoinTestFill is Test {
         );
 
         bytes memory output = abi.encodePacked(
-            bytes32(0), // oracle 
+            bytes32(0), // oracle
             bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
             block.chainid, // chainId
             bytes32(uint256(uint160(outputTokenAddress))), // token
@@ -383,7 +383,7 @@ contract OutputSettlerCoinTestFill is Test {
         );
 
         bytes memory output = abi.encodePacked(
-            bytes32(0), // oracle 
+            bytes32(0), // oracle
             bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
             block.chainid, // chainId
             bytes32(uint256(uint160(outputTokenAddress))), // token
@@ -408,7 +408,7 @@ contract OutputSettlerCoinTestFill is Test {
         bytes32 filler = bytes32(0);
 
         bytes memory output = abi.encodePacked(
-            bytes32(0), // oracle 
+            bytes32(0), // oracle
             bytes32(0), // settler
             uint256(0), // chainId
             bytes32(0), // token
@@ -432,7 +432,7 @@ contract OutputSettlerCoinTestFill is Test {
         vm.assume(filler != bytes32(0));
 
         bytes memory output = abi.encodePacked(
-            bytes32(0), // oracle 
+            bytes32(0), // oracle
             bytes32(0), // settler
             chainId, // chainId
             bytes32(0), // token
@@ -457,9 +457,8 @@ contract OutputSettlerCoinTestFill is Test {
         vm.assume(fillerOracleBytes != outputSettlerCoinOracleBytes);
         vm.assume(filler != bytes32(0));
 
-
         bytes memory output = abi.encodePacked(
-            bytes32(0), // oracle 
+            bytes32(0), // oracle
             fillerOracleBytes, // settler
             uint256(block.chainid), // chainId
             bytes32(0), // token
@@ -492,9 +491,8 @@ contract OutputSettlerCoinTestFill is Test {
 
         vm.warp(filledAt);
 
-
         bytes memory output = abi.encodePacked(
-            bytes32(0), // oracle 
+            bytes32(0), // oracle
             bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
             uint256(block.chainid), // chainId
             bytes32(0), // token
@@ -528,7 +526,7 @@ contract OutputSettlerCoinTestFill is Test {
         outputToken.approve(outputSettlerCoinAddress, amount);
 
         bytes memory output = abi.encodePacked(
-            bytes32(0), // oracle 
+            bytes32(0), // oracle
             bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
             block.chainid, // chainId
             bytes32(uint256(uint160(outputTokenAddress))), // token
@@ -574,7 +572,7 @@ contract OutputSettlerCoinTestFill is Test {
         outputToken.approve(outputSettlerCoinAddress, amount);
 
         bytes memory output = abi.encodePacked(
-            bytes32(0), // oracle 
+            bytes32(0), // oracle
             bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
             block.chainid, // chainId
             bytes32(uint256(uint160(outputTokenAddress))), // token

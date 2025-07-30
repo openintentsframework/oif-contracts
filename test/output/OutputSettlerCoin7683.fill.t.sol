@@ -102,7 +102,6 @@ contract OutputSettlerCoinTestFill is Test {
 
         assertEq(outputToken.balanceOf(swapper), amount);
         assertEq(outputToken.balanceOf(sender), 0);
-
     }
 
     /// forge-config: default.isolate = true
@@ -118,8 +117,7 @@ contract OutputSettlerCoinTestFill is Test {
     //     );
     // }
 
-    function test_fill_exclusive(
-    ) public {
+    function test_fill_exclusive() public {
         // vm.assume(solverIdentifier != bytes32(0) && swapper != sender);
         // vm.warp(currentTime);
 
@@ -160,8 +158,6 @@ contract OutputSettlerCoinTestFill is Test {
         );
 
         bytes memory fillerData = abi.encodePacked(solverIdentifier);
-
-
 
         vm.prank(sender);
 
@@ -256,9 +252,7 @@ contract OutputSettlerCoinTestFill is Test {
     //     );
     // }
 
-    function test_fill_dutch_auction(
-    ) public {
-
+    function test_fill_dutch_auction() public {
         bytes32 orderId = keccak256(bytes("orderId"));
         address sender = makeAddr("sender");
         bytes32 filler = keccak256(bytes("filler"));
@@ -343,9 +337,7 @@ contract OutputSettlerCoinTestFill is Test {
     //     );
     // }
 
-    function test_fill_exclusive_dutch_auction(
-    ) public {
-
+    function test_fill_exclusive_dutch_auction() public {
         bytes32 orderId = keccak256(bytes("orderId"));
         address sender = makeAddr("sender");
         uint256 amount = 10 ** 18;
@@ -354,7 +346,6 @@ contract OutputSettlerCoinTestFill is Test {
         uint64 slope = 251251;
         uint16 currentTime = 1250;
         bytes32 exclusiveFor = keccak256(bytes("exclusiveFor"));
-
 
         uint32 stopTime = uint32(startTime) + uint32(runTime);
         vm.assume(exclusiveFor != bytes32(0) && swapper != sender);

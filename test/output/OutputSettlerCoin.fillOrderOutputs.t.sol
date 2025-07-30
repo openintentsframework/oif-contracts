@@ -11,9 +11,7 @@ import { MockERC20 } from "../mocks/MockERC20.sol";
 contract OutputSettlerCoinTestfillOrderOutputs is Test {
     error FilledBySomeoneElse(bytes32 solver);
 
-    event OutputFilled(
-        bytes32 indexed orderId, bytes32 solver, uint32 timestamp, bytes output, uint256 finalAmount
-    );
+    event OutputFilled(bytes32 indexed orderId, bytes32 solver, uint32 timestamp, bytes output, uint256 finalAmount);
 
     OutputSettlerCoin outputSettlerCoin;
 
@@ -34,7 +32,7 @@ contract OutputSettlerCoinTestfillOrderOutputs is Test {
 
     /// forge-config: default.isolate = true
     function test_fill_batch_gas() external {
-         test_fill_batch(
+        test_fill_batch(
             keccak256(bytes("orderId")),
             makeAddr("sender"),
             keccak256(bytes("filler")),
@@ -64,7 +62,7 @@ contract OutputSettlerCoinTestfillOrderOutputs is Test {
         bytes[] memory outputs = new bytes[](2);
 
         outputs[0] = abi.encodePacked(
-            bytes32(0), // oracle 
+            bytes32(0), // oracle
             bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
             uint256(block.chainid), // chainId
             bytes32(uint256(uint160(outputTokenAddress))), // token
@@ -77,7 +75,7 @@ contract OutputSettlerCoinTestfillOrderOutputs is Test {
         );
 
         outputs[1] = abi.encodePacked(
-            bytes32(0), // oracle 
+            bytes32(0), // oracle
             bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
             uint256(block.chainid), // chainId
             bytes32(uint256(uint160(outputTokenAddress))), // token

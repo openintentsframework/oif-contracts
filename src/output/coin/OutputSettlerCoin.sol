@@ -113,42 +113,42 @@ contract OutputSettlerCoin is BaseOutputSettler {
     }
 
     function _orderType(bytes calldata output, bytes32 solver) internal view returns (uint256 amount) {
+        uint16 callDataLength = uint16(bytes2(output[0xc0:0xc2]));
 
-        uint16 callDataLength = uint16(bytes2(output[0xc0: 0xc2]));
-
-        uint16 fulfillmentLength = uint16(bytes2(output[0xc2 + callDataLength: 0xc4 + callDataLength]));
+        uint16 fulfillmentLength = uint16(bytes2(output[0xc2 + callDataLength:0xc4 + callDataLength]));
 
         assembly ("memory-safe") {
             amount := calldataload(add(output.offset, 0x80))
         }
-        
+
         if (fulfillmentLength == 0) return amount;
 
         //bytes1 orderType = bytes1(output.context);
 
-        uint256 fullfillmentOffset = 0xc0 + 0x2 + callDataLength + 0x2; // callData offset, 2 bytes for call size, calldata length, 2 bytes for context size
+        uint256 fullfillmentOffset = 0xc0 + 0x2 + callDataLength + 0x2; // callData offset, 2 bytes for call size,
+            // calldata length, 2 bytes for context size
 
         bytes1 orderType = bytes1(output[fullfillmentOffset]);
 
         if (orderType == 0x00 && fulfillmentLength == 1) return amount;
         if (orderType == 0x01 && fulfillmentLength == 41) {
-            uint32 startTime = uint32(bytes4(output[fullfillmentOffset + 1: fullfillmentOffset + 5]));
-            uint32 stopTime = uint32(bytes4(output[fullfillmentOffset + 5: fullfillmentOffset + 9]));
-            uint256 slope = uint256(bytes32(output[fullfillmentOffset + 9: fullfillmentOffset + 41]));
+            uint32 startTime = uint32(bytes4(output[fullfillmentOffset + 1:fullfillmentOffset + 5]));
+            uint32 stopTime = uint32(bytes4(output[fullfillmentOffset + 5:fullfillmentOffset + 9]));
+            uint256 slope = uint256(bytes32(output[fullfillmentOffset + 9:fullfillmentOffset + 41]));
             return _dutchAuctionSlope(amount, slope, startTime, stopTime);
         }
 
         if (orderType == 0xe0 && fulfillmentLength == 37) {
-            bytes32 exclusiveFor = bytes32(output[fullfillmentOffset + 1: fullfillmentOffset + 33]);
-            uint32 startTime = uint32(bytes4(output[fullfillmentOffset + 33: fullfillmentOffset + 37]));
+            bytes32 exclusiveFor = bytes32(output[fullfillmentOffset + 1:fullfillmentOffset + 33]);
+            uint32 startTime = uint32(bytes4(output[fullfillmentOffset + 33:fullfillmentOffset + 37]));
             if (startTime > block.timestamp && exclusiveFor != solver) revert ExclusiveTo(exclusiveFor);
             return amount;
         }
         if (orderType == 0xe1 && fulfillmentLength == 73) {
-            bytes32 exclusiveFor = bytes32(output[fullfillmentOffset + 1: fullfillmentOffset + 33]);
-            uint32 startTime = uint32(bytes4(output[fullfillmentOffset + 33: fullfillmentOffset + 37]));
-            uint32 stopTime = uint32(bytes4(output[fullfillmentOffset + 37: fullfillmentOffset + 41]));
-            uint256 slope = uint256(bytes32(output[fullfillmentOffset + 41: fullfillmentOffset + 73]));
+            bytes32 exclusiveFor = bytes32(output[fullfillmentOffset + 1:fullfillmentOffset + 33]);
+            uint32 startTime = uint32(bytes4(output[fullfillmentOffset + 33:fullfillmentOffset + 37]));
+            uint32 stopTime = uint32(bytes4(output[fullfillmentOffset + 37:fullfillmentOffset + 41]));
+            uint256 slope = uint256(bytes32(output[fullfillmentOffset + 41:fullfillmentOffset + 73]));
             if (startTime > block.timestamp && exclusiveFor != solver) revert ExclusiveTo(exclusiveFor);
             return _dutchAuctionSlope(amount, slope, startTime, stopTime);
         }
@@ -160,9 +160,7 @@ contract OutputSettlerCoin is BaseOutputSettler {
         bytes calldata output,
         bytes32 proposedSolver
     ) internal override returns (bytes32) {
-
         uint256 amount = _orderType(output, proposedSolver);
         return _fill(orderId, output, amount, proposedSolver);
-        
     }
 }

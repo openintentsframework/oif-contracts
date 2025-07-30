@@ -68,9 +68,7 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
     //     bytes32 indexed orderId, bytes32 solver, uint32 timestamp, MandateOutput output, uint256 finalAmount
     // );
 
-    event OutputFilled(
-        bytes32 indexed orderId, bytes32 solver, uint32 timestamp, bytes output, uint256 finalAmount
-    );
+    event OutputFilled(bytes32 indexed orderId, bytes32 solver, uint32 timestamp, bytes output, uint256 finalAmount);
 
     function _getFillRecordHash(bytes32 solver, uint32 timestamp) internal pure returns (bytes32 fillRecordHash) {
         fillRecordHash = keccak256(abi.encodePacked(solver, timestamp));
@@ -98,11 +96,7 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
         return output.amount;
     }
 
-    function _fill(
-        bytes32 orderId,
-        bytes calldata output,
-        bytes32 proposedSolver
-    ) internal virtual returns (bytes32);
+    function _fill(bytes32 orderId, bytes calldata output, bytes32 proposedSolver) internal virtual returns (bytes32);
 
     /**
      * @notice Performs basic validation and fills output if unfilled.
@@ -171,7 +165,7 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
         return _fill(orderId, output, proposedSolver);
     }
 
-    function fill(bytes32 orderId, bytes calldata originData, bytes calldata fillerData) external { 
+    function fill(bytes32 orderId, bytes calldata originData, bytes calldata fillerData) external {
         // TODO: handle fill deadline
         bytes32 proposedSolver;
         assembly ("memory-safe") {
@@ -213,7 +207,6 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
         uint256 outputAmount,
         bytes32 proposedSolver
     ) internal virtual returns (bytes32 fillRecordHash) {
-
         bytes32 oracle;
         bytes32 settler;
         uint256 chainId;
@@ -229,7 +222,6 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
             amount := calldataload(add(output.offset, 0x80))
             recipientBytes := calldataload(add(output.offset, 0xa0))
         }
-        
 
         if (proposedSolver == bytes32(0)) revert ZeroValue();
         OutputVerificationLib._isThisChain(chainId);
@@ -238,7 +230,7 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
         bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHashFromBytes(output);
         bytes32 existingFillRecordHash = _fillRecords[orderId][outputHash];
         if (existingFillRecordHash != bytes32(0)) return existingFillRecordHash; // Early return if already solved.
-        
+
         // The above and below lines act as a local re-entry check.
         uint32 fillTimestamp = uint32(block.timestamp);
         fillRecordHash = _getFillRecordHash(proposedSolver, fillTimestamp);
@@ -248,18 +240,16 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
         address recipient = address(uint160(uint256(recipientBytes)));
         SafeTransferLib.safeTransferFrom(address(uint160(uint256(token))), msg.sender, recipient, outputAmount);
 
-        uint16 callDataLength = uint16(bytes2(output[0xc0: 0xc2]));
+        uint16 callDataLength = uint16(bytes2(output[0xc0:0xc2]));
 
-        if(callDataLength > 0) {
+        if (callDataLength > 0) {
             bytes calldata callData = output[0xc2:0xc2 + callDataLength];
             IOIFCallback(recipient).outputFilled(token, outputAmount, callData);
-
         }
 
         emit OutputFilled(orderId, proposedSolver, fillTimestamp, output, outputAmount);
 
         return fillRecordHash;
-
     }
 
     // -- Batch Solving -- //
@@ -302,9 +292,7 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
         }
     }
 
-    function fillOrderOutputs(
-        bytes32 orderId, bytes[] calldata outputs, bytes calldata fillerData
-    ) external {
+    function fillOrderOutputs(bytes32 orderId, bytes[] calldata outputs, bytes calldata fillerData) external {
         bytes32 proposedSolver;
         assembly ("memory-safe") {
             proposedSolver := calldataload(fillerData.offset)
@@ -319,7 +307,6 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
         for (uint256 i = 1; i < numOutputs; ++i) {
             _fill(orderId, outputs[i], proposedSolver);
         }
-        
     }
 
     // --- External Calls --- //
@@ -412,6 +399,3 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
         _attestations[chainId][application][oracle][dataHash] = true;
     }
 }
-
-
-

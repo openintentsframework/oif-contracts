@@ -51,7 +51,6 @@ contract OutputInputSettler7683 is BaseOutputSettler {
         }
 
         return _fill(orderId, output, amount, proposedSolver);
-
     }
 
     /**
