@@ -5,11 +5,11 @@ import { ISignatureTransfer } from "permit2/src/interfaces/ISignatureTransfer.so
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
+import { IERC3009 } from "../../interfaces/IERC3009.sol";
 import { Output, ResolvedCrossChainOrder } from "../../interfaces/IERC7683.sol";
 import { IInputSettlerEscrow } from "../../interfaces/IInputSettlerEscrow.sol";
 import { IOIFCallback } from "../../interfaces/IOIFCallback.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
-import { IERC3009 } from "../../interfaces/IERC3009.sol";
 
 import { BytesLib } from "../../libs/BytesLib.sol";
 import { IsContractLib } from "../../libs/IsContractLib.sol";
@@ -220,16 +220,22 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
     /**
      * @notice Helper function for using permit2 to collect assets represented by a StandardOrder.
-     * @dev For the `receiveWithAuthorization` call, the nonce is set as the orderId to encode the proper order for the authorization.
+     * @dev For the `receiveWithAuthorization` call, the nonce is set as the orderId to encode the proper order for the
+     * authorization.
      * @param order StandardOrder representing the intent.
      * @param _signature_ 712 signature of permit2 structure with Permit2Witness representing `order` signed by
      * `order.user`.
      */
-    function _openForWithAuthorization(StandardOrder calldata order, bytes calldata _signature_, bytes32 orderId) internal {
+    function _openForWithAuthorization(
+        StandardOrder calldata order,
+        bytes calldata _signature_,
+        bytes32 orderId
+    ) internal {
         uint256 numInputs = order.inputs.length;
         if (numInputs == 1) {
             uint256[2] calldata input = order.inputs[0];
-            // First trial using the entire signature. This is an optimisation that allows passing a smaller signature if only
+            // First trial using the entire signature. This is an optimisation that allows passing a smaller signature
+            // if only
             // 1 input has to be collected.
             // TODO: Convert try catch into assembly.
             try IERC3009(EfficiencyLib.asSanitizedAddress(input[0])).receiveWithAuthorization({
@@ -243,7 +249,8 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
             }) {
                 return;
             } catch {
-                // If an error occured, it could be because of a lot of reasons. One being the signature is actually abi.encoded as bytes[].
+                // If an error occured, it could be because of a lot of reasons. One being the signature is actually
+                // abi.encoded as bytes[].
             }
         }
         uint256 numSignatures = BytesLib.getLengthOfBytesArray(_signature_);
@@ -437,4 +444,3 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         );
     }
 }
-

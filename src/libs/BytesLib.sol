@@ -22,13 +22,15 @@ library BytesLib {
      * @param _bytes Calldata reference to encoded bytes[]
      * @return length of bytes[]
      */
-    function getLengthOfBytesArray(bytes calldata _bytes) internal pure returns (uint256 length) {
+    function getLengthOfBytesArray(
+        bytes calldata _bytes
+    ) internal pure returns (uint256 length) {
         assembly ("memory-safe") {
             let pointerOfBytesArray := add(_bytes.offset, calldataload(_bytes.offset))
             length := calldataload(pointerOfBytesArray)
         }
     }
-    
+
     /**
      * @notice Given calldata bytes of bytes[], slices a bytes array by the offset.
      * @dev Does not validate that the slice won't go out of calldata.
@@ -39,7 +41,8 @@ library BytesLib {
     function getBytesOfArray(bytes calldata _bytes, uint256 offset) internal pure returns (bytes calldata res) {
         assembly ("memory-safe") {
             let pointerOfBytesArray := add(_bytes.offset, calldataload(_bytes.offset))
-            let pointerOfBytes := add(add(pointerOfBytesArray, calldataload(add(pointerOfBytesArray, mul(add(offset, 1), 0x20)))), 0x20)
+            let pointerOfBytes :=
+                add(add(pointerOfBytesArray, calldataload(add(pointerOfBytesArray, mul(add(offset, 1), 0x20)))), 0x20)
             res.offset := add(pointerOfBytes, 0x20)
             res.length := calldataload(pointerOfBytes)
         }
