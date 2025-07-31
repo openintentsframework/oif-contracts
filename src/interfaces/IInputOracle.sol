@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0;
 
-interface IOracle {
+interface IInputOracle {
     /**
      * @notice Check if some data has been attested to on the remote chain.
      * @param remoteChainId ChainId of data origin.

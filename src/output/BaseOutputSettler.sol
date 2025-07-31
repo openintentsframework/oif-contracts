@@ -11,7 +11,7 @@ import { LibAddress } from "../libs/LibAddress.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../libs/MandateOutputEncodingLib.sol";
 import { OutputVerificationLib } from "../libs/OutputVerificationLib.sol";
 
-import { BaseOracle } from "../oracles/BaseOracle.sol";
+import { BaseInputOracle } from "../oracles/BaseInputOracle.sol";
 
 /**
  * @notice Base Output Settler implementing logic for settling outputs.
@@ -35,7 +35,7 @@ import { BaseOracle } from "../oracles/BaseOracle.sol";
  *
  * Choose the appropriate pattern based on your use case requirements.
  */
-abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
+abstract contract BaseOutputSettler is IPayloadCreator, BaseInputOracle {
     using LibAddress for address;
 
     error FillDeadline();

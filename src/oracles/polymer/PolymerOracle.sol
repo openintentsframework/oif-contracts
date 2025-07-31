@@ -7,14 +7,14 @@ import { LibBytes } from "solady/utils/LibBytes.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 
 import { BaseOutputSettler } from "../../output/BaseOutputSettler.sol";
-import { BaseOracle } from "../BaseOracle.sol";
+import { BaseInputOracle } from "../BaseInputOracle.sol";
 import { ICrossL2Prover } from "./ICrossL2Prover.sol";
 
 /**
  * @notice Polymer Oracle.
  * Polymer uses the fill event to reconstruct the payload for verification instead of sending messages cross-chain.
  */
-contract PolymerOracle is BaseOracle {
+contract PolymerOracle is BaseInputOracle {
     using LibAddress for address;
 
     error WrongEventSignature();

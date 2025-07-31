@@ -14,7 +14,7 @@ import { LibAddress } from "../../libs/LibAddress.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 import { OutputVerificationLib } from "../../libs/OutputVerificationLib.sol";
 
-import { BaseOracle } from "../BaseOracle.sol";
+import { BaseInputOracle } from "../BaseInputOracle.sol";
 
 /**
  * @dev Bitcoin oracle can operate in 2 modes:
@@ -32,7 +32,7 @@ import { BaseOracle } from "../BaseOracle.sol";
  *
  * 0xB17C012
  */
-contract BitcoinOracle is BaseOracle {
+contract BitcoinOracle is BaseInputOracle {
     using LibAddress for address;
 
     error AlreadyClaimed(bytes32 claimer);

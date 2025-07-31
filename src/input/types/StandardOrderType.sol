@@ -9,7 +9,7 @@ struct StandardOrder {
     uint256 originChainId;
     uint32 expires;
     uint32 fillDeadline;
-    address localOracle;
+    address inputOracle;
     uint256[2][] inputs;
     MandateOutput[] outputs;
 }
@@ -20,7 +20,7 @@ struct StandardOrder {
  */
 struct Mandate {
     uint32 fillDeadline;
-    address localOracle;
+    address inputOracle;
     MandateOutput[] outputs;
 }
 
@@ -42,7 +42,7 @@ library StandardOrderType {
                 order.nonce,
                 order.expires,
                 order.fillDeadline,
-                order.localOracle,
+                order.inputOracle,
                 keccak256(abi.encodePacked(order.inputs)),
                 abi.encode(order.outputs)
             )
@@ -51,12 +51,12 @@ library StandardOrderType {
 
     /// @dev TheCompact needs us to provide the type without the last ")"
     bytes constant BATCH_COMPACT_SUB_TYPES = bytes(
-        "uint32 fillDeadline,address localOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context"
+        "uint32 fillDeadline,address inputOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context"
     );
 
     /// @dev For hashing of our subtypes, we need proper types.
     bytes constant CATALYST_WITNESS_TYPE = abi.encodePacked(
-        "Mandate(uint32 fillDeadline,address localOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
+        "Mandate(uint32 fillDeadline,address inputOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
     );
     bytes32 constant CATALYST_WITNESS_TYPE_HASH = keccak256(CATALYST_WITNESS_TYPE);
 
@@ -72,7 +72,7 @@ library StandardOrderType {
             abi.encode(
                 CATALYST_WITNESS_TYPE_HASH,
                 order.fillDeadline,
-                order.localOracle,
+                order.inputOracle,
                 MandateOutputType.hashOutputs(order.outputs)
             )
         );

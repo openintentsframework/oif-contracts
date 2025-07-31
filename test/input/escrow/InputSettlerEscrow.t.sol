@@ -41,7 +41,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
             originChainId: block.chainid,
             expires: expires,
             fillDeadline: expires,
-            localOracle: address(0),
+            inputOracle: address(0),
             inputs: inputs,
             outputs: outputs
         });
@@ -81,7 +81,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
             originChainId: block.chainid,
             expires: type(uint32).max,
             fillDeadline: type(uint32).max,
-            localOracle: address(0),
+            inputOracle: address(0),
             inputs: inputs,
             outputs: outputs
         });
@@ -162,7 +162,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
             originChainId: block.chainid,
             expires: type(uint32).max,
             fillDeadline: type(uint32).max,
-            localOracle: alwaysYesOracle,
+            inputOracle: alwaysYesOracle,
             inputs: inputs,
             outputs: outputs
         });
@@ -237,7 +237,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
             originChainId: block.chainid,
             expires: type(uint32).max,
             fillDeadline: fillDeadline,
-            localOracle: alwaysYesOracle,
+            inputOracle: alwaysYesOracle,
             inputs: inputs,
             outputs: outputs
         });
@@ -292,7 +292,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
             originChainId: block.chainid,
             expires: type(uint32).max,
             fillDeadline: type(uint32).max,
-            localOracle: alwaysYesOracle,
+            inputOracle: alwaysYesOracle,
             inputs: inputs,
             outputs: outputs
         });
