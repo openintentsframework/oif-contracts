@@ -62,13 +62,13 @@ contract OutputSettlerCoinTestfillOrderOutputs is Test {
         bytes[] memory outputs = new bytes[](2);
 
         outputs[0] = abi.encodePacked(
+            type(uint48).max, // fill deadline
             bytes32(0), // oracle
             bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
             uint256(block.chainid), // chainId
             bytes32(uint256(uint160(outputTokenAddress))), // token
             uint256(amount), //amount
             bytes32(uint256(uint160(swapper))), // recipient
-            type(uint48).max, // fill deadline
             uint16(0), // call length
             bytes(""), // call
             uint16(0), // context length
@@ -76,13 +76,13 @@ contract OutputSettlerCoinTestfillOrderOutputs is Test {
         );
 
         outputs[1] = abi.encodePacked(
+            type(uint48).max, // fill deadline
             bytes32(0), // oracle
             bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
             uint256(block.chainid), // chainId
             bytes32(uint256(uint160(outputTokenAddress))), // token
             uint256(amount2), //amount
             bytes32(uint256(uint160(swapper))), // recipient
-            type(uint48).max, // fill deadline
             uint16(0), // call length
             bytes(""), // call
             uint16(0), // context length
@@ -146,13 +146,13 @@ contract OutputSettlerCoinTestfillOrderOutputs is Test {
         bytes[] memory outputs = new bytes[](1);
 
         bytes memory output = abi.encodePacked(
+            uint48(fillDeadline), // fill deadline
             bytes32(0), // oracle
             bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
             uint256(block.chainid), // chainId
             bytes32(uint256(uint160(outputTokenAddress))), // token
             uint256(amount), //amount
             bytes32(uint256(uint160(swapper))), // recipient
-            uint48(fillDeadline), // fill deadline
             uint16(0), // call length
             bytes(""), // call
             uint16(0), // context length

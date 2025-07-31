@@ -169,7 +169,7 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
     function fill(bytes32 orderId, bytes calldata originData, bytes calldata fillerData) external returns (bytes32) {
         // TODO: handle fill deadline
         bytes32 proposedSolver;
-        uint48 fillDeadline = uint48(bytes6(originData[0xc0:0xc6]));
+        uint48 fillDeadline = uint48(bytes6(originData[0x00:0x06]));
         assembly ("memory-safe") {
             proposedSolver := calldataload(fillerData.offset)
         }
@@ -219,12 +219,12 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
         bytes32 recipientBytes;
 
         assembly ("memory-safe") {
-            oracle := calldataload(output.offset)
-            settler := calldataload(add(output.offset, 0x20))
-            chainId := calldataload(add(output.offset, 0x40))
-            token := calldataload(add(output.offset, 0x60))
-            amount := calldataload(add(output.offset, 0x80))
-            recipientBytes := calldataload(add(output.offset, 0xa0))
+            oracle := calldataload(add(output.offset, 0x06))
+            settler := calldataload(add(output.offset, 0x26))
+            chainId := calldataload(add(output.offset, 0x46))
+            token := calldataload(add(output.offset, 0x66))
+            amount := calldataload(add(output.offset, 0x86))
+            recipientBytes := calldataload(add(output.offset, 0xa6))
         }
 
         if (proposedSolver == bytes32(0)) revert ZeroValue();
@@ -302,7 +302,7 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
             proposedSolver := calldataload(fillerData.offset)
         }
 
-        uint48 fillDeadline = uint48(bytes6(outputs[0][0xc0:0xc6]));
+        uint48 fillDeadline = uint48(bytes6(outputs[0][0x00:0x06]));
 
         if (fillDeadline < block.timestamp) revert FillDeadline();
 

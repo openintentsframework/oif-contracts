@@ -118,7 +118,7 @@ contract OutputSettlerCoin is BaseOutputSettler {
         uint16 fulfillmentLength = uint16(bytes2(output[0xc8 + callDataLength:0xca + callDataLength]));
 
         assembly ("memory-safe") {
-            amount := calldataload(add(output.offset, 0x80))
+            amount := calldataload(add(output.offset, 0x86))
         }
 
         if (fulfillmentLength == 0) return amount;

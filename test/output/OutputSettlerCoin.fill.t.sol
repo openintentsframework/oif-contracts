@@ -54,13 +54,13 @@ contract OutputSettlerCoinTestFill is Test {
         outputToken.approve(outputSettlerCoinAddress, amount);
 
         bytes memory output = abi.encodePacked(
+            type(uint48).max, // fill deadline
             bytes32(0), // oracle
             bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
             block.chainid, // chainId
             bytes32(uint256(uint160(outputTokenAddress))), // token
             amount, //amount
             bytes32(uint256(uint160(swapper))), // recipient
-            type(uint48).max, // fill deadline
             uint16(0), // call length
             bytes(""), // call
             uint16(0), // context length
@@ -117,13 +117,13 @@ contract OutputSettlerCoinTestFill is Test {
         bytes memory context = abi.encodePacked(bytes1(0xe0), exclusiveFor, startTime);
 
         bytes memory output = abi.encodePacked(
+            type(uint48).max, // fill deadline
             bytes32(0), // oracle
             bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
             block.chainid, // chainId
             bytes32(uint256(uint160(outputTokenAddress))), // token
             amount, //amount
             bytes32(uint256(uint160(swapper))), // recipient
-            type(uint48).max, // fill deadline
             uint16(0), // call length
             bytes(""), // call
             uint16(context.length), // context length
@@ -157,13 +157,13 @@ contract OutputSettlerCoinTestFill is Test {
         outputToken.approve(outputSettlerCoinAddress, amount);
 
         bytes memory output = abi.encodePacked(
+            type(uint48).max, // fill deadline
             bytes32(0), // oracle
             bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
             block.chainid, // chainId
             bytes32(uint256(uint160(outputTokenAddress))), // token
             amount, //amount
             bytes32(uint256(uint160(mockCallbackExecutorAddress))), // recipient
-            type(uint48).max,
             uint16(remoteCallData.length), // call length
             remoteCallData, // call
             uint16(0), // context length
@@ -240,13 +240,13 @@ contract OutputSettlerCoinTestFill is Test {
             abi.encodePacked(bytes1(0x01), bytes4(uint32(startTime)), bytes4(uint32(stopTime)), bytes32(uint256(slope)));
 
         bytes memory output = abi.encodePacked(
+            type(uint48).max, // fill deadline
             bytes32(0), // oracle
             bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
             block.chainid, // chainId
             bytes32(uint256(uint160(outputTokenAddress))), // token
             uint256(amount), //amount
             bytes32(uint256(uint160(swapper))), // recipient
-            type(uint48).max, // fill deadline
             uint16(0), // call length
             bytes(""), // call
             uint16(context.length), // context length
@@ -318,13 +318,13 @@ contract OutputSettlerCoinTestFill is Test {
         );
 
         bytes memory output = abi.encodePacked(
+            type(uint48).max, // fill deadline
             bytes32(0), // oracle
             bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
             block.chainid, // chainId
             bytes32(uint256(uint160(outputTokenAddress))), // token
             uint256(amount), //amount
             bytes32(uint256(uint160(swapper))), // recipient
-            type(uint48).max, // fill deadline
             uint16(0), // call length
             bytes(""), // call
             uint16(context.length), // context length
@@ -384,13 +384,13 @@ contract OutputSettlerCoinTestFill is Test {
         );
 
         bytes memory output = abi.encodePacked(
+            type(uint48).max, // fill deadline
             bytes32(0), // oracle
             bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
             block.chainid, // chainId
             bytes32(uint256(uint160(outputTokenAddress))), // token
             uint256(amount), //amount
             bytes32(uint256(uint160(swapper))), // recipient
-            type(uint48).max, // fill deadline
             uint16(0), // call length
             bytes(""), // call
             uint16(context.length), // context length
@@ -410,13 +410,13 @@ contract OutputSettlerCoinTestFill is Test {
         bytes32 filler = bytes32(0);
 
         bytes memory output = abi.encodePacked(
+            type(uint48).max, // fill deadline
             bytes32(0), // oracle
             bytes32(0), // settler
             uint256(0), // chainId
             bytes32(0), // token
             uint256(0), //amount
             bytes32(0), // recipient
-            type(uint48).max, // fill deadline
             uint16(0), // call length
             bytes(""), // call
             uint16(0), // context length
@@ -435,13 +435,13 @@ contract OutputSettlerCoinTestFill is Test {
         vm.assume(filler != bytes32(0));
 
         bytes memory output = abi.encodePacked(
+            type(uint48).max, // fill deadline
             bytes32(0), // oracle
             bytes32(0), // settler
             chainId, // chainId
             bytes32(0), // token
             uint256(0), // amount
             bytes32(0), // recipient
-            type(uint48).max, // fill deadline
             uint16(0), // call length
             bytes(""), // call
             uint16(0), // context length
@@ -462,13 +462,13 @@ contract OutputSettlerCoinTestFill is Test {
         vm.assume(filler != bytes32(0));
 
         bytes memory output = abi.encodePacked(
+            type(uint48).max, // fill deadline
             bytes32(0), // oracle
             fillerOracleBytes, // settler
             uint256(block.chainid), // chainId
             bytes32(0), // token
             uint256(0), // amount
             bytes32(0), // recipient
-            type(uint48).max, // fill deadline
             uint16(0), // call length
             bytes(""), // call
             uint16(0), // context length
@@ -497,13 +497,13 @@ contract OutputSettlerCoinTestFill is Test {
         vm.warp(filledAt);
 
         bytes memory output = abi.encodePacked(
+            uint48(fillDeadline), // fill deadline
             bytes32(0), // oracle
             bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
             uint256(block.chainid), // chainId
             bytes32(0), // token
             uint256(0), // amount
             bytes32(0), // recipient
-            uint48(fillDeadline), // fill deadline
             uint16(0), // call length
             bytes(""), // call
             uint16(0), // context length
@@ -532,13 +532,13 @@ contract OutputSettlerCoinTestFill is Test {
         outputToken.approve(outputSettlerCoinAddress, amount);
 
         bytes memory output = abi.encodePacked(
+            type(uint48).max, // fill deadline
             bytes32(0), // oracle
             bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
             block.chainid, // chainId
             bytes32(uint256(uint160(outputTokenAddress))), // token
             amount, //amount
             bytes32(0), // recipient,
-            type(uint48).max, // fill deadline
             uint16(0), // call length
             bytes(""), // call
             uint16(0), // context length
@@ -577,13 +577,13 @@ contract OutputSettlerCoinTestFill is Test {
         outputToken.approve(outputSettlerCoinAddress, amount);
 
         bytes memory output = abi.encodePacked(
+            type(uint48).max, // fill deadline
             bytes32(0), // oracle
             bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
             block.chainid, // chainId
             bytes32(uint256(uint160(outputTokenAddress))), // token
             amount, //amount
             bytes32(uint256(uint160(swapper))), // recipient
-            type(uint48).max, // fill deadline
             uint16(0), // call length
             bytes(""), // call
             uint16(outputContext.length), // context length
