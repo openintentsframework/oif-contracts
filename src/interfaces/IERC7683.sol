@@ -11,7 +11,7 @@ struct ResolvedCrossChainOrder {
     address user;
     /// @dev The chainId of the origin chain
     uint256 originChainId;
-    /// @dev The timestamp by which the order must be opened. If zero, the open step is not necesary.
+    /// @dev The timestamp by which the order must be opened. If zero, the open step is not necessary.
     uint32 openDeadline;
     /// @dev The timestamp by which the order must be filled on the destination chain(s)
     uint32 fillDeadline;
