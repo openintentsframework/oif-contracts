@@ -125,8 +125,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     /**
      * @notice Opens an intent for `order.user`. `order.input` tokens are collected from `order.user` through permit2.
      * @param order StandardOrder representing the intent.
-     * @param signature Allowance signature from user. Should contain a bytes1 selector type and then appropiate encoded
-     * signature(s).
+     * @param signature Allowance signature from user with a signature type then encoded as:
      * - SIGNATURE_TYPE_PERMIT2:  b1:0x00 | bytes:signature
      * - SIGNATURE_TYPE_3009:     b1:0x01 | bytes:signature OR abi.encode(bytes[]:signatures)
      */
@@ -152,7 +151,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         bytes1 signatureType = signature[0];
         if (signatureType == SIGNATURE_TYPE_PERMIT2) _openForWithPermit2(order, signature[1:], address(this));
         else if (signatureType == SIGNATURE_TYPE_3009) _openForWithAuthorization(order, signature[1:], orderId);
-        
+
         // Validate that there has been no reentrancy.
         if (orderStatus[orderId] != OrderStatus.Deposited) revert ReentrancyDetected();
 
