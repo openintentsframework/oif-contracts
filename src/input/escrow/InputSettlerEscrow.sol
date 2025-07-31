@@ -2,7 +2,6 @@
 pragma solidity ^0.8.26;
 
 import { ISignatureTransfer } from "permit2/src/interfaces/ISignatureTransfer.sol";
-
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
@@ -123,7 +122,12 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     }
 
     /**
-     * @notice Opens an intent for `order.user`. `order.input` tokens are collected from `order.user` through permit2.
+     * @notice Opens an intent for `order.user`. `order.input` tokens are collected from `order.user` through either
+     * permit2 or ERC3009.
+     * @dev This function may make multiple sub-call calls either directly from this contract or from deeper inside the
+     * call tree. To protect against reentry, the function uses the `orderStatus`. Local reentry (calling twice) is
+     * protected through a checks-effect pattern while global reentry is enforced by not allowing existing the function
+     * with `orderStatus` not set to `Deposited`
      * @param order StandardOrder representing the intent.
      * @param signature Allowance signature from user with a signature type then encoded as:
      * - SIGNATURE_TYPE_PERMIT2:  b1:0x00 | bytes:signature
@@ -160,8 +164,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     /**
      * @notice Helper function for using permit2 to collect assets represented by a StandardOrder.
      * @param order StandardOrder representing the intent.
-     * @param signature 712 signature of permit2 structure with Permit2Witness representing `order` signed by
-     * `order.user`.
+     * @param signature permit2 signature with Permit2Witness representing `order` signed by `order.user`.
      * @param to recipient of the inputs tokens. In most cases, should be address(this).
      */
     function _openForWithPermit2(StandardOrder calldata order, bytes calldata signature, address to) internal {
@@ -211,13 +214,11 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     }
 
     /**
-     * @notice Helper function for using permit2 to collect assets represented by a StandardOrder.
-     * @dev For the `receiveWithAuthorization` call, the nonce is set as the orderId to encode the proper order for the
-     * authorization.
-     * This function makes several external calls. Since these calls may cause issues for token collection, any function
-     * calling this function needs to have a reentrancy guard.
+     * @notice Helper function for using ERC-3009 to collect assets represented by a StandardOrder.
+     * @dev For the `receiveWithAuthorization` call, the nonce is set as the orderId to select the order associated with
+     * the authorization.
      * @param order StandardOrder representing the intent.
-     * @param _signature_ Either a single 3009 signature or an abi.encoded bytes[] of signatures. A single signature is
+     * @param _signature_ Either a single ERC-3009 signature or abi.encoded bytes[] of signatures. A single signature is
      * only allowed if the order has exactly 1 input.
      */
     function _openForWithAuthorization(
@@ -228,8 +229,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         uint256 numInputs = order.inputs.length;
         if (numInputs == 1) {
             uint256[2] calldata input = order.inputs[0];
-            // First trial using the entire signature. This is an optimisation that allows passing a smaller signature
-            // if only 1 input has to be collected.
+            // If there is only 1 input, try using the provided signature as is.
             bytes memory callData = abi.encodeWithSelector(
                 IERC3009.receiveWithAuthorization.selector,
                 order.user,
@@ -253,8 +253,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
             IsContractLib.validateContainsCode(token); // Ensure called contract has code.
             (bool success,) = token.call(callData);
             if (success) return;
-            // Otherwise it could be because of a lot of reasons. One being the signature is actually abi.encoded as
-            // bytes[].
+            // Otherwise it could be because of a lot of reasons. One being the signature is abi.encoded as bytes[].
         }
         uint256 numSignatures = BytesLib.getLengthOfBytesArray(_signature_);
         if (numInputs != numSignatures) revert SignatureAndInputsNotEqual();
