@@ -6,10 +6,10 @@ import { StandardOrder } from "../types/StandardOrderType.sol";
 
 /**
  * @notice The signed witness / mandate used for the permit2 transaction.
+ * @dev The filldeadline is part of the Permit2 struct as the openDeadline.
  */
 struct Permit2Witness {
     uint32 expires;
-    // uint32 fillDeadline; // TODO: fillDeadline is the openDeadline thus is still signed.
     address localOracle;
     MandateOutput[] outputs;
 }

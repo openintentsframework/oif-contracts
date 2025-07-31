@@ -2,6 +2,7 @@
 pragma solidity ^0.8.26;
 
 import { ISignatureTransfer } from "permit2/src/interfaces/ISignatureTransfer.sol";
+
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
@@ -42,9 +43,13 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     error OrderIdMismatch(bytes32 provided, bytes32 computed);
     error InputTokenHasDirtyBits();
     error SignatureAndInputsNotEqual();
+    error ReentrancyDetected();
 
     event Open(bytes32 indexed orderId, StandardOrder order);
     event Refunded(bytes32 indexed orderId);
+
+    bytes1 internal constant SIGNATURE_TYPE_PERMIT2 = 0x00;
+    bytes1 internal constant SIGNATURE_TYPE_3009 = 0x01;
 
     enum OrderStatus {
         None,
@@ -111,13 +116,19 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
             SafeTransferLib.safeTransferFrom(token, msg.sender, address(this), amount);
         }
 
+        // Validate that there has been no reentrancy.
+        if (orderStatus[orderId] != OrderStatus.Deposited) revert ReentrancyDetected();
+
         emit Open(orderId, order);
     }
 
     /**
      * @notice Opens an intent for `order.user`. `order.input` tokens are collected from `order.user` through permit2.
      * @param order StandardOrder representing the intent.
-     * @param signature Permit2 signature from `order.user` authorizing collection of `order.input`.
+     * @param signature Allowance signature from user. Should contain a bytes1 selector type and then appropiate encoded
+     * signature(s).
+     * - SIGNATURE_TYPE_PERMIT2:  b1:0x00 | bytes:signature
+     * - SIGNATURE_TYPE_3009:     b1:0x01 | bytes:signature OR abi.encode(bytes[]:signatures)
      */
     function openFor(
         StandardOrder calldata order,
@@ -137,8 +148,14 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         // revert and it will unmark it. This acts as a reentry check.
         orderStatus[orderId] = OrderStatus.Deposited;
 
-        // Collect input tokens
-        _openFor(order, signature, address(this));
+        // Check the first byte of the signature for signature type.
+        bytes1 signatureType = signature[0];
+        if (signatureType == SIGNATURE_TYPE_PERMIT2) _openForWithPermit2(order, signature[1:], address(this));
+        else if (signatureType == SIGNATURE_TYPE_3009) _openForWithAuthorization(order, signature[1:], orderId);
+        
+        // Validate that there has been no reentrancy.
+        if (orderStatus[orderId] != OrderStatus.Deposited) revert ReentrancyDetected();
+
         emit Open(orderId, order);
     }
 
@@ -149,7 +166,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
      * `order.user`.
      * @param to recipient of the inputs tokens. In most cases, should be address(this).
      */
-    function _openFor(StandardOrder calldata order, bytes calldata signature, address to) internal {
+    function _openForWithPermit2(StandardOrder calldata order, bytes calldata signature, address to) internal {
         ISignatureTransfer.TokenPermissions[] memory permitted;
         ISignatureTransfer.SignatureTransferDetails[] memory transferDetails;
 
@@ -173,7 +190,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
                     token := inputToken
                 }
                 // Check if input tokens are contracts.
-                IsContractLib.checkCodeSize(token);
+                IsContractLib.validateContainsCode(token);
                 // Set the allowance. This is the explicit max allowed amount approved by the user.
                 permitted[i] = ISignatureTransfer.TokenPermissions({ token: token, amount: amount });
                 // Set our requested transfer. This has to be less than or equal to the allowance
@@ -195,36 +212,15 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         );
     }
 
-    // TODO: Merge open for functions
-    function openForWithAuthorization(
-        StandardOrder calldata order,
-        bytes calldata signature,
-        bytes calldata /* originFillerData */
-    ) external {
-        // Validate the order structure
-        _validateInputChain(order.originChainId);
-        // _validateTimestampHasNotPassed(order.openDeadline);
-        _validateTimestampHasNotPassed(order.fillDeadline);
-        _validateTimestampHasNotPassed(order.expires);
-
-        bytes32 orderId = _orderIdentifier(order);
-        if (orderStatus[orderId] != OrderStatus.None) revert InvalidOrderStatus();
-        // Mark order as deposited. If we can't make the deposit, we will
-        // revert and it will unmark it. This acts as a reentry check.
-        orderStatus[orderId] = OrderStatus.Deposited;
-
-        // Collect input tokens
-        _openForWithAuthorization(order, signature, orderId);
-        emit Open(orderId, order);
-    }
-
     /**
      * @notice Helper function for using permit2 to collect assets represented by a StandardOrder.
      * @dev For the `receiveWithAuthorization` call, the nonce is set as the orderId to encode the proper order for the
      * authorization.
+     * This function makes several external calls. Since these calls may cause issues for token collection, any function
+     * calling this function needs to have a reentrancy guard.
      * @param order StandardOrder representing the intent.
-     * @param _signature_ 712 signature of permit2 structure with Permit2Witness representing `order` signed by
-     * `order.user`.
+     * @param _signature_ Either a single 3009 signature or an abi.encoded bytes[] of signatures. A single signature is
+     * only allowed if the order has exactly 1 input.
      */
     function _openForWithAuthorization(
         StandardOrder calldata order,
@@ -235,23 +231,32 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         if (numInputs == 1) {
             uint256[2] calldata input = order.inputs[0];
             // First trial using the entire signature. This is an optimisation that allows passing a smaller signature
-            // if only
-            // 1 input has to be collected.
-            // TODO: Convert try catch into assembly.
-            try IERC3009(EfficiencyLib.asSanitizedAddress(input[0])).receiveWithAuthorization({
-                from: order.user,
-                to: address(this),
-                value: input[1],
-                validAfter: 0,
-                validBefore: order.fillDeadline,
-                nonce: orderId,
-                signature: _signature_
-            }) {
-                return;
-            } catch {
-                // If an error occurred, it could be because of a lot of reasons. One being the signature is actually
-                // abi.encoded as bytes[].
-            }
+            // if only 1 input has to be collected.
+            bytes memory callData = abi.encodeWithSelector(
+                IERC3009.receiveWithAuthorization.selector,
+                order.user,
+                address(this),
+                input[1],
+                0,
+                order.fillDeadline,
+                orderId,
+                _signature_
+            );
+            // IERC3009(EfficiencyLib.asSanitizedAddress(input[0])).receiveWithAuthorization({
+            //     from: order.user,
+            //     to: address(this),
+            //     value: input[1],
+            //     validAfter: 0,
+            //     validBefore: order.fillDeadline,
+            //     nonce: orderId,
+            //     signature: _signature_
+            // })
+            address token = EfficiencyLib.asSanitizedAddress(input[0]);
+            IsContractLib.validateContainsCode(token); // Ensure called contract has code.
+            (bool success,) = token.call(callData);
+            if (success) return;
+            // Otherwise it could be because of a lot of reasons. One being the signature is actually abi.encoded as
+            // bytes[].
         }
         uint256 numSignatures = BytesLib.getLengthOfBytesArray(_signature_);
         if (numInputs != numSignatures) revert SignatureAndInputsNotEqual();
