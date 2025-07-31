@@ -49,7 +49,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         assertEq(token.balanceOf(address(user)), amount);
 
         vm.prank(user);
-        IInputSettlerEscrow(inputSettlerEscrow).open(order);
+        IInputSettlerEscrow(inputSettlerEscrow).open(abi.encode(order));
         vm.snapshotGasLastCall("inputSettler", "escrowOpen");
 
         assertEq(token.balanceOf(address(user)), 0);
@@ -91,7 +91,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         assertEq(token.balanceOf(address(swapper)), amount);
 
         vm.prank(swapper);
-        IInputSettlerEscrow(inputSettlerEscrow).openFor(order, signature, hex"");
+        IInputSettlerEscrow(inputSettlerEscrow).openFor(abi.encode(order), signature, hex"");
         vm.snapshotGasLastCall("inputSettler", "escrowOpenFor");
 
         assertEq(token.balanceOf(address(swapper)), 0);
@@ -171,7 +171,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         vm.prank(swapper);
         token.approve(inputSettlerEscrow, amount);
         vm.prank(swapper);
-        IInputSettlerEscrow(inputSettlerEscrow).open(order);
+        IInputSettlerEscrow(inputSettlerEscrow).open(abi.encode(order));
 
         uint32[] memory timestamps = new uint32[](1);
         timestamps[0] = uint32(block.timestamp);
@@ -246,7 +246,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         vm.prank(swapper);
         token.approve(inputSettlerEscrow, amount);
         vm.prank(swapper);
-        IInputSettlerEscrow(inputSettlerEscrow).open(order);
+        IInputSettlerEscrow(inputSettlerEscrow).open(abi.encode(order));
 
         uint32[] memory timestamps = new uint32[](1);
         timestamps[0] = filledAt;
@@ -301,7 +301,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         vm.prank(swapper);
         token.approve(inputSettlerEscrow, amount);
         vm.prank(swapper);
-        IInputSettlerEscrow(inputSettlerEscrow).open(order);
+        IInputSettlerEscrow(inputSettlerEscrow).open(abi.encode(order));
 
         uint32[] memory timestamps = new uint32[](1);
         timestamps[0] = uint32(block.timestamp);

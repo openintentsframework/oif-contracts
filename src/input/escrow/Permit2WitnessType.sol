@@ -2,14 +2,13 @@
 pragma solidity ^0.8.26;
 
 import { MandateOutput, MandateOutputType } from "../types/MandateOutputType.sol";
-import { StandardOrder } from "../types/StandardOrderType.sol";
+import { StandardOrder, StandardOrderType } from "../types/StandardOrderType.sol";
 
 /**
  * @notice The signed witness / mandate used for the permit2 transaction.
  */
 struct Permit2Witness {
     uint32 expires;
-    // uint32 fillDeadline; // TODO: fillDeadline is the openDeadline thus is still signed.
     address localOracle;
     MandateOutput[] outputs;
 }
@@ -21,6 +20,8 @@ struct Permit2Witness {
  * TYPE: Is complete including sub-types.
  */
 library Permit2WitnessType {
+    using StandardOrderType for bytes;
+
     bytes constant PERMIT2_WITNESS_TYPE_STUB = abi.encodePacked(
         "Permit2Witness(uint32 expires,address localOracle,uint256[2][] inputs,MandateOutput[] outputs)"
     );
@@ -40,14 +41,14 @@ library Permit2WitnessType {
      * @notice Computes the permit2 witness hash.
      */
     function Permit2WitnessHash(
-        StandardOrder calldata order
+        bytes calldata order
     ) internal pure returns (bytes32) {
         return keccak256(
             abi.encode(
                 PERMIT2_WITNESS_TYPE_HASH,
-                order.expires,
-                order.localOracle,
-                MandateOutputType.hashOutputs(order.outputs)
+                order.expires(),
+                order.localOracle(),
+                MandateOutputType.hashOutputs(order.outputs())
             )
         );
     }
