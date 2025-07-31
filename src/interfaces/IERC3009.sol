@@ -10,11 +10,6 @@ interface IERC3009 {
         uint256 validAfter,
         uint256 validBefore,
         bytes32 nonce,
-        bytes memory signature
+        bytes calldata signature
     ) external;
-
-    // Optional but useful for checking if an authorization has been used
-    function authorizationState(address authorizer, bytes32 nonce) external view returns (bool);
-
-    function DOMAIN_SEPARATOR() external view returns (bytes32);
 }

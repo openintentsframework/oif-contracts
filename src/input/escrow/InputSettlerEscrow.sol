@@ -136,7 +136,6 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     ) external {
         // Validate the order structure.
         _validateInputChain(order.originChainId);
-        // _validateTimestampHasNotPassed(order.openDeadline);
         _validateTimestampHasNotPassed(order.fillDeadline);
         _validateTimestampHasNotPassed(order.expires);
 

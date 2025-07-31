@@ -4,6 +4,7 @@ pragma solidity ^0.8.22;
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
 import { InputSettlerEscrow } from "../../../src/input/escrow/InputSettlerEscrow.sol";
+import { LibAddress } from "../../../src/libs/LibAddress.sol";
 
 import { AllowOpenType } from "../../../src/input/types/AllowOpenType.sol";
 import { MandateOutput } from "../../../src/input/types/MandateOutputType.sol";
@@ -20,6 +21,8 @@ interface EIP712 {
 }
 
 contract InputSettlerEscrowTestBase is Permit2Test {
+    using LibAddress for uint256;
+
     event Transfer(address from, address to, uint256 afmount);
     event Transfer(address by, address from, address to, uint256 id, uint256 amount);
     event CompactRegistered(address indexed sponsor, bytes32 claimHash, bytes32 typehash);
@@ -175,6 +178,38 @@ contract InputSettlerEscrowTestBase is Permit2Test {
                         order.nonce,
                         order.fillDeadline,
                         witnessHash(order)
+                    )
+                )
+            )
+        );
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
+        return bytes.concat(r, s, bytes1(v));
+    }
+
+    function get3009Signature(
+        uint256 privateKey,
+        address inputSettler,
+        uint256 inputIndex,
+        StandardOrder memory order
+    ) internal view returns (bytes memory sig) {
+        uint256[2] memory input = order.inputs[inputIndex];
+        bytes32 domainSeparator = EIP712(input[0].fromIdentifier()).DOMAIN_SEPARATOR();
+        bytes32 msgHash = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                domainSeparator,
+                keccak256(
+                    abi.encode(
+                        keccak256(
+                            "ReceiveWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce)"
+                        ),
+                        order.user,
+                        inputSettler,
+                        input[1],
+                        0,
+                        order.fillDeadline,
+                        InputSettlerEscrow(inputSettler).orderIdentifier(order)
                     )
                 )
             )
