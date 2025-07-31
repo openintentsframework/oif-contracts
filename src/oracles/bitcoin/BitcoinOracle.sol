@@ -9,6 +9,7 @@ import { AddressType, BitcoinAddress, BtcScript } from "bitcoinprism-evm/src/lib
 
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
+import { AssemblyLib } from "../../libs/AssemblyLib.sol";
 import { LibAddress } from "../../libs/LibAddress.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 import { OutputVerificationLib } from "../../libs/OutputVerificationLib.sol";
@@ -305,10 +306,7 @@ contract BitcoinOracle is BaseOracle {
         accumulator = true;
         uint256 numPayloads = payloads.length;
         for (uint256 i; i < numPayloads; ++i) {
-            bool payloadValid = _isPayloadValid(payloads[i]);
-            assembly ("memory-safe") {
-                accumulator := and(accumulator, payloadValid)
-            }
+            accumulator = AssemblyLib.and(accumulator, _isPayloadValid(payloads[i]));
         }
     }
 
