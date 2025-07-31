@@ -90,8 +90,6 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     function open(
         bytes calldata order
     ) external {
-        // Important! Validate that the incoming order can be read using the calldata tooling.
-        order.validateMinimumCalldataSize();
         // Validate the order structure.
         _validateTimestampHasNotPassed(order.fillDeadline());
         _validateTimestampHasNotPassed(order.expires());
@@ -134,8 +132,6 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
      * @param signature Permit2 signature from `order.user` authorizing collection of `order.input`.
      */
     function openFor(address sponsor, bytes calldata order, bytes calldata signature) external {
-        // Important! Validate that the incoming order can be read using the calldata tooling.
-        order.validateMinimumCalldataSize();
         // Validate the order structure.
         _validateInputChain(order.originChainId());
         // _validateTimestampHasNotPassed(order.openDeadline);

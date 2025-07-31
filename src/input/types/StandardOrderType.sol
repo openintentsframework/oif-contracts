@@ -70,24 +70,12 @@ library StandardOrderType {
     }
 
     // --- Standard Order Decoding Helpers --- //
-    // For 7683 compliance, the order will be given to us on open as a series of bytes. To aid with decoding various
-    // elements of the order, the below decoding aids are provided.
 
-    uint256 internal constant MINIMUM_STANDARD_ORDER_LENGTH = 13 * 32;
-
-    error UndecodeableOrder(uint256 size);
-
-    /// @notice Validates that the order has a minimum size that allows us to use pure calldata loads to decode its
-    /// bytes
-    function validateMinimumCalldataSize(
-        bytes calldata order
-    ) internal pure {
-        // We need to validate that enough calldata exists to decode the order. We need at least 13*32 slots for the
-        // smallest order
-        if (order.length < MINIMUM_STANDARD_ORDER_LENGTH) revert UndecodeableOrder(order.length);
-    }
-
-    /// @dev Loads beyond its slot. bytes length needs to be validated.
+    /**
+     * @notice Loads the user from an abi.encoded standard order given a bytes calldata pointer
+     * @param order Bytes pointer to abiencoded standard order
+     * @return _user Decoded user address for the order.
+     */
     function user(
         bytes calldata order
     ) internal pure returns (address _user) {
@@ -98,6 +86,11 @@ library StandardOrderType {
         }
     }
 
+    /**
+     * @notice Loads the nonce from an abi.encoded standard order given a bytes calldata pointer
+     * @param order Bytes pointer to abi encoded standard order
+     * @return _nonce Decoded nonce for the order.
+     */
     function nonce(
         bytes calldata order
     ) internal pure returns (uint256 _nonce) {
@@ -107,6 +100,11 @@ library StandardOrderType {
         }
     }
 
+    /**
+     * @notice Loads the originChainId from an abi.encoded standard order given a bytes calldata pointer
+     * @param order Bytes pointer to abi encoded standard order
+     * @return _originChainId Decoded originChainId for the order.
+     */
     function originChainId(
         bytes calldata order
     ) internal pure returns (uint256 _originChainId) {
@@ -116,7 +114,11 @@ library StandardOrderType {
         }
     }
 
-    /// @dev Loads beyond its slot. bytes length needs to be validated.
+    /**
+     * @notice Loads the expiry from an abi.encoded standard order given a bytes calldata pointer
+     * @param order Bytes pointer to abi encoded standard order
+     * @return _expires Decoded expiry for the order.
+     */
     function expires(
         bytes calldata order
     ) internal pure returns (uint32 _expires) {
@@ -126,6 +128,11 @@ library StandardOrderType {
         }
     }
 
+    /**
+     * @notice Loads the fill deadline from an abi.encoded standard order given a bytes calldata pointer
+     * @param order Bytes pointer to abi encoded standard order
+     * @return _fillDeadline Decoded fill deadline for the order.
+     */
     function fillDeadline(
         bytes calldata order
     ) internal pure returns (uint32 _fillDeadline) {
@@ -135,6 +142,11 @@ library StandardOrderType {
         }
     }
 
+    /**
+     * @notice Loads the input oracle from an abi.encoded standard order given a bytes calldata pointer
+     * @param order Bytes pointer to abi encoded standard order
+     * @return _localOracle Decoded input oracle for the order.
+     */
     function localOracle(
         bytes calldata order
     ) internal pure returns (address _localOracle) {
@@ -144,6 +156,11 @@ library StandardOrderType {
         }
     }
 
+    /**
+     * @notice Loads the order inputs from an abi.encoded standard order given a bytes calldata pointer
+     * @param order Bytes pointer to abi encoded standard order
+     * @return _input Decoded inputs calldata pointer for the order.
+     */
     function inputs(
         bytes calldata order
     ) internal pure returns (uint256[2][] calldata _input) {
@@ -155,6 +172,11 @@ library StandardOrderType {
         }
     }
 
+    /**
+     * @notice Loads the order inputs from an abi.encoded standard order given a bytes calldata pointer
+     * @param order Bytes pointer to abi encoded standard order
+     * @return _outputs Decoded outputs pointer for the order.
+     */
     function outputs(
         bytes calldata order
     ) internal pure returns (MandateOutput[] calldata _outputs) {
