@@ -7,12 +7,7 @@ import { StandardOrder } from "../input/types/StandardOrderType.sol";
 import { GaslessCrossChainOrder, OnchainCrossChainOrder, ResolvedCrossChainOrder } from "./IERC7683.sol";
 
 interface IInputSettlerEscrow {
-    function openFor(
-        address sponsor,
-        bytes calldata order,
-        bytes calldata signature,
-        bytes calldata /* originFillerData */
-    ) external;
+    function openFor(address sponsor, bytes calldata order, bytes calldata signature) external;
 
     function open(
         bytes calldata order

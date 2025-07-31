@@ -82,6 +82,8 @@ library StandardOrderType {
     function validateMinimumCalldataSize(
         bytes calldata order
     ) internal pure {
+        // We need to validate that enough calldata exists to decode the order. We need at least 13*32 slots for the
+        // smallest order
         if (order.length < MINIMUM_STANDARD_ORDER_LENGTH) revert UndecodeableOrder(order.length);
     }
 

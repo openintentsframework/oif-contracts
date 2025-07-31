@@ -133,12 +133,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
      * @param order  bytes representing an encoded StandadrdOrder.
      * @param signature Permit2 signature from `order.user` authorizing collection of `order.input`.
      */
-    function openFor(
-        address sponsor,
-        bytes calldata order,
-        bytes calldata signature,
-        bytes calldata /* originFillerData */
-    ) external {
+    function openFor(address sponsor, bytes calldata order, bytes calldata signature) external {
         // Important! Validate that the incoming order can be read using the calldata tooling.
         order.validateMinimumCalldataSize();
         // Validate the order structure.
