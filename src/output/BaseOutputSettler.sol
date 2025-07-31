@@ -231,7 +231,7 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
         OutputVerificationLib._isThisChain(chainId);
         OutputVerificationLib._isThisOutputSettler(settler);
 
-        bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHashFromBytes(output);
+        bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHashFromBytes(output[6:]);
         bytes32 existingFillRecordHash = _fillRecords[orderId][outputHash];
         if (existingFillRecordHash != bytes32(0)) return existingFillRecordHash; // Early return if already solved.
 
