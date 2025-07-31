@@ -125,30 +125,30 @@ contract OutputSettlerCoin is BaseOutputSettler {
 
         //bytes1 orderType = bytes1(output.context);
 
-        uint256 fullfillmentOffset = 0xc6 + 0x2 + callDataLength + 0x2; // callData offset, 2 bytes for call size,
+        uint256 fulfilmentOffset = 0xc6 + 0x2 + callDataLength + 0x2; // callData offset, 2 bytes for call size,
             // calldata length, 2 bytes for context size
 
-        bytes1 orderType = bytes1(output[fullfillmentOffset]);
+        bytes1 orderType = bytes1(output[fulfilmentOffset]);
 
         if (orderType == 0x00 && fulfillmentLength == 1) return amount;
         if (orderType == 0x01 && fulfillmentLength == 41) {
-            uint32 startTime = uint32(bytes4(output[fullfillmentOffset + 1:fullfillmentOffset + 5]));
-            uint32 stopTime = uint32(bytes4(output[fullfillmentOffset + 5:fullfillmentOffset + 9]));
-            uint256 slope = uint256(bytes32(output[fullfillmentOffset + 9:fullfillmentOffset + 41]));
+            uint32 startTime = uint32(bytes4(output[fulfilmentOffset + 1:fulfilmentOffset + 5]));
+            uint32 stopTime = uint32(bytes4(output[fulfilmentOffset + 5:fulfilmentOffset + 9]));
+            uint256 slope = uint256(bytes32(output[fulfilmentOffset + 9:fulfilmentOffset + 41]));
             return _dutchAuctionSlope(amount, slope, startTime, stopTime);
         }
 
         if (orderType == 0xe0 && fulfillmentLength == 37) {
-            bytes32 exclusiveFor = bytes32(output[fullfillmentOffset + 1:fullfillmentOffset + 33]);
-            uint32 startTime = uint32(bytes4(output[fullfillmentOffset + 33:fullfillmentOffset + 37]));
+            bytes32 exclusiveFor = bytes32(output[fulfilmentOffset + 1:fulfilmentOffset + 33]);
+            uint32 startTime = uint32(bytes4(output[fulfilmentOffset + 33:fulfilmentOffset + 37]));
             if (startTime > block.timestamp && exclusiveFor != solver) revert ExclusiveTo(exclusiveFor);
             return amount;
         }
         if (orderType == 0xe1 && fulfillmentLength == 73) {
-            bytes32 exclusiveFor = bytes32(output[fullfillmentOffset + 1:fullfillmentOffset + 33]);
-            uint32 startTime = uint32(bytes4(output[fullfillmentOffset + 33:fullfillmentOffset + 37]));
-            uint32 stopTime = uint32(bytes4(output[fullfillmentOffset + 37:fullfillmentOffset + 41]));
-            uint256 slope = uint256(bytes32(output[fullfillmentOffset + 41:fullfillmentOffset + 73]));
+            bytes32 exclusiveFor = bytes32(output[fulfilmentOffset + 1:fulfilmentOffset + 33]);
+            uint32 startTime = uint32(bytes4(output[fulfilmentOffset + 33:fulfilmentOffset + 37]));
+            uint32 stopTime = uint32(bytes4(output[fulfilmentOffset + 37:fulfilmentOffset + 41]));
+            uint256 slope = uint256(bytes32(output[fulfilmentOffset + 41:fulfilmentOffset + 73]));
             if (startTime > block.timestamp && exclusiveFor != solver) revert ExclusiveTo(exclusiveFor);
             return _dutchAuctionSlope(amount, slope, startTime, stopTime);
         }
