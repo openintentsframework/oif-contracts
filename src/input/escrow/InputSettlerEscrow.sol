@@ -6,6 +6,8 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
 import { Output, ResolvedCrossChainOrder } from "../../interfaces/IERC7683.sol";
+
+import { IOriginSettler } from "../../interfaces/IERC7683.sol";
 import { IInputSettlerEscrow } from "../../interfaces/IInputSettlerEscrow.sol";
 import { IOIFCallback } from "../../interfaces/IOIFCallback.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
@@ -127,11 +129,11 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
     /**
      * @notice Opens an intent for `order.user`. `order.input` tokens are collected from `sponsor` through permit2.
-     * @param sponsor Address to collect tokens from.
      * @param order  bytes representing an encoded StandadrdOrder.
+     * @param sponsor Address to collect tokens from.
      * @param signature Permit2 signature from `order.user` authorizing collection of `order.input`.
      */
-    function openFor(address sponsor, bytes calldata order, bytes calldata signature) external {
+    function openFor(bytes calldata order, address sponsor, bytes calldata signature) external {
         // Validate the order structure.
         _validateInputChain(order.originChainId());
         // _validateTimestampHasNotPassed(order.openDeadline);
@@ -147,20 +149,20 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
         // Collect input tokens
         if (msg.sender == sponsor && signature.length == 0) _open(order);
-        else _openFor(sponsor, order, signature, address(this));
+        else _openFor(order, sponsor, signature, address(this));
 
         emit Open(orderId, order);
     }
 
     /**
      * @notice Helper function for using permit2 to collect assets represented by a StandardOrder.
-     * @param signer Provider of the permit2 funds and signer of the intent.
      * @param order StandardOrder representing the intent.
+     * @param signer Provider of the permit2 funds and signer of the intent.
      * @param signature 712 signature of permit2 structure with Permit2Witness representing `order` signed by
      * `order.user`.
      * @param to recipient of the inputs tokens. In most cases, should be address(this).
      */
-    function _openFor(address signer, bytes calldata order, bytes calldata signature, address to) internal {
+    function _openFor(bytes calldata order, address signer, bytes calldata signature, address to) internal {
         ISignatureTransfer.TokenPermissions[] memory permitted;
         ISignatureTransfer.SignatureTransferDetails[] memory transferDetails;
 

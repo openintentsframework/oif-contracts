@@ -4,10 +4,9 @@ pragma solidity >=0.8.0;
 import { MandateOutput } from "../input/types/MandateOutputType.sol";
 import { OrderPurchase } from "../input/types/OrderPurchaseType.sol";
 import { StandardOrder } from "../input/types/StandardOrderType.sol";
-import { GaslessCrossChainOrder, OnchainCrossChainOrder, ResolvedCrossChainOrder } from "./IERC7683.sol";
 
 interface IInputSettlerEscrow {
-    function openFor(address sponsor, bytes calldata order, bytes calldata signature) external;
+    function openFor(bytes calldata order, address sponsor, bytes calldata signature) external;
 
     function open(
         bytes calldata order
