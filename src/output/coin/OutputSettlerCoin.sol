@@ -113,9 +113,9 @@ contract OutputSettlerCoin is BaseOutputSettler {
     }
 
     function _orderType(bytes calldata output, bytes32 solver) internal view returns (uint256 amount) {
-        uint16 callDataLength = uint16(bytes2(output[0xc0:0xc2]));
+        uint16 callDataLength = uint16(bytes2(output[0xc6:0xc8]));
 
-        uint16 fulfillmentLength = uint16(bytes2(output[0xc2 + callDataLength:0xc4 + callDataLength]));
+        uint16 fulfillmentLength = uint16(bytes2(output[0xc8 + callDataLength:0xca + callDataLength]));
 
         assembly ("memory-safe") {
             amount := calldataload(add(output.offset, 0x80))
@@ -125,7 +125,7 @@ contract OutputSettlerCoin is BaseOutputSettler {
 
         //bytes1 orderType = bytes1(output.context);
 
-        uint256 fullfillmentOffset = 0xc0 + 0x2 + callDataLength + 0x2; // callData offset, 2 bytes for call size,
+        uint256 fullfillmentOffset = 0xc6 + 0x2 + callDataLength + 0x2; // callData offset, 2 bytes for call size,
             // calldata length, 2 bytes for context size
 
         bytes1 orderType = bytes1(output[fullfillmentOffset]);

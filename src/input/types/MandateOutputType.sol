@@ -10,6 +10,7 @@ struct MandateOutput {
     bytes32 token;
     uint256 amount;
     bytes32 recipient;
+    /// uint48 fillDeadline
     /// @dev Data that will be delivered to recipient through the settlement callback on the output chain. Can be used
     /// to schedule additional actions.
     bytes call;

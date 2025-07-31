@@ -169,9 +169,12 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
     function fill(bytes32 orderId, bytes calldata originData, bytes calldata fillerData) external returns (bytes32) {
         // TODO: handle fill deadline
         bytes32 proposedSolver;
+        uint48 fillDeadline = uint48(bytes6(originData[0xc0:0xc6]));
         assembly ("memory-safe") {
             proposedSolver := calldataload(fillerData.offset)
         }
+
+        if (fillDeadline < block.timestamp) revert FillDeadline();
 
         return _fill(orderId, originData, proposedSolver);
     }
@@ -241,10 +244,10 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
         address recipient = address(uint160(uint256(recipientBytes)));
         SafeTransferLib.safeTransferFrom(address(uint160(uint256(token))), msg.sender, recipient, outputAmount);
 
-        uint16 callDataLength = uint16(bytes2(output[0xc0:0xc2]));
+        uint16 callDataLength = uint16(bytes2(output[0xc6:0xc8]));
 
         if (callDataLength > 0) {
-            bytes calldata callData = output[0xc2:0xc2 + callDataLength];
+            bytes calldata callData = output[0xc8:0xc8 + callDataLength];
             IOIFCallback(recipient).outputFilled(token, outputAmount, callData);
         }
 
@@ -298,6 +301,10 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
         assembly ("memory-safe") {
             proposedSolver := calldataload(fillerData.offset)
         }
+
+        uint48 fillDeadline = uint48(bytes6(outputs[0][0xc0:0xc6]));
+
+        if (fillDeadline < block.timestamp) revert FillDeadline();
 
         bytes32 fillRecordHash = _fill(orderId, outputs[0], proposedSolver);
         bytes32 expectedFillRecordHash = _getFillRecordHash(proposedSolver, uint32(block.timestamp));

@@ -60,6 +60,7 @@ contract OutputSettlerCoinTestFill is Test {
             bytes32(uint256(uint160(outputTokenAddress))), // token
             amount, //amount
             bytes32(uint256(uint160(swapper))), // recipient
+            type(uint48).max, // fill deadline
             uint16(0), // call length
             bytes(""), // call
             uint16(0), // context length
@@ -122,6 +123,7 @@ contract OutputSettlerCoinTestFill is Test {
             bytes32(uint256(uint160(outputTokenAddress))), // token
             amount, //amount
             bytes32(uint256(uint160(swapper))), // recipient
+            type(uint48).max, // fill deadline
             uint16(0), // call length
             bytes(""), // call
             uint16(context.length), // context length
@@ -161,6 +163,7 @@ contract OutputSettlerCoinTestFill is Test {
             bytes32(uint256(uint160(outputTokenAddress))), // token
             amount, //amount
             bytes32(uint256(uint160(mockCallbackExecutorAddress))), // recipient
+            type(uint48).max,
             uint16(remoteCallData.length), // call length
             remoteCallData, // call
             uint16(0), // context length
@@ -243,6 +246,7 @@ contract OutputSettlerCoinTestFill is Test {
             bytes32(uint256(uint160(outputTokenAddress))), // token
             uint256(amount), //amount
             bytes32(uint256(uint160(swapper))), // recipient
+            type(uint48).max, // fill deadline
             uint16(0), // call length
             bytes(""), // call
             uint16(context.length), // context length
@@ -320,6 +324,7 @@ contract OutputSettlerCoinTestFill is Test {
             bytes32(uint256(uint160(outputTokenAddress))), // token
             uint256(amount), //amount
             bytes32(uint256(uint160(swapper))), // recipient
+            type(uint48).max, // fill deadline
             uint16(0), // call length
             bytes(""), // call
             uint16(context.length), // context length
@@ -385,6 +390,7 @@ contract OutputSettlerCoinTestFill is Test {
             bytes32(uint256(uint160(outputTokenAddress))), // token
             uint256(amount), //amount
             bytes32(uint256(uint160(swapper))), // recipient
+            type(uint48).max, // fill deadline
             uint16(0), // call length
             bytes(""), // call
             uint16(context.length), // context length
@@ -410,6 +416,7 @@ contract OutputSettlerCoinTestFill is Test {
             bytes32(0), // token
             uint256(0), //amount
             bytes32(0), // recipient
+            type(uint48).max, // fill deadline
             uint16(0), // call length
             bytes(""), // call
             uint16(0), // context length
@@ -434,6 +441,7 @@ contract OutputSettlerCoinTestFill is Test {
             bytes32(0), // token
             uint256(0), // amount
             bytes32(0), // recipient
+            type(uint48).max, // fill deadline
             uint16(0), // call length
             bytes(""), // call
             uint16(0), // context length
@@ -460,6 +468,7 @@ contract OutputSettlerCoinTestFill is Test {
             bytes32(0), // token
             uint256(0), // amount
             bytes32(0), // recipient
+            type(uint48).max, // fill deadline
             uint16(0), // call length
             bytes(""), // call
             uint16(0), // context length
@@ -479,8 +488,8 @@ contract OutputSettlerCoinTestFill is Test {
         address sender,
         bytes32 filler,
         bytes32 orderId,
-        uint32 fillDeadline,
-        uint32 filledAt
+        uint48 fillDeadline,
+        uint48 filledAt
     ) public {
         vm.assume(filler != bytes32(0));
         vm.assume(fillDeadline < filledAt);
@@ -494,6 +503,7 @@ contract OutputSettlerCoinTestFill is Test {
             bytes32(0), // token
             uint256(0), // amount
             bytes32(0), // recipient
+            uint48(fillDeadline), // fill deadline
             uint16(0), // call length
             bytes(""), // call
             uint16(0), // context length
@@ -527,7 +537,8 @@ contract OutputSettlerCoinTestFill is Test {
             block.chainid, // chainId
             bytes32(uint256(uint160(outputTokenAddress))), // token
             amount, //amount
-            bytes32(0), // recipient
+            bytes32(0), // recipient,
+            type(uint48).max, // fill deadline
             uint16(0), // call length
             bytes(""), // call
             uint16(0), // context length
@@ -572,6 +583,7 @@ contract OutputSettlerCoinTestFill is Test {
             bytes32(uint256(uint160(outputTokenAddress))), // token
             amount, //amount
             bytes32(uint256(uint160(swapper))), // recipient
+            type(uint48).max, // fill deadline
             uint16(0), // call length
             bytes(""), // call
             uint16(outputContext.length), // context length

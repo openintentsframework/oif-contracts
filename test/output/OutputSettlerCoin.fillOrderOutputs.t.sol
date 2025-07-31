@@ -68,6 +68,7 @@ contract OutputSettlerCoinTestfillOrderOutputs is Test {
             bytes32(uint256(uint160(outputTokenAddress))), // token
             uint256(amount), //amount
             bytes32(uint256(uint160(swapper))), // recipient
+            type(uint48).max, // fill deadline
             uint16(0), // call length
             bytes(""), // call
             uint16(0), // context length
@@ -81,6 +82,7 @@ contract OutputSettlerCoinTestfillOrderOutputs is Test {
             bytes32(uint256(uint160(outputTokenAddress))), // token
             uint256(amount2), //amount
             bytes32(uint256(uint160(swapper))), // recipient
+            type(uint48).max, // fill deadline
             uint16(0), // call length
             bytes(""), // call
             uint16(0), // context length
@@ -141,23 +143,31 @@ contract OutputSettlerCoinTestfillOrderOutputs is Test {
         vm.prank(sender);
         outputToken.approve(outputSettlerCoinAddress, uint256(amount));
 
-        MandateOutput[] memory outputs = new MandateOutput[](1);
-        outputs[0] = MandateOutput({
-            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
-            oracle: bytes32(0),
-            chainId: block.chainid,
-            token: bytes32(uint256(uint160(outputTokenAddress))),
-            amount: amount,
-            recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
-            context: bytes("")
-        });
+        bytes[] memory outputs = new bytes[](1);
+
+        bytes memory output = abi.encodePacked(
+            bytes32(0), // oracle
+            bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
+            uint256(block.chainid), // chainId
+            bytes32(uint256(uint160(outputTokenAddress))), // token
+            uint256(amount), //amount
+            bytes32(uint256(uint160(swapper))), // recipient
+            uint48(fillDeadline), // fill deadline
+            uint16(0), // call length
+            bytes(""), // call
+            uint16(0), // context length
+            bytes("") // context
+        );
+
+        outputs[0] = output;
+
+        bytes memory fillerData = abi.encodePacked(filler);
 
         uint32 warpTo = uint32(excess) + uint32(fillDeadline);
         vm.warp(warpTo);
 
         if (excess != 0) vm.expectRevert(abi.encodeWithSignature("FillDeadline()"));
         vm.prank(sender);
-        outputSettlerCoin.fillOrderOutputs(fillDeadline, orderId, outputs, filler);
+        outputSettlerCoin.fillOrderOutputs(orderId, outputs, fillerData);
     }
 }
