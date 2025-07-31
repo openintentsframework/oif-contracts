@@ -128,11 +128,17 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     }
 
     /**
-     * @notice Opens an intent for `order.user`. `order.input` tokens are collected from `order.user` through permit2.
+     * @notice Opens an intent for `order.user`. `order.input` tokens are collected from `sponsor` through permit2.
+     * @param sponsor Address to collect tokens from.
      * @param order  bytes representing an encoded StandadrdOrder.
      * @param signature Permit2 signature from `order.user` authorizing collection of `order.input`.
      */
-    function openFor(bytes calldata order, bytes calldata signature, bytes calldata /* originFillerData */ ) external {
+    function openFor(
+        address sponsor,
+        bytes calldata order,
+        bytes calldata signature,
+        bytes calldata /* originFillerData */
+    ) external {
         // Important! Validate that the incoming order can be read using the calldata tooling.
         order.validateMinimumCalldataSize();
         // Validate the order structure.
@@ -149,19 +155,21 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         orderStatus[orderId] = OrderStatus.Deposited;
 
         // Collect input tokens
-        _openFor(order, signature, address(this));
+        if (msg.sender == sponsor && signature.length == 0) _open(order);
+        else _openFor(sponsor, order, signature, address(this));
 
         emit Open(orderId, order);
     }
 
     /**
      * @notice Helper function for using permit2 to collect assets represented by a StandardOrder.
+     * @param signer Provider of the permit2 funds and signer of the intent.
      * @param order StandardOrder representing the intent.
      * @param signature 712 signature of permit2 structure with Permit2Witness representing `order` signed by
      * `order.user`.
      * @param to recipient of the inputs tokens. In most cases, should be address(this).
      */
-    function _openFor(bytes calldata order, bytes calldata signature, address to) internal {
+    function _openFor(address signer, bytes calldata order, bytes calldata signature, address to) internal {
         ISignatureTransfer.TokenPermissions[] memory permitted;
         ISignatureTransfer.SignatureTransferDetails[] memory transferDetails;
 
@@ -200,7 +208,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         PERMIT2.permitWitnessTransferFrom(
             permitBatch,
             transferDetails,
-            order.user(),
+            signer,
             Permit2WitnessType.Permit2WitnessHash(order),
             Permit2WitnessType.PERMIT2_PERMIT2_TYPESTRING,
             signature
@@ -297,7 +305,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         bytes calldata call,
         bytes calldata orderOwnerSignature
     ) external virtual {
-        _validateDestination(destination);
+        // _validateDestination has been moved down to circumvent stack issue.
         _validateInputChain(order.originChainId);
 
         bytes32 orderId = order.orderIdentifier();
@@ -306,6 +314,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
             bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
 
             // Validate the external claimant with signature
+            _validateDestination(destination);
             _allowExternalClaimant(
                 orderId, EfficiencyLib.asSanitizedAddress(uint256(orderOwner)), destination, call, orderOwnerSignature
             );

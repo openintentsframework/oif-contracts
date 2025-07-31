@@ -57,6 +57,51 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
     }
 
     /// forge-config: default.isolate = true
+    function test_open_for_msgsender_gas() external {
+        test_open_for_msgsender(10000, 10 ** 18, makeAddr("user"));
+    }
+
+    function test_open_for_msgsender(
+        uint32 expires,
+        uint128 amount,
+        address user
+    ) public returns (StandardOrder memory order) {
+        vm.assume(expires < type(uint32).max);
+        vm.assume(expires > block.timestamp);
+        vm.assume(token.balanceOf(user) == 0);
+        vm.assume(user != inputSettlerEscrow);
+
+        token.mint(user, amount);
+        vm.prank(user);
+        token.approve(inputSettlerEscrow, amount);
+
+        MandateOutput[] memory outputs = new MandateOutput[](0);
+
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        order = StandardOrder({
+            user: swapper,
+            nonce: 0,
+            originChainId: block.chainid,
+            expires: expires,
+            fillDeadline: expires,
+            localOracle: address(0),
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        assertEq(token.balanceOf(address(user)), amount);
+
+        vm.prank(user);
+        IInputSettlerEscrow(inputSettlerEscrow).openFor(user, abi.encode(order), hex"", hex"");
+        vm.snapshotGasLastCall("inputSettler", "escrowOpenForMsgSender");
+
+        assertEq(token.balanceOf(address(user)), 0);
+        assertEq(token.balanceOf(inputSettlerEscrow), amount);
+    }
+
+    /// forge-config: default.isolate = true
     function test_open_for_gas() external {
         test_open_for(10 ** 18, 251251);
     }
@@ -91,7 +136,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         assertEq(token.balanceOf(address(swapper)), amount);
 
         vm.prank(swapper);
-        IInputSettlerEscrow(inputSettlerEscrow).openFor(abi.encode(order), signature, hex"");
+        IInputSettlerEscrow(inputSettlerEscrow).openFor(order.user, abi.encode(order), signature, hex"");
         vm.snapshotGasLastCall("inputSettler", "escrowOpenFor");
 
         assertEq(token.balanceOf(address(swapper)), 0);
