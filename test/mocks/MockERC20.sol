@@ -2,11 +2,13 @@
 pragma solidity ^0.8.26;
 
 import { IERC3009 } from "../../src/interfaces/IERC3009.sol";
-import { EIP712 } from "solady/utils/EIP712.sol";
+
 import { ERC20 } from "solady/tokens/ERC20.sol";
+import { EIP712 } from "solady/utils/EIP712.sol";
 import { SignatureCheckerLib } from "solady/utils/SignatureCheckerLib.sol";
 
-import {console} from "forge-std/console.sol";
+import { console } from "forge-std/console.sol";
+
 contract MockERC20 is ERC20, IERC3009, EIP712 {
     string internal _name;
     string internal _symbol;
@@ -31,7 +33,7 @@ contract MockERC20 is ERC20, IERC3009, EIP712 {
         _nameHash = keccak256(bytes(name_));
     }
 
-    function _domainNameAndVersionMayChange() internal override pure returns (bool result) {
+    function _domainNameAndVersionMayChange() internal pure override returns (bool result) {
         return true;
     }
 
@@ -105,7 +107,7 @@ contract MockERC20 is ERC20, IERC3009, EIP712 {
         uint256 validBefore,
         bytes32 nonce,
         bytes calldata signature
-    ) override external {
+    ) external override {
         require(block.timestamp > validAfter, "EIP3009: authorization is not yet valid");
         require(block.timestamp < validBefore, "EIP3009: authorization is expired");
         require(!_authorizationStates[from][nonce], "EIP3009: authorization is used");
@@ -115,7 +117,7 @@ contract MockERC20 is ERC20, IERC3009, EIP712 {
             keccak256(abi.encode(RECEIVE_WITH_AUTHORIZATION_TYPEHASH, from, to, value, validAfter, validBefore, nonce));
         bytes32 digest = _hashTypedData(data);
         bool isValid = SignatureCheckerLib.isValidSignatureNowCalldata(from, digest, signature);
-        require(isValid, "Siganture invalid");
+        require(isValid, "Signature invalid");
 
         _authorizationStates[from][nonce] = true;
         emit AuthorizationUsed(from, nonce);
