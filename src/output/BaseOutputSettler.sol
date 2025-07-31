@@ -6,6 +6,7 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { IOIFCallback } from "../interfaces/IOIFCallback.sol";
 import { IPayloadCreator } from "../interfaces/IPayloadCreator.sol";
 
+import { AssemblyLib } from "../libs/AssemblyLib.sol";
 import { LibAddress } from "../libs/LibAddress.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../libs/MandateOutputEncodingLib.sol";
 import { OutputVerificationLib } from "../libs/OutputVerificationLib.sol";
@@ -255,10 +256,7 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
         uint256 numPayloads = payloads.length;
         accumulator = true;
         for (uint256 i; i < numPayloads; ++i) {
-            bool payloadValid = _isPayloadValid(payloads[i]);
-            assembly ("memory-safe") {
-                accumulator := and(accumulator, payloadValid)
-            }
+            accumulator = AssemblyLib.and(accumulator, _isPayloadValid(payloads[i]));
         }
     }
 

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.26;
 
 import { IOracle } from "../interfaces/IOracle.sol";
+import { AssemblyLib } from "../libs/AssemblyLib.sol";
 
 /**
  * @notice Base implementation for storing and exposting attesations for consumers. Maintains a storage slot which is
@@ -97,10 +98,7 @@ abstract contract BaseOracle is IOracle {
                     dataHash := calldataload(offset)
                     offset := add(offset, 0x20)
                 }
-                bool _proven = _isProven(remoteChainId, remoteOracle, application, dataHash);
-                assembly ("memory-safe") {
-                    state := and(state, _proven)
-                }
+                state = AssemblyLib.and(state, _isProven(remoteChainId, remoteOracle, application, dataHash));
             }
             if (!state) revert NotProven();
         }
