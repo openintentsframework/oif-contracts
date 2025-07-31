@@ -182,7 +182,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         // Other callers are disallowed:
         vm.prank(non_solver);
 
-        vm.expectRevert(abi.encodeWithSignature("NotOrderOwner()"));
+        vm.expectRevert(abi.encodeWithSignature("UnexpectedCaller(bytes32)", solvers[0]));
         IInputSettlerEscrow(inputSettlerEscrow).finalise(order, timestamps, solvers, solver.toIdentifier(), hex"");
 
         assertEq(token.balanceOf(solver), 0);

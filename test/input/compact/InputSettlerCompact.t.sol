@@ -90,9 +90,9 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
 
         // Other callers are disallowed:
         vm.prank(non_solver);
-        vm.expectRevert(abi.encodeWithSignature("NotOrderOwner()"));
         bytes32[] memory solvers = new bytes32[](1);
         solvers[0] = solverIdentifier;
+        vm.expectRevert(abi.encodeWithSignature("UnexpectedCaller(bytes32)", solvers[0]));
         IInputSettlerCompact(inputSettlerCompact).finalise(
             order, signature, timestamps, solvers, solverIdentifier, hex""
         );
@@ -252,11 +252,11 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
 
         vm.prank(non_solver);
 
-        vm.expectRevert(abi.encodeWithSignature("NotOrderOwner()"));
         bytes32 solverIdentifier = solver.toIdentifier();
         bytes32 destinationIdentifier = destination.toIdentifier();
         bytes32[] memory solvers = new bytes32[](1);
         solvers[0] = solverIdentifier;
+        vm.expectRevert(abi.encodeWithSignature("UnexpectedCaller(bytes32)", solvers[0]));
         IInputSettlerCompact(inputSettlerCompact).finalise(
             order, signature, timestamps, solvers, destinationIdentifier, hex""
         );

@@ -253,7 +253,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
         bytes32 orderId = _orderIdentifier(order);
         bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
-        _orderOwnerIsCaller(orderOwner);
+        _validateIsCaller(orderOwner);
 
         _validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, timestamps, solvers);
 
