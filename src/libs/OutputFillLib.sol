@@ -1,4 +1,5 @@
-import { console } from "forge-std/console.sol";
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.26;
 
 library OutputFillLib {
     function fillDeadline(
