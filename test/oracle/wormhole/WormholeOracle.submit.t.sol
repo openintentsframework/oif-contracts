@@ -78,18 +78,31 @@ contract WormholeOracleTestSubmit is Test {
         vm.prank(sender);
         token.approve(address(outputSettler), amount);
 
-        MandateOutput memory output = MandateOutput({
-            oracle: bytes32(uint256(uint160(address(oracle)))),
-            settler: bytes32(uint256(uint160(address(outputSettler)))),
-            token: bytes32(abi.encode(address(token))),
-            amount: amount,
-            recipient: bytes32(abi.encode(recipient)),
-            chainId: uint32(block.chainid),
-            call: hex"",
-            context: hex""
-        });
+        bytes memory output = abi.encodePacked(
+            type(uint48).max, // fill deadline
+            bytes32(uint256(uint160(address(oracle)))), // oracle
+            bytes32(uint256(uint160(address(outputSettler)))), // settler
+            uint256(block.chainid), // chainId
+            bytes32(abi.encode(address(token))), // token
+            amount, // amount
+            bytes32(abi.encode(recipient)), // recipient
+            uint16(0), // call length
+            bytes(""), // call
+            uint16(0), // context length
+            bytes("") // context
+        );
+
+        bytes memory fillerData = abi.encodePacked(solverIdentifier);
+
         bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionMemory(
-            solverIdentifier, orderId, uint32(block.timestamp), output
+            solverIdentifier,
+            orderId,
+            uint32(block.timestamp),
+            bytes32(abi.encode(address(token))),
+            amount,
+            bytes32(abi.encode(recipient)),
+            bytes(""),
+            bytes("")
         );
         bytes[] memory payloads = new bytes[](1);
         payloads[0] = payload;
@@ -104,9 +117,10 @@ contract WormholeOracleTestSubmit is Test {
         );
 
         vm.prank(sender);
-        outputSettler.fill(type(uint32).max, orderId, output, solverIdentifier);
+        outputSettler.fill(orderId, output, fillerData);
 
-        bytes memory expectedPayload = this.encodeMessageCalldata(output.settler, payloads);
+        bytes memory expectedPayload =
+            this.encodeMessageCalldata(bytes32(uint256(uint160(address(outputSettler)))), payloads);
 
         vm.expectEmit();
         emit PackagePublished(0, expectedPayload, 15);

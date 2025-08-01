@@ -552,7 +552,6 @@ contract OutputSettlerCoinTestFill is Test {
 
         bytes memory differentFillerData = abi.encodePacked(differentFiller);
         vm.prank(sender);
-        //bytes32 alreadyFilledBy = outputSettlerCoin.fill(type(uint32).max, orderId, output, differentFiller);
         bytes32 alreadyFilledBy = outputSettlerCoin.fill(orderId, output, differentFillerData);
 
         assertNotEq(alreadyFilledBy, keccak256(abi.encodePacked(differentFiller, uint32(block.timestamp))));
