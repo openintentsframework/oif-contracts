@@ -145,27 +145,6 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
 
     // --- External Solver Interface --- //
 
-    /**
-     * @notice External fill interface for filling a single output (idempotent operation).
-     * @dev This function is idempotent - it can be called multiple times safely. If the output is already filled,
-     * it returns the existing fill record hash without reverting. This makes it suitable for retry mechanisms
-     * and scenarios where multiple parties might attempt to fill the same output.
-     *
-     * @param fillDeadline If the transaction is executed after this timestamp, the call will fail.
-     * @param orderId Input chain order identifier. Is used as is, not checked for validity.
-     * @param output Given output to fill. Is expected to belong to a greater order identified by orderId.
-     * @param proposedSolver Solver identifier to be sent to input chain.
-     * @return bytes32 Fill record hash. Returns existing hash if already filled, new hash if successfully filled.
-     */
-    function fill(
-        uint32 fillDeadline,
-        bytes32 orderId,
-        MandateOutput calldata output,
-        bytes32 proposedSolver
-    ) external virtual checkFillDeadline(fillDeadline) returns (bytes32) {
-        return _fill(orderId, output, proposedSolver);
-    }
-
     function fill(bytes32 orderId, bytes calldata originData, bytes calldata fillerData) external returns (bytes32) {
         // TODO: handle fill deadline
         bytes32 proposedSolver;
