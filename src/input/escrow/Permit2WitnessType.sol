@@ -10,7 +10,7 @@ import { StandardOrder, StandardOrderType } from "../types/StandardOrderType.sol
  */
 struct Permit2Witness {
     uint32 expires;
-    address localOracle;
+    address inputOracle;
     MandateOutput[] outputs;
 }
 
@@ -24,19 +24,19 @@ library Permit2WitnessType {
     using StandardOrderType for bytes;
 
     bytes constant PERMIT2_WITNESS_TYPE_STUB = abi.encodePacked(
-        "Permit2Witness(uint32 expires,address localOracle,uint256[2][] inputs,MandateOutput[] outputs)"
+        "Permit2Witness(uint32 expires,address inputOracle,uint256[2][] inputs,MandateOutput[] outputs)"
     );
 
     // M comes earlier than P.
     bytes constant PERMIT2_WITNESS_TYPE = abi.encodePacked(
-        "Permit2Witness(uint32 expires,address localOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
+        "Permit2Witness(uint32 expires,address inputOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
     );
 
     bytes32 constant PERMIT2_WITNESS_TYPE_HASH = keccak256(PERMIT2_WITNESS_TYPE);
 
     /// @notice Typestring for handed to Permit2.
     string constant PERMIT2_PERMIT2_TYPESTRING =
-        "Permit2Witness witness)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)TokenPermissions(address token,uint256 amount)Permit2Witness(uint32 expires,address localOracle,MandateOutput[] outputs)";
+        "Permit2Witness witness)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)TokenPermissions(address token,uint256 amount)Permit2Witness(uint32 expires,address inputOracle,MandateOutput[] outputs)";
 
     /**
      * @notice Computes the permit2 witness hash.
@@ -48,7 +48,7 @@ library Permit2WitnessType {
             abi.encode(
                 PERMIT2_WITNESS_TYPE_HASH,
                 order.expires(),
-                order.localOracle(),
+                order.inputOracle(),
                 MandateOutputType.hashOutputs(order.outputs())
             )
         );

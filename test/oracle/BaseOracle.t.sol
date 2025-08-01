@@ -4,9 +4,9 @@ pragma solidity ^0.8.22;
 
 import { Test } from "forge-std/Test.sol";
 
-import { BaseOracle } from "../../src/oracles/BaseOracle.sol";
+import { BaseInputOracle } from "../../src/oracles/BaseInputOracle.sol";
 
-contract MockBaseOracle is BaseOracle {
+contract MockBaseInputOracle is BaseInputOracle {
     function setAttestation(
         uint256 remoteChainId,
         bytes32 senderIdentifier,
@@ -17,11 +17,11 @@ contract MockBaseOracle is BaseOracle {
     }
 }
 
-contract BaseOracleTest is Test {
-    MockBaseOracle baseOracle;
+contract BaseInputOracleTest is Test {
+    MockBaseInputOracle baseInputOracle;
 
     function setUp() external {
-        baseOracle = new MockBaseOracle();
+        baseInputOracle = new MockBaseInputOracle();
     }
 
     function test_is_proven(
@@ -30,12 +30,12 @@ contract BaseOracleTest is Test {
         bytes32 remoteOracle,
         bytes32 dataHash
     ) external {
-        bool statusBefore = baseOracle.isProven(remoteChainId, remoteOracle, application, dataHash);
+        bool statusBefore = baseInputOracle.isProven(remoteChainId, remoteOracle, application, dataHash);
         assertEq(statusBefore, false);
 
-        baseOracle.setAttestation(remoteChainId, remoteOracle, application, dataHash);
+        baseInputOracle.setAttestation(remoteChainId, remoteOracle, application, dataHash);
 
-        bool statusAfter = baseOracle.isProven(remoteChainId, remoteOracle, application, dataHash);
+        bool statusAfter = baseInputOracle.isProven(remoteChainId, remoteOracle, application, dataHash);
         assertEq(statusAfter, true);
     }
 
@@ -50,6 +50,6 @@ contract BaseOracleTest is Test {
         } else {
             vm.expectRevert(abi.encodeWithSignature("NotProven()"));
         }
-        baseOracle.efficientRequireProven(proofSeries);
+        baseInputOracle.efficientRequireProven(proofSeries);
     }
 }

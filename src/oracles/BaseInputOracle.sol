@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { IOracle } from "../interfaces/IOracle.sol";
+import { IInputOracle } from "../interfaces/IInputOracle.sol";
 import { AssemblyLib } from "../libs/AssemblyLib.sol";
 
 /**
  * @notice Base implementation for storing and exposting attesations for consumers. Maintains a storage slot which is
- * exposed through 'xProven' interfaces.
+ * exposed through proving interfaces.
  */
-abstract contract BaseOracle is IOracle {
+abstract contract BaseInputOracle is IInputOracle {
     error NotDivisible(uint256 value, uint256 divisor);
     error NotProven();
 

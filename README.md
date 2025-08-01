@@ -40,7 +40,7 @@ Input Settlers are located in `src/input`. Currently, 2 Settlers are implemented
 
 To implement a new lock or a different order type, the following considerations are required to make it compatible with the rest of the system:
 - **OutputSettler**: To be compatible with the `MandateOutput` OutputSettlers, implement `MandateOutput` described in `src/input/types/MandateOutputType.sol` using the encoding scheme from `src/libs/MandateOutputEncodingLib.sol`.
-- **Oracle**: To be compatible with OIF oracles, implement a validation function that calls either of the `IOracle` functions from `src/interfaces/IOracle.sol`.
+- **Oracle**: To be compatible with OIF oracles, implement a validation function that calls either of the `IInputOracle` functions from `src/interfaces/IInputOracle.sol`.
 
 Assuming the Settler supports both these structures, it is now compatible with the existing solvers and fillers.
 
@@ -79,7 +79,7 @@ This scheme allows The OIF to scale to any chain where only one of the chains ha
 
 #### ChainIds
 
-ChainIds should typically follow the "canonical" chain id: `block.chainid`. While the output chainId is defined by the localOracle, it is good practice to implement it as the remote chain's `block.chainid` or equivalent.
+ChainIds should typically follow the "canonical" chain id: `block.chainid`. While the output chainId is defined by the inputOracle, it is good practice to implement it as the remote chain's `block.chainid` or equivalent.
 
 ## Output Settler
 
@@ -89,7 +89,7 @@ Otherwise, the fill interface is left undefined. It is generally expected that t
 
 ## Oracle
 
-Oracles are located in `src/oracles`. `src/oracles/BaseOracle.sol` provides a standardized attestation storage structure along with attestation lookup structures. This allows anyone to easily create new oracles that remains compatible with Input Settlers.
+Oracles are located in `src/oracles`. `src/oracles/BaseInputOracle.sol` provides a standardized attestation storage structure along with attestation lookup structures. This allows anyone to easily create new oracles that remains compatible with Input Settlers.
 
 Message submission and/or relaying is not defined and has to be created specifically for each oracle. The most important compatibility layer between fillers and oracles exists through the `IPayloadCreator.arePayloadsValid`.
 

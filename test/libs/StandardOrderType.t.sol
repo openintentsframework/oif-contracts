@@ -17,7 +17,7 @@ contract StandardOrderTypeTest is Test {
         this.validateOriginChainId(_bytes, junk);
         this.validateExpires(_bytes, junk);
         this.validateFillDeadline(_bytes, junk);
-        this.validateLocalOracle(_bytes, junk);
+        this.validateInputOracle(_bytes, junk);
         this.validateInputs(_bytes, junk);
         this.validateOutputs(_bytes, junk);
     }
@@ -42,8 +42,8 @@ contract StandardOrderTypeTest is Test {
         assertEq(order.fillDeadline, _bytes.fillDeadline());
     }
 
-    function validateLocalOracle(bytes calldata _bytes, bytes calldata) external view {
-        assertEq(order.localOracle, _bytes.localOracle());
+    function validateInputOracle(bytes calldata _bytes, bytes calldata) external view {
+        assertEq(order.inputOracle, _bytes.inputOracle());
     }
 
     function validateInputs(bytes calldata _bytes, bytes calldata) external view {

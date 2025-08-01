@@ -7,8 +7,8 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { SignatureCheckerLib } from "solady/utils/SignatureCheckerLib.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
+import { IInputOracle } from "../interfaces/IInputOracle.sol";
 import { IOIFCallback } from "../interfaces/IOIFCallback.sol";
-import { IOracle } from "../interfaces/IOracle.sol";
 
 import { AllowOpenType } from "./types/AllowOpenType.sol";
 import { MandateOutput } from "./types/MandateOutputType.sol";
@@ -159,7 +159,7 @@ abstract contract InputSettlerBase is EIP712 {
      */
     function _validateFills(
         uint32 fillDeadline,
-        address localOracle,
+        address inputOracle,
         MandateOutput[] calldata outputs,
         bytes32 orderId,
         uint32[] calldata timestamps,
@@ -187,6 +187,6 @@ abstract contract InputSettlerBase is EIP712 {
                 mstore(add(offset, 0x60), payloadHash)
             }
         }
-        IOracle(localOracle).efficientRequireProven(proofSeries);
+        IInputOracle(inputOracle).efficientRequireProven(proofSeries);
     }
 }

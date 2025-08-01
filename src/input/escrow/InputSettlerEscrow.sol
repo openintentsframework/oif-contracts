@@ -9,9 +9,9 @@ import { IERC3009 } from "../../interfaces/IERC3009.sol";
 import { Output, ResolvedCrossChainOrder } from "../../interfaces/IERC7683.sol";
 
 import { IOriginSettler } from "../../interfaces/IERC7683.sol";
+import { IInputOracle } from "../../interfaces/IInputOracle.sol";
 import { IInputSettlerEscrow } from "../../interfaces/IInputSettlerEscrow.sol";
 import { IOIFCallback } from "../../interfaces/IOIFCallback.sol";
-import { IOracle } from "../../interfaces/IOracle.sol";
 
 import { BytesLib } from "../../libs/BytesLib.sol";
 import { IsContractLib } from "../../libs/IsContractLib.sol";
@@ -360,7 +360,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
         _orderOwnerIsCaller(orderOwner);
 
-        _validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, timestamps, solvers);
+        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, timestamps, solvers);
 
         _finalise(order, orderId, solvers[0], destination);
 
@@ -403,7 +403,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
             );
         }
 
-        _validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, timestamps, solvers);
+        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, timestamps, solvers);
 
         _finalise(order, orderId, solvers[0], destination);
 
