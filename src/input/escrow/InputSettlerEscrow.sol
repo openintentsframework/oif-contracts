@@ -169,7 +169,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         if (signatureType == SIGNATURE_TYPE_PERMIT2) {
             _openForWithPermit2(order, sponsor, signature[1:], address(this));
         } else if (signatureType == SIGNATURE_TYPE_3009) {
-            _openForWithAuthorization(order, sponsor, signature[1:], orderId);
+            _openForWithAuthorization(order.inputs(), order.fillDeadline(), sponsor, signature[1:], orderId);
         } else if (msg.sender == sponsor && signatureType == SIGNATURE_TYPE_SELF) {
             _open(order);
         } else {
@@ -239,29 +239,30 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
      * @notice Helper function for using ERC-3009 to collect assets represented by a StandardOrder.
      * @dev For the `receiveWithAuthorization` call, the nonce is set as the orderId to select the order associated with
      * the authorization.
-     * @param order StandardOrder representing the intent.
+     * @param inputs Order inputs to be collected.
+     * @param fillDeadline Deadline for calling the open function.
      * @param signer Provider of the ERC-3009 funds and signer of the intent.
      * @param _signature_ Either a single ERC-3009 signature or abi.encoded bytes[] of signatures. A single signature is
      * only allowed if the order has exactly 1 input.
      */
     function _openForWithAuthorization(
-        bytes calldata order,
+        uint256[2][] calldata inputs,
+        uint32 fillDeadline,
         address signer,
         bytes calldata _signature_,
         bytes32 orderId
     ) internal {
-        uint256[2][] calldata inputs = order.inputs();
         uint256 numInputs = inputs.length;
         if (numInputs == 1) {
-            uint256[2] calldata input = inputs[0];
             // If there is only 1 input, try using the provided signature as is.
+            uint256[2] calldata input = inputs[0];
             bytes memory callData = abi.encodeWithSelector(
                 IERC3009.receiveWithAuthorization.selector,
                 signer,
                 address(this),
                 input[1],
                 0,
-                order.fillDeadline(),
+                fillDeadline,
                 orderId,
                 _signature_
             );
@@ -271,7 +272,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
             //     to: address(this),
             //     value: input[1],
             //     validAfter: 0,
-            //     validBefore: order.fillDeadline,
+            //     validBefore: fillDeadline,
             //     nonce: orderId,
             //     signature: _signature_
             // })
@@ -285,13 +286,12 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         if (numInputs != numSignatures) revert SignatureAndInputsNotEqual();
         for (uint256 i; i < numInputs; ++i) {
             bytes calldata signature = BytesLib.getBytesOfArray(_signature_, i);
-            uint256[2] calldata input = inputs[i];
-            IERC3009(EfficiencyLib.asSanitizedAddress(input[0])).receiveWithAuthorization({
+            IERC3009(EfficiencyLib.asSanitizedAddress(inputs[i][0])).receiveWithAuthorization({
                 from: signer,
                 to: address(this),
-                value: input[1],
+                value: inputs[i][1],
                 validAfter: 0,
-                validBefore: order.fillDeadline(),
+                validBefore: fillDeadline,
                 nonce: orderId,
                 signature: signature
             });
