@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import { Test, console } from "forge-std/Test.sol";
+import { Test } from "forge-std/Test.sol";
 
 import { TheCompact } from "the-compact/src/TheCompact.sol";
 import { SimpleAllocator } from "the-compact/src/examples/allocator/SimpleAllocator.sol";
@@ -416,7 +416,7 @@ contract InputSettlerCompactTestCrossChain is Test {
         bytes[] memory payloads = new bytes[](1);
         payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
             solverIdentifier,
-            orderId, 
+            orderId,
             uint32(block.timestamp),
             outputs[0].token,
             outputs[0].amount,
@@ -426,12 +426,10 @@ contract InputSettlerCompactTestCrossChain is Test {
         );
 
         bytes memory expectedMessageEmitted = this.encodeMessage(outputs[0].settler, payloads);
-
         vm.expectEmit();
         emit PackagePublished(0, expectedMessageEmitted, 15);
         wormholeOracle.submit(address(outputSettlerCoin), payloads);
         vm.snapshotGasLastCall("inputSettler", "IntegrationWormholeSubmit");
-
         bytes memory vaa =
             makeValidVAA(uint16(block.chainid), address(wormholeOracle).toIdentifier(), expectedMessageEmitted);
 
@@ -507,21 +505,68 @@ contract InputSettlerCompactTestCrossChain is Test {
         }
         // Initiation is over. We need to fill the order.
 
+        bytes[] memory outputsToFill = new bytes[](2);
+
+        outputsToFill[0] = abi.encodePacked(
+            type(uint48).max, // fill deadline
+            outputs[0].oracle, // oracle
+            outputs[0].settler, // settler
+            uint256(outputs[0].chainId), // chainId
+            outputs[0].token, // token
+            outputs[0].amount, // amount
+            outputs[0].recipient, // recipient
+            uint16(outputs[0].call.length), // call length
+            bytes(""), // call
+            uint16(outputs[0].context.length), // context length
+            bytes("") // context
+        );
+
+        outputsToFill[1] = abi.encodePacked(
+            type(uint48).max, // fill deadline
+            outputs[1].oracle, // oracle
+            outputs[1].settler, // settler
+            uint256(outputs[1].chainId), // chainId
+            outputs[1].token, // token
+            outputs[1].amount, // amount
+            outputs[1].recipient, // recipient
+            uint16(outputs[1].call.length), // call length
+            bytes(""), // call
+            uint16(outputs[1].context.length), // context length
+            bytes("") // context
+        );
+
+        bytes memory fillerData1 = abi.encodePacked(solverIdentifier);
+        bytes memory fillerData2 = abi.encodePacked(solverIdentifier2);
+
         {
             bytes32 orderId = IInputSettlerCompact(inputSettlerCompact).orderIdentifier(order);
 
             vm.prank(solver);
-            outputSettlerCoin.fill(type(uint32).max, orderId, outputs[0], solverIdentifier);
+            outputSettlerCoin.fill(orderId, outputsToFill[0], fillerData1);
 
             vm.prank(solver);
-            outputSettlerCoin.fill(type(uint32).max, orderId, outputs[1], solverIdentifier2);
+            outputSettlerCoin.fill(orderId, outputsToFill[1], fillerData2);
 
             bytes[] memory payloads = new bytes[](2);
             payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
-                solverIdentifier, orderId, uint32(block.timestamp), outputs[0]
+                solverIdentifier,
+                orderId,
+                uint32(block.timestamp),
+                outputs[0].token,
+                outputs[0].amount,
+                outputs[0].recipient,
+                outputs[0].call,
+                outputs[0].context
             );
             payloads[1] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
-                solverIdentifier2, orderId, uint32(block.timestamp), outputs[1]
+                solverIdentifier2,
+                orderId,
+                uint32(block.timestamp),
+                outputs[1].token,
+                outputs[1].amount,
+                outputs[1].recipient,
+                outputs[1].call,
+                outputs[1].context
             );
 
             bytes memory expectedMessageEmitted = this.encodeMessage(outputs[0].settler, payloads);
