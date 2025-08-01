@@ -7,6 +7,8 @@ import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
 import { IERC3009 } from "../../interfaces/IERC3009.sol";
 import { Output, ResolvedCrossChainOrder } from "../../interfaces/IERC7683.sol";
+
+import { IOriginSettler } from "../../interfaces/IERC7683.sol";
 import { IInputSettlerEscrow } from "../../interfaces/IInputSettlerEscrow.sol";
 import { IOIFCallback } from "../../interfaces/IOIFCallback.sol";
 import { IOracle } from "../../interfaces/IOracle.sol";
@@ -36,6 +38,8 @@ import { Permit2WitnessType } from "./Permit2WitnessType.sol";
  * `order.inputs` for the solver.
  */
 contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
+    using StandardOrderType for bytes;
+    using StandardOrderType for StandardOrder;
     using LibAddress for bytes32;
 
     error InvalidOrderStatus();
@@ -45,7 +49,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     error ReentrancyDetected();
     error SignatureNotSupported(bytes1);
 
-    event Open(bytes32 indexed orderId, StandardOrder order);
+    event Open(bytes32 indexed orderId, bytes order);
     event Refunded(bytes32 indexed orderId);
 
     bytes1 internal constant SIGNATURE_TYPE_PERMIT2 = 0x00;
@@ -76,30 +80,30 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
     // --- Generic order identifier --- //
 
-    function _orderIdentifier(
-        StandardOrder calldata order
-    ) internal view returns (bytes32) {
-        return StandardOrderType.orderIdentifier(order);
+    function orderIdentifier(
+        bytes calldata order
+    ) external view returns (bytes32) {
+        return order.orderIdentifier();
     }
 
     function orderIdentifier(
         StandardOrder calldata order
     ) external view returns (bytes32) {
-        return _orderIdentifier(order);
+        return order.orderIdentifier();
     }
 
     /**
      * @notice Opens an intent for `order.user`. `order.input` tokens are collected from msg.sender.
-     * @param order StandardOrder representing the intent.
+     * @param order  bytes representing an encoded StandadrdOrder.
      */
     function open(
-        StandardOrder calldata order
+        bytes calldata order
     ) external {
         // Validate the order structure.
-        _validateTimestampHasNotPassed(order.fillDeadline);
-        _validateTimestampHasNotPassed(order.expires);
+        _validateTimestampHasNotPassed(order.fillDeadline());
+        _validateTimestampHasNotPassed(order.expires());
 
-        bytes32 orderId = StandardOrderType.orderIdentifier(order);
+        bytes32 orderId = order.orderIdentifier();
 
         if (orderStatus[orderId] != OrderStatus.None) revert InvalidOrderStatus();
         // Mark order as deposited. If we can't make the deposit, we will
@@ -107,14 +111,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         orderStatus[orderId] = OrderStatus.Deposited;
 
         // Collect input tokens.
-        uint256[2][] memory inputs = order.inputs;
-        uint256 numInputs = inputs.length;
-        for (uint256 i = 0; i < numInputs; ++i) {
-            uint256[2] memory input = inputs[i];
-            address token = EfficiencyLib.asSanitizedAddress(input[0]);
-            uint256 amount = input[1];
-            SafeTransferLib.safeTransferFrom(token, msg.sender, address(this), amount);
-        }
+        _open(order);
 
         // Validate that there has been no reentrancy.
         if (orderStatus[orderId] != OrderStatus.Deposited) revert ReentrancyDetected();
@@ -123,38 +120,54 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     }
 
     /**
-     * @notice Opens an intent for `order.user`. `order.input` tokens are collected from `order.user` through either
+     * @notice Collect input tokens directly from msg.sender.
+     * @param order bytes representing an encoded StandadrdOrder.
+     */
+    function _open(
+        bytes calldata order
+    ) internal {
+        // Collect input tokens.
+        uint256[2][] calldata inputs = order.inputs();
+        uint256 numInputs = inputs.length;
+        for (uint256 i = 0; i < numInputs; ++i) {
+            uint256[2] calldata input = inputs[i];
+            address token = EfficiencyLib.asSanitizedAddress(input[0]);
+            uint256 amount = input[1];
+            SafeTransferLib.safeTransferFrom(token, msg.sender, address(this), amount);
+        }
+    }
+
+    /**
+     * @notice Opens an intent for `order.user`. `order.input` tokens are collected from `sponsor` through either
      * permit2 or ERC3009.
      * @dev This function may make multiple sub-call calls either directly from this contract or from deeper inside the
      * call tree. To protect against reentry, the function uses the `orderStatus`. Local reentry (calling twice) is
      * protected through a checks-effect pattern while global reentry is enforced by not allowing existing the function
      * with `orderStatus` not set to `Deposited`
-     * @param order StandardOrder representing the intent.
-     * @param signature Allowance signature from user with a signature type then encoded as:
+     * @param order  bytes representing an encoded StandadrdOrder.
+     * @param sponsor Address to collect tokens from.
+     * @param signature Allowance signature from user with a signature type encoded as:
      * - SIGNATURE_TYPE_PERMIT2:  b1:0x00 | bytes:signature
      * - SIGNATURE_TYPE_3009:     b1:0x01 | bytes:signature OR abi.encode(bytes[]:signatures)
      */
-    function openFor(
-        StandardOrder calldata order,
-        bytes calldata signature,
-        bytes calldata /* originFillerData */
-    ) external {
+    function openFor(bytes calldata order, address sponsor, bytes calldata signature) external {
         // Validate the order structure.
-        _validateInputChain(order.originChainId);
-        _validateTimestampHasNotPassed(order.fillDeadline);
-        _validateTimestampHasNotPassed(order.expires);
+        _validateInputChain(order.originChainId());
+        // _validateTimestampHasNotPassed(order.openDeadline);
+        _validateTimestampHasNotPassed(order.fillDeadline());
+        _validateTimestampHasNotPassed(order.expires());
 
-        bytes32 orderId = _orderIdentifier(order);
+        bytes32 orderId = order.orderIdentifier();
 
         if (orderStatus[orderId] != OrderStatus.None) revert InvalidOrderStatus();
         // Mark order as deposited. If we can't make the deposit, we will
         // revert and it will unmark it. This acts as a reentry check.
         orderStatus[orderId] = OrderStatus.Deposited;
 
-        // Check the first byte of the signature for signature type.
+        // Check the first byte of the signature for signature type then collect inputs.
         bytes1 signatureType = signature[0];
-        if (signatureType == SIGNATURE_TYPE_PERMIT2) _openForWithPermit2(order, signature[1:], address(this));
-        else if (signatureType == SIGNATURE_TYPE_3009) _openForWithAuthorization(order, signature[1:], orderId);
+        if (signatureType == SIGNATURE_TYPE_PERMIT2) _openForWithPermit2(order, sponsor, signature[1:], address(this));
+        else if (signatureType == SIGNATURE_TYPE_3009) _openForWithAuthorization(order, sponsor, signature[1:], orderId);
         else revert SignatureNotSupported(signatureType);
 
         // Validate that there has been no reentrancy.
@@ -166,15 +179,16 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     /**
      * @notice Helper function for using permit2 to collect assets represented by a StandardOrder.
      * @param order StandardOrder representing the intent.
+     * @param signer Provider of the permit2 funds and signer of the intent.
      * @param signature permit2 signature with Permit2Witness representing `order` signed by `order.user`.
      * @param to recipient of the inputs tokens. In most cases, should be address(this).
      */
-    function _openForWithPermit2(StandardOrder calldata order, bytes calldata signature, address to) internal {
+    function _openForWithPermit2(bytes calldata order, address signer, bytes calldata signature, address to) internal {
         ISignatureTransfer.TokenPermissions[] memory permitted;
         ISignatureTransfer.SignatureTransferDetails[] memory transferDetails;
 
         {
-            uint256[2][] calldata orderInputs = order.inputs;
+            uint256[2][] calldata orderInputs = order.inputs();
             // Load the number of inputs. We need them to set the array size & convert each
             // input struct into a transferDetails struct.
             uint256 numInputs = orderInputs.length;
@@ -202,13 +216,13 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         }
         ISignatureTransfer.PermitBatchTransferFrom memory permitBatch = ISignatureTransfer.PermitBatchTransferFrom({
             permitted: permitted,
-            nonce: order.nonce,
-            deadline: order.fillDeadline
+            nonce: order.nonce(),
+            deadline: order.fillDeadline()
         });
         PERMIT2.permitWitnessTransferFrom(
             permitBatch,
             transferDetails,
-            order.user,
+            signer,
             Permit2WitnessType.Permit2WitnessHash(order),
             Permit2WitnessType.PERMIT2_PERMIT2_TYPESTRING,
             signature
@@ -220,31 +234,34 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
      * @dev For the `receiveWithAuthorization` call, the nonce is set as the orderId to select the order associated with
      * the authorization.
      * @param order StandardOrder representing the intent.
+     * @param signer Provider of the ERC-3009 funds and signer of the intent.
      * @param _signature_ Either a single ERC-3009 signature or abi.encoded bytes[] of signatures. A single signature is
      * only allowed if the order has exactly 1 input.
      */
     function _openForWithAuthorization(
-        StandardOrder calldata order,
+        bytes calldata order,
+        address signer,
         bytes calldata _signature_,
         bytes32 orderId
     ) internal {
-        uint256 numInputs = order.inputs.length;
+        uint256[2][] calldata inputs = order.inputs();
+        uint256 numInputs = inputs.length;
         if (numInputs == 1) {
-            uint256[2] calldata input = order.inputs[0];
+            uint256[2] calldata input = inputs[0];
             // If there is only 1 input, try using the provided signature as is.
             bytes memory callData = abi.encodeWithSelector(
                 IERC3009.receiveWithAuthorization.selector,
-                order.user,
+                signer,
                 address(this),
                 input[1],
                 0,
-                order.fillDeadline,
+                order.fillDeadline(),
                 orderId,
                 _signature_
             );
             // The above calldata encoding is equivalent to:
             // IERC3009(EfficiencyLib.asSanitizedAddress(input[0])).receiveWithAuthorization({
-            //     from: order.user,
+            //     from: signer,
             //     to: address(this),
             //     value: input[1],
             //     validAfter: 0,
@@ -262,13 +279,13 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         if (numInputs != numSignatures) revert SignatureAndInputsNotEqual();
         for (uint256 i; i < numInputs; ++i) {
             bytes calldata signature = BytesLib.getBytesOfArray(_signature_, i);
-            uint256[2] calldata input = order.inputs[i];
+            uint256[2] calldata input = inputs[i];
             IERC3009(EfficiencyLib.asSanitizedAddress(input[0])).receiveWithAuthorization({
-                from: order.user,
+                from: signer,
                 to: address(this),
                 value: input[1],
                 validAfter: 0,
-                validBefore: order.fillDeadline,
+                validBefore: order.fillDeadline(),
                 nonce: orderId,
                 signature: signature
             });
@@ -288,7 +305,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         _validateInputChain(order.originChainId);
         _validateTimestampHasPassed(order.expires);
 
-        bytes32 orderId = _orderIdentifier(order);
+        bytes32 orderId = order.orderIdentifier();
         _resolveLock(orderId, order.inputs, order.user, OrderStatus.Refunded);
         emit Refunded(orderId);
     }
@@ -333,7 +350,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         _validateDestination(destination);
         _validateInputChain(order.originChainId);
 
-        bytes32 orderId = _orderIdentifier(order);
+        bytes32 orderId = order.orderIdentifier();
         bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
         _orderOwnerIsCaller(orderOwner);
 
@@ -365,15 +382,16 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         bytes calldata call,
         bytes calldata orderOwnerSignature
     ) external virtual {
-        _validateDestination(destination);
+        // _validateDestination has been moved down to circumvent stack issue.
         _validateInputChain(order.originChainId);
 
-        bytes32 orderId = _orderIdentifier(order);
+        bytes32 orderId = order.orderIdentifier();
 
         {
             bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
 
             // Validate the external claimant with signature
+            _validateDestination(destination);
             _allowExternalClaimant(
                 orderId, EfficiencyLib.asSanitizedAddress(uint256(orderOwner)), destination, call, orderOwnerSignature
             );
@@ -440,7 +458,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         uint256 expiryTimestamp,
         bytes calldata solverSignature
     ) external virtual {
-        bytes32 computedOrderId = _orderIdentifier(order);
+        bytes32 computedOrderId = order.orderIdentifier();
         // Sanity check to ensure the user thinks they are buying the right order.
         if (computedOrderId != orderPurchase.orderId) revert OrderIdMismatch(orderPurchase.orderId, computedOrderId);
 
