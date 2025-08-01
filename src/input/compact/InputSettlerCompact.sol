@@ -8,9 +8,9 @@ import { IdLib } from "the-compact/src/lib/IdLib.sol";
 import { BatchClaim } from "the-compact/src/types/BatchClaims.sol";
 import { BatchClaimComponent, Component } from "the-compact/src/types/Components.sol";
 
+import { IInputCallback } from "../../interfaces/IInputCallback.sol";
 import { IInputOracle } from "../../interfaces/IInputOracle.sol";
 import { IInputSettlerCompact } from "../../interfaces/IInputSettlerCompact.sol";
-import { IOIFCallback } from "../../interfaces/IOIFCallback.sol";
 
 import { BytesLib } from "../../libs/BytesLib.sol";
 import { MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
@@ -127,7 +127,7 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
         _finalise(order, signatures, orderId, solvers[0], destination);
 
         if (call.length > 0) {
-            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
+            IInputCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
         }
     }
 
@@ -169,7 +169,7 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
         _finalise(order, signatures, orderId, solvers[0], destination);
 
         if (call.length > 0) {
-            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
+            IInputCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
         }
     }
 

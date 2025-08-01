@@ -2,14 +2,9 @@
 pragma solidity >=0.8.0;
 
 /**
- * @notice Callback handling for OIF payouts, both outputs and inputs.
+ * @notice Callback handling for OIF input processing.
  */
-interface IOIFCallback {
-    /**
-     * @notice If configured, is called when the output is filled on the output chain.
-     */
-    function outputFilled(bytes32 token, uint256 amount, bytes calldata executionData) external;
-
+interface IInputCallback {
     /**
      * @notice If configured, is called when the input is sent to the solver.
      * @param inputs Inputs of the order.

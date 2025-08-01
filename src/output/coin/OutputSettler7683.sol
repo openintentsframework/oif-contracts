@@ -4,7 +4,7 @@ pragma solidity ^0.8.26;
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
 import { IDestinationSettler } from "../../interfaces/IERC7683.sol";
-import { IOIFCallback } from "../../interfaces/IOIFCallback.sol";
+import { IOutputCallback } from "../../interfaces/IOutputCallback.sol";
 
 import { LibAddress } from "../../libs/LibAddress.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
@@ -88,7 +88,7 @@ contract OutputInputSettlerEscrow is BaseOutputSettler, IDestinationSettler {
         // Storage has been set. Fill the output.
         address recipient = address(uint160(uint256(output.recipient)));
         SafeTransferLib.safeTransferFrom(address(uint160(uint256(output.token))), msg.sender, recipient, outputAmount);
-        if (output.call.length > 0) IOIFCallback(recipient).outputFilled(output.token, outputAmount, output.call);
+        if (output.call.length > 0) IOutputCallback(recipient).outputFilled(output.token, outputAmount, output.call);
 
         emit OutputFilled(orderId, proposedSolver, fillTimestamp, output, outputAmount);
     }
