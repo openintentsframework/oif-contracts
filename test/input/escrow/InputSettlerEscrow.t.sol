@@ -102,11 +102,11 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
     }
 
     /// forge-config: default.isolate = true
-    function test_open_for_gas() external {
-        test_open_for(10 ** 18, 251251);
+    function test_open_for_permit2_gas() external {
+        test_open_for_permit2(10 ** 18, 251251);
     }
 
-    function test_open_for(uint128 amountMint, uint256 nonce) public {
+    function test_open_for_permit2(uint128 amountMint, uint256 nonce) public {
         token.mint(swapper, amountMint);
 
         uint256 amount = token.balanceOf(swapper);
@@ -136,11 +136,149 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         assertEq(token.balanceOf(address(swapper)), amount);
 
         vm.prank(swapper);
-        IInputSettlerEscrow(inputSettlerEscrow).openFor(abi.encode(order), order.user, signature);
-        vm.snapshotGasLastCall("inputSettler", "escrowOpenFor");
+        IInputSettlerEscrow(inputSettlerEscrow).openFor(
+            abi.encode(order), order.user, abi.encodePacked(bytes1(0x00), signature)
+        );
+        vm.snapshotGasLastCall("inputSettler", "escrowOpenForPermit2");
 
         assertEq(token.balanceOf(address(swapper)), 0);
         assertEq(token.balanceOf(inputSettlerEscrow), amount);
+    }
+
+    /// forge-config: default.isolate = true
+    function test_open_for_3009_single() external {
+        test_open_for_3009_single(10 ** 18, 251251);
+    }
+
+    function test_open_for_3009_single(uint128 amountMint, uint256 nonce) public {
+        token.mint(swapper, amountMint);
+
+        uint256 amount = token.balanceOf(swapper);
+
+        // Permit2 has default infinite allowance. (Solady erc20)
+        // vm.prank(swapper);
+        // token.approve(address(permit2), amount);
+
+        MandateOutput[] memory outputs = new MandateOutput[](0);
+
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        StandardOrder memory order = StandardOrder({
+            user: swapper,
+            nonce: nonce,
+            originChainId: block.chainid,
+            expires: type(uint32).max,
+            fillDeadline: type(uint32).max,
+            localOracle: address(0),
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        bytes memory signature = get3009Signature(swapperPrivateKey, inputSettlerEscrow, 0, order);
+
+        assertEq(token.balanceOf(address(swapper)), amount);
+
+        vm.prank(swapper);
+        IInputSettlerEscrow(inputSettlerEscrow).openFor(
+            abi.encode(order), order.user, abi.encodePacked(bytes1(0x01), signature)
+        );
+        vm.snapshotGasLastCall("inputSettler", "escrowOpenFor3009Single");
+
+        assertEq(token.balanceOf(address(swapper)), 0);
+        assertEq(token.balanceOf(inputSettlerEscrow), amount);
+    }
+
+    /// forge-config: default.isolate = true
+    function test_open_for_3009_single_as_array() external {
+        test_open_for_3009_single_as_array(10 ** 18, 251251);
+    }
+
+    function test_open_for_3009_single_as_array(uint128 amountMint, uint256 nonce) public {
+        token.mint(swapper, amountMint);
+
+        uint256 amount = token.balanceOf(swapper);
+
+        MandateOutput[] memory outputs = new MandateOutput[](0);
+
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        StandardOrder memory order = StandardOrder({
+            user: swapper,
+            nonce: nonce,
+            originChainId: block.chainid,
+            expires: type(uint32).max,
+            fillDeadline: type(uint32).max,
+            localOracle: address(0),
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        bytes memory signature = get3009Signature(swapperPrivateKey, inputSettlerEscrow, 0, order);
+        bytes[] memory signatures = new bytes[](1);
+        signatures[0] = signature;
+
+        assertEq(token.balanceOf(address(swapper)), amount);
+
+        vm.prank(swapper);
+        IInputSettlerEscrow(inputSettlerEscrow).openFor(
+            abi.encode(order), order.user, abi.encodePacked(bytes1(0x01), abi.encode(signatures))
+        );
+        vm.snapshotGasLastCall("inputSettler", "escrowOpenFor3009SingleArray");
+
+        assertEq(token.balanceOf(address(swapper)), 0);
+        assertEq(token.balanceOf(inputSettlerEscrow), amount);
+    }
+
+    /// forge-config: default.isolate = true
+    function test_open_for_3009_two_as_array() external {
+        test_open_for_3009_two_as_array(10 ** 18, 251251);
+    }
+
+    function test_open_for_3009_two_as_array(uint128 amountMint, uint256 nonce) public {
+        token.mint(swapper, amountMint);
+        anotherToken.mint(swapper, amountMint);
+
+        uint256 amount1 = token.balanceOf(swapper);
+        uint256 amount2 = anotherToken.balanceOf(swapper);
+
+        MandateOutput[] memory outputs = new MandateOutput[](0);
+
+        uint256[2][] memory inputs = new uint256[2][](2);
+        inputs[0] = [uint256(uint160(address(token))), amount1];
+        inputs[1] = [uint256(uint160(address(anotherToken))), amount2];
+
+        StandardOrder memory order = StandardOrder({
+            user: swapper,
+            nonce: nonce,
+            originChainId: block.chainid,
+            expires: type(uint32).max,
+            fillDeadline: type(uint32).max,
+            localOracle: address(0),
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        bytes memory signature1 = get3009Signature(swapperPrivateKey, inputSettlerEscrow, 0, order);
+        bytes memory signature2 = get3009Signature(swapperPrivateKey, inputSettlerEscrow, 1, order);
+        bytes[] memory signatures = new bytes[](2);
+        signatures[0] = signature1;
+        signatures[1] = signature2;
+
+        assertEq(token.balanceOf(address(swapper)), amount1);
+        assertEq(anotherToken.balanceOf(address(swapper)), amount2);
+
+        vm.prank(swapper);
+        IInputSettlerEscrow(inputSettlerEscrow).openFor(
+            abi.encode(order), order.user, abi.encodePacked(bytes1(0x01), abi.encode(signatures))
+        );
+        vm.snapshotGasLastCall("inputSettler", "escrowOpenFor3009Two");
+
+        assertEq(token.balanceOf(address(swapper)), 0);
+        assertEq(token.balanceOf(inputSettlerEscrow), amount1);
+        assertEq(anotherToken.balanceOf(address(swapper)), 0);
+        assertEq(anotherToken.balanceOf(inputSettlerEscrow), amount2);
     }
 
     function test_refund(uint32 expires, uint128 amount, address user) public {
