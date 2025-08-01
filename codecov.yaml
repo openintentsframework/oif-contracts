@@ -28,3 +28,5 @@ ignore:
   - "test"
   - "src/oracles/wormhole/external/wormhole"
   - "src/oracles/wormhole/external/callworm/GettersGetter.sol"
+  - "src/oracles/hyperlane/external/hyperlane/interfaces"
+  - "src/oracles/hyperlane/external/hyperlane/libs"
