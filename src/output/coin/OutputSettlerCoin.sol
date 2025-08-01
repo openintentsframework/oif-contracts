@@ -46,18 +46,21 @@ contract OutputSettlerCoin is BaseOutputSettler {
     }
 
     /**
-     * @notice Executes order specific logic and returns the amount to replace output.amount.
+     * @notice Executes order specific logic and returns the amount.
      * @dev Uses output.context to determine order type.
      * 0x00: limit order             : B1:orderType
      * 0x01: dutch auction           : B1:orderType | B4:startTime     | B4:stopTime  | B32:slope
      * 0xe0: exclusive limit order   : B1:orderType | B32:exclusiveFor | B4:startTime
      * 0xe1: exclusive dutch auction : B1:orderType | B32:exclusiveFor | B4:startTime | B4:stopTime | B32:slope
-     * For exclusive orders, if before startTime will revert if solver is not exclusiveFor.
+     * For exclusive orders, reverts if before startTime and solver is not exclusiveFor.
      * @param output Output to evaluate.
-     * @param solver Solver identifier to be compared against exclusiveFor for exclusive orders.
-     * @param amount The tokens the output requires.
+     * @param proposedSolver Solver identifier to be compared against exclusiveFor for exclusive orders.
+     * @return amount The computed amount for the output.
      */
-    function _orderType(MandateOutput calldata output, bytes32 solver) internal view returns (uint256 amount) {
+    function _resolveOutput(
+        MandateOutput calldata output,
+        bytes32 proposedSolver
+    ) internal view override returns (uint256 amount) {
         uint256 fulfillmentLength = output.context.length;
         if (fulfillmentLength == 0) return output.amount;
         bytes1 orderType = bytes1(output.context);
@@ -84,9 +87,9 @@ contract OutputSettlerCoin is BaseOutputSettler {
             assembly ("memory-safe") {
                 exclusiveFor := calldataload(add(fulfillmentContext.offset, 1))
                 // Clean the leftmost bytes: (32-4)*8 = 224
-                startTime := shr(224, shl(224, calldataload(add(fulfillmentContext.offset, 5))))
+                startTime := shr(224, calldataload(add(fulfillmentContext.offset, 33)))
             }
-            if (startTime > block.timestamp && exclusiveFor != solver) revert ExclusiveTo(exclusiveFor);
+            if (startTime > block.timestamp && exclusiveFor != proposedSolver) revert ExclusiveTo(exclusiveFor);
             return output.amount;
         }
         if (orderType == 0xe1 && fulfillmentLength == 73) {
@@ -98,30 +101,14 @@ contract OutputSettlerCoin is BaseOutputSettler {
             assembly ("memory-safe") {
                 exclusiveFor := calldataload(add(fulfillmentContext.offset, 1))
                 // Clean the leftmost bytes: (32-4)*8 = 224
-                startTime := shr(224, shl(224, calldataload(add(fulfillmentContext.offset, 5))))
-                stopTime := shr(224, shl(224, calldataload(add(fulfillmentContext.offset, 9))))
+                startTime := shr(224, calldataload(add(fulfillmentContext.offset, 33)))
+                stopTime := shr(224, calldataload(add(fulfillmentContext.offset, 37)))
 
                 slope := calldataload(add(fulfillmentContext.offset, 41))
             }
-            if (startTime > block.timestamp && exclusiveFor != solver) revert ExclusiveTo(exclusiveFor);
+            if (startTime > block.timestamp && exclusiveFor != proposedSolver) revert ExclusiveTo(exclusiveFor);
             return _dutchAuctionSlope(output.amount, slope, startTime, stopTime);
         }
         revert NotImplemented();
-    }
-
-    /**
-     * @dev Hands off parsed output type to BaseOutputSettler execute fill logic.
-     * @param orderId Input chain order identifier.
-     * @param output The given output to fill.
-     * @param proposedSolver Solver identifier to be sent to origin chain.
-     * @return actualSolver may differ from proposed solver if output has already been filled.
-     */
-    function _fill(
-        bytes32 orderId,
-        MandateOutput calldata output,
-        bytes32 proposedSolver
-    ) internal override returns (bytes32) {
-        uint256 amount = _orderType(output, proposedSolver);
-        return _fill(orderId, output, amount, proposedSolver);
     }
 }

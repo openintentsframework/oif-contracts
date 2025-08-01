@@ -3,9 +3,9 @@ pragma solidity ^0.8.22;
 
 import { Test } from "forge-std/Test.sol";
 
-import { BaseInputSettler } from "../../src/input/BaseInputSettler.sol";
+import { InputSettlerBase } from "../../src/input/InputSettlerBase.sol";
 
-contract MockSettler is BaseInputSettler {
+contract MockSettler is InputSettlerBase {
     function _domainNameAndVersion()
         internal
         pure

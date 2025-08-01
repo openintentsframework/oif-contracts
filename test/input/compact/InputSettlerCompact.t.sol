@@ -5,14 +5,15 @@ import { TheCompact } from "the-compact/src/TheCompact.sol";
 
 import { MandateOutput, MandateOutputType } from "../../../src/input/types/MandateOutputType.sol";
 import { StandardOrder, StandardOrderType } from "../../../src/input/types/StandardOrderType.sol";
+
+import { IInputSettlerCompact } from "../../../src/interfaces/IInputSettlerCompact.sol";
+import { LibAddress } from "../../../src/libs/LibAddress.sol";
 import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
 import { OutputSettlerCoin } from "../../../src/output/coin/OutputSettlerCoin.sol";
 
 import { AlwaysYesOracle } from "../../mocks/AlwaysYesOracle.sol";
 import { MockERC20 } from "../../mocks/MockERC20.sol";
-
-import { LibAddress } from "../../../src/libs/LibAddress.sol";
-import { IInputSettlerCompactHarness, InputSettlerCompactTestBase } from "./InputSettlerCompact.base.t.sol";
+import { InputSettlerCompactTestBase } from "./InputSettlerCompact.base.t.sol";
 
 contract InputSettlerCompactTest is InputSettlerCompactTestBase {
     using LibAddress for address;
@@ -27,125 +28,6 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
     uint64 constant MAX_GOVERNANCE_FEE = 10 ** 18 * 0.05; // 10%
 
     address owner;
-
-    // -- Units Tests -- //
-
-    error InvalidProofSeries();
-
-    mapping(bytes proofSeries => bool valid) _validProofSeries;
-
-    function efficientRequireProven(
-        bytes calldata proofSeries
-    ) external view {
-        if (!_validProofSeries[proofSeries]) revert InvalidProofSeries();
-    }
-
-    struct OrderFulfillmentDescription {
-        uint32 timestamp;
-        MandateOutput MandateOutput;
-    }
-
-    function test_validate_fills_one_solver(
-        bytes32 solverIdentifier,
-        bytes32 orderId,
-        OrderFulfillmentDescription[] calldata orderFulfillmentDescription
-    ) external {
-        vm.assume(orderFulfillmentDescription.length > 0);
-
-        address localOracle = address(this);
-
-        bytes memory expectedProofPayload = hex"";
-        uint32[] memory timestamps = new uint32[](orderFulfillmentDescription.length);
-        MandateOutput[] memory MandateOutputs = new MandateOutput[](orderFulfillmentDescription.length);
-        bytes32[] memory solvers = new bytes32[](orderFulfillmentDescription.length);
-        for (uint256 i; i < orderFulfillmentDescription.length; ++i) {
-            solvers[i] = solverIdentifier;
-            timestamps[i] = orderFulfillmentDescription[i].timestamp;
-            MandateOutputs[i] = orderFulfillmentDescription[i].MandateOutput;
-
-            expectedProofPayload = abi.encodePacked(
-                expectedProofPayload,
-                MandateOutputs[i].chainId,
-                MandateOutputs[i].oracle,
-                MandateOutputs[i].settler,
-                keccak256(
-                    MandateOutputEncodingLib.encodeFillDescriptionMemory(
-                        solverIdentifier, orderId, timestamps[i], MandateOutputs[i]
-                    )
-                )
-            );
-        }
-        _validProofSeries[expectedProofPayload] = true;
-
-        IInputSettlerCompactHarness(inputSettlerCompact).validateFills(
-            StandardOrder({
-                user: address(0),
-                nonce: 0,
-                originChainId: 0,
-                expires: type(uint32).max,
-                fillDeadline: type(uint32).max,
-                localOracle: localOracle,
-                inputs: new uint256[2][](0),
-                outputs: MandateOutputs
-            }),
-            orderId,
-            solvers,
-            timestamps
-        );
-    }
-
-    struct OrderFulfillmentDescriptionWithSolver {
-        uint32 timestamp;
-        bytes32 solver;
-        MandateOutput MandateOutput;
-    }
-
-    function test_validate_fills_multiple_solvers(
-        bytes32 orderId,
-        OrderFulfillmentDescriptionWithSolver[] calldata orderFulfillmentDescriptionWithSolver
-    ) external {
-        vm.assume(orderFulfillmentDescriptionWithSolver.length > 0);
-        address localOracle = address(this);
-
-        bytes memory expectedProofPayload = hex"";
-        uint32[] memory timestamps = new uint32[](orderFulfillmentDescriptionWithSolver.length);
-        MandateOutput[] memory MandateOutputs = new MandateOutput[](orderFulfillmentDescriptionWithSolver.length);
-        bytes32[] memory solvers = new bytes32[](orderFulfillmentDescriptionWithSolver.length);
-        for (uint256 i; i < orderFulfillmentDescriptionWithSolver.length; ++i) {
-            timestamps[i] = orderFulfillmentDescriptionWithSolver[i].timestamp;
-            MandateOutputs[i] = orderFulfillmentDescriptionWithSolver[i].MandateOutput;
-            solvers[i] = orderFulfillmentDescriptionWithSolver[i].solver;
-
-            expectedProofPayload = abi.encodePacked(
-                expectedProofPayload,
-                MandateOutputs[i].chainId,
-                MandateOutputs[i].oracle,
-                MandateOutputs[i].settler,
-                keccak256(
-                    MandateOutputEncodingLib.encodeFillDescriptionMemory(
-                        solvers[i], orderId, timestamps[i], MandateOutputs[i]
-                    )
-                )
-            );
-        }
-        _validProofSeries[expectedProofPayload] = true;
-
-        IInputSettlerCompactHarness(inputSettlerCompact).validateFills(
-            StandardOrder({
-                user: address(0),
-                nonce: 0,
-                originChainId: 0,
-                expires: type(uint32).max,
-                fillDeadline: type(uint32).max,
-                localOracle: localOracle,
-                inputs: new uint256[2][](0),
-                outputs: MandateOutputs
-            }),
-            orderId,
-            solvers,
-            timestamps
-        );
-    }
 
     // -- Larger Integration tests -- //
 
@@ -186,7 +68,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
             originChainId: block.chainid,
             fillDeadline: type(uint32).max,
             expires: type(uint32).max,
-            localOracle: alwaysYesOracle,
+            inputOracle: alwaysYesOracle,
             inputs: inputs,
             outputs: outputs
         });
@@ -211,7 +93,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
         vm.expectRevert(abi.encodeWithSignature("NotOrderOwner()"));
         bytes32[] memory solvers = new bytes32[](1);
         solvers[0] = solverIdentifier;
-        IInputSettlerCompactHarness(inputSettlerCompact).finalise(
+        IInputSettlerCompact(inputSettlerCompact).finalise(
             order, signature, timestamps, solvers, solverIdentifier, hex""
         );
 
@@ -219,7 +101,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
 
         bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionMemory(
             solverIdentifier,
-            IInputSettlerCompactHarness(inputSettlerCompact).orderIdentifier(order),
+            IInputSettlerCompact(inputSettlerCompact).orderIdentifier(order),
             uint32(block.timestamp),
             outputs[0]
         );
@@ -236,7 +118,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
         );
 
         vm.prank(solver);
-        IInputSettlerCompactHarness(inputSettlerCompact).finalise(
+        IInputSettlerCompact(inputSettlerCompact).finalise(
             order, signature, timestamps, solvers, solverIdentifier, hex""
         );
         vm.snapshotGasLastCall("inputSettler", "CompactFinaliseSelf");
@@ -257,14 +139,14 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
         vm.prank(swapper);
         uint256 tokenId = theCompact.depositERC20(address(token), alwaysOkAllocatorLockTag, amount, swapper);
 
-        address localOracle = address(alwaysYesOracle);
+        address inputOracle = address(alwaysYesOracle);
 
         uint256[2][] memory inputs = new uint256[2][](1);
         inputs[0] = [tokenId, amount];
         MandateOutput[] memory outputs = new MandateOutput[](1);
         outputs[0] = MandateOutput({
             settler: address(outputSettlerCoin).toIdentifier(),
-            oracle: localOracle.toIdentifier(),
+            oracle: inputOracle.toIdentifier(),
             chainId: block.chainid,
             token: address(anotherToken).toIdentifier(),
             amount: amount,
@@ -278,7 +160,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
             originChainId: block.chainid,
             fillDeadline: fillDeadline,
             expires: type(uint32).max,
-            localOracle: alwaysYesOracle,
+            inputOracle: alwaysYesOracle,
             inputs: inputs,
             outputs: outputs
         });
@@ -303,7 +185,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
         vm.expectRevert(abi.encodeWithSignature("FilledTooLate(uint32,uint32)", fillDeadline, filledAt));
         bytes32[] memory solvers = new bytes32[](1);
         solvers[0] = solverIdentifier;
-        IInputSettlerCompactHarness(inputSettlerCompact).finalise(
+        IInputSettlerCompact(inputSettlerCompact).finalise(
             order, signature, timestamps, solvers, solverIdentifier, hex""
         );
     }
@@ -348,7 +230,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
             originChainId: block.chainid,
             fillDeadline: type(uint32).max,
             expires: type(uint32).max,
-            localOracle: alwaysYesOracle,
+            inputOracle: alwaysYesOracle,
             inputs: inputs,
             outputs: outputs
         });
@@ -375,14 +257,14 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
         bytes32 destinationIdentifier = destination.toIdentifier();
         bytes32[] memory solvers = new bytes32[](1);
         solvers[0] = solverIdentifier;
-        IInputSettlerCompactHarness(inputSettlerCompact).finalise(
+        IInputSettlerCompact(inputSettlerCompact).finalise(
             order, signature, timestamps, solvers, destinationIdentifier, hex""
         );
 
         assertEq(token.balanceOf(destination), 0);
 
         vm.prank(solver);
-        IInputSettlerCompactHarness(inputSettlerCompact).finalise(
+        IInputSettlerCompact(inputSettlerCompact).finalise(
             order, signature, timestamps, solvers, destinationIdentifier, hex""
         );
         vm.snapshotGasLastCall("inputSettler", "CompactFinaliseTo");
@@ -432,7 +314,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
                 originChainId: block.chainid,
                 fillDeadline: type(uint32).max,
                 expires: type(uint32).max,
-                localOracle: alwaysYesOracle,
+                inputOracle: alwaysYesOracle,
                 inputs: inputs,
                 outputs: outputs
             });
@@ -459,7 +341,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
             vm.expectRevert(abi.encodeWithSignature("InvalidSigner()"));
             bytes32[] memory solvers = new bytes32[](1);
             solvers[0] = solver.toIdentifier();
-            IInputSettlerCompactHarness(inputSettlerCompact).finaliseWithSignature(
+            IInputSettlerCompact(inputSettlerCompact).finaliseWithSignature(
                 order, signature, timestamps, solvers, destination.toIdentifier(), hex"", hex""
             );
         }
@@ -467,7 +349,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
 
         bytes memory orderOwnerSignature = this.getOrderOpenSignature(
             solverPrivateKey,
-            IInputSettlerCompactHarness(inputSettlerCompact).orderIdentifier(order),
+            IInputSettlerCompact(inputSettlerCompact).orderIdentifier(order),
             destination.toIdentifier(),
             hex""
         );
@@ -475,7 +357,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
             bytes32[] memory solvers = new bytes32[](1);
             solvers[0] = solver.toIdentifier();
             vm.prank(non_solver);
-            IInputSettlerCompactHarness(inputSettlerCompact).finaliseWithSignature(
+            IInputSettlerCompact(inputSettlerCompact).finaliseWithSignature(
                 order, signature, timestamps, solvers, destination.toIdentifier(), hex"", orderOwnerSignature
             );
         }

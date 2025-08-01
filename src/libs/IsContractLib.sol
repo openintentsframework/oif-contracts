@@ -10,7 +10,7 @@ library IsContractLib {
      * @param addr is the token contract address needs to be checked against.
      */
 
-    function checkCodeSize(
+    function validateContainsCode(
         address addr
     ) internal view {
         uint256 size;
