@@ -8,7 +8,6 @@ import { SignatureCheckerLib } from "solady/utils/SignatureCheckerLib.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
 import { IInputCallback } from "../interfaces/IInputCallback.sol";
-import { IOracle } from "../interfaces/IOracle.sol";
 
 import { AllowOpenType } from "./types/AllowOpenType.sol";
 import { MandateOutput } from "./types/MandateOutputType.sol";

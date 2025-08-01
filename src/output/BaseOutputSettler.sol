@@ -6,11 +6,12 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { IOutputCallback } from "../interfaces/IOutputCallback.sol";
 import { IPayloadCreator } from "../interfaces/IPayloadCreator.sol";
 
+import { AssemblyLib } from "../libs/AssemblyLib.sol";
 import { LibAddress } from "../libs/LibAddress.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../libs/MandateOutputEncodingLib.sol";
 import { OutputVerificationLib } from "../libs/OutputVerificationLib.sol";
 
-import { BaseOracle } from "../oracles/BaseOracle.sol";
+import { BaseInputOracle } from "../oracles/BaseInputOracle.sol";
 
 /**
  * @notice Base Output Settler implementing logic for settling outputs.
@@ -34,7 +35,7 @@ import { BaseOracle } from "../oracles/BaseOracle.sol";
  *
  * Choose the appropriate pattern based on your use case requirements.
  */
-abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
+abstract contract BaseOutputSettler is IPayloadCreator, BaseInputOracle {
     using LibAddress for address;
 
     error FillDeadline();
@@ -255,10 +256,7 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
         uint256 numPayloads = payloads.length;
         accumulator = true;
         for (uint256 i; i < numPayloads; ++i) {
-            bool payloadValid = _isPayloadValid(payloads[i]);
-            assembly ("memory-safe") {
-                accumulator := and(accumulator, payloadValid)
-            }
+            accumulator = AssemblyLib.and(accumulator, _isPayloadValid(payloads[i]));
         }
     }
 
