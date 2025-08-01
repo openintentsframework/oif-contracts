@@ -11,10 +11,10 @@ import { MockERC20 } from "../mocks/MockERC20.sol";
 
 /// @dev harness is used to place the revert at a lower call depth than our current.
 contract IsContractLibHarness {
-    function checkCodeSize(
+    function validateContainsCode(
         address addr
     ) external view {
-        IsContractLib.checkCodeSize(addr);
+        IsContractLib.validateContainsCode(addr);
     }
 }
 
@@ -32,22 +32,22 @@ contract IsContractLibTest is Test {
         inputSettlerCompact = address(new InputSettlerCompact(address(0)));
     }
 
-    function test_checkCodeSize_known_addresses() external {
-        isContractLib.checkCodeSize(outputSettlerCoin);
+    function test_validateContainsCode_known_addresses() external {
+        isContractLib.validateContainsCode(outputSettlerCoin);
 
         vm.expectRevert(abi.encodeWithSignature("CodeSize0()"));
-        isContractLib.checkCodeSize(makeAddr("outputSettlerCoin"));
+        isContractLib.validateContainsCode(makeAddr("outputSettlerCoin"));
 
         vm.expectRevert(abi.encodeWithSignature("CodeSize0()"));
-        isContractLib.checkCodeSize(address(0));
+        isContractLib.validateContainsCode(address(0));
 
-        isContractLib.checkCodeSize(outputToken);
-        isContractLib.checkCodeSize(inputSettlerCompact);
-
-        vm.expectRevert(abi.encodeWithSignature("CodeSize0()"));
-        isContractLib.checkCodeSize(makeAddr("random"));
+        isContractLib.validateContainsCode(outputToken);
+        isContractLib.validateContainsCode(inputSettlerCompact);
 
         vm.expectRevert(abi.encodeWithSignature("CodeSize0()"));
-        isContractLib.checkCodeSize(makeAddr("swapper"));
+        isContractLib.validateContainsCode(makeAddr("random"));
+
+        vm.expectRevert(abi.encodeWithSignature("CodeSize0()"));
+        isContractLib.validateContainsCode(makeAddr("swapper"));
     }
 }

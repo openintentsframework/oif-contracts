@@ -26,4 +26,14 @@ library LibAddress {
     ) internal pure returns (address) {
         return address(uint160(uint256(identifier)));
     }
+
+    /// @notice Converts a uint256 identifier back to an Ethereum address
+    /// @dev Reverses the toIdentifier operation by casting through uint160
+    /// @param identifier The uint256 identifier to convert
+    /// @return _ The address representation of the identifier
+    function fromIdentifier(
+        uint256 identifier
+    ) internal pure returns (address) {
+        return address(uint160(identifier));
+    }
 }
