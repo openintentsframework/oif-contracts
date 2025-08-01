@@ -44,7 +44,7 @@ library StandardOrderType {
                 order.nonce(),
                 order.expires(),
                 order.fillDeadline(),
-                order.localOracle(),
+                order.inputOracle(),
                 keccak256(abi.encodePacked(order.inputs())),
                 abi.encode(order.outputs())
             )
@@ -145,14 +145,14 @@ library StandardOrderType {
     /**
      * @notice Loads the input oracle from an abi.encoded standard order given a bytes calldata pointer
      * @param order Bytes pointer to abi encoded standard order
-     * @return _localOracle Decoded input oracle for the order.
+     * @return _inputOracle Decoded input oracle for the order.
      */
-    function localOracle(
+    function inputOracle(
         bytes calldata order
-    ) internal pure returns (address _localOracle) {
+    ) internal pure returns (address _inputOracle) {
         assembly ("memory-safe") {
             // Load the sixth element 6*32 with offset 12 = 0xcc
-            _localOracle := shr(96, calldataload(add(order.offset, 0xcc)))
+            _inputOracle := shr(96, calldataload(add(order.offset, 0xcc)))
         }
     }
 

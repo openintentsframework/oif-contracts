@@ -5,7 +5,7 @@
   "CompactFinaliseTo": "129495",
   "EscrowFinalise": "77041",
   "IntegrationCoinFill": "88997",
-  "IntegrationCompactFinaliseSelf": "126021",
+  "IntegrationCompactFinaliseSelf": "126109",
   "IntegrationWormholeReceiveMessage": "73514",
   "IntegrationWormholeSubmit": "42485",
   "escrowFinaliseWithSignature": "85646",
