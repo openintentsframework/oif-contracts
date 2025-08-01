@@ -2,7 +2,6 @@
 pragma solidity ^0.8.26;
 
 struct MandateOutput {
-    /// fill deadline
     /// @dev Oracle implementation responsible for collecting the proof from settler on output chain.
     bytes32 oracle;
     /// @dev Output Settler on the output chain responsible for settling the output payment.

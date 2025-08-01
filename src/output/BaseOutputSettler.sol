@@ -13,7 +13,11 @@ import { LibAddress } from "../libs/LibAddress.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../libs/MandateOutputEncodingLib.sol";
 import { OutputVerificationLib } from "../libs/OutputVerificationLib.sol";
 
+import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
+
 import { BaseOracle } from "../oracles/BaseOracle.sol";
+
+import { OutputFillLib } from "../libs/OutputFillLib.sol";
 
 /**
  * @notice Base Output Settler implementing logic for settling outputs.
@@ -39,12 +43,16 @@ import { BaseOracle } from "../oracles/BaseOracle.sol";
  */
 abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseOracle {
     using LibAddress for address;
+    using OutputFillLib for bytes;
 
     error FillDeadline();
     error AlreadyFilled();
     error InvalidAttestation(bytes32 storedFillRecordHash, bytes32 givenFillRecordHash);
     error ZeroValue();
     error PayloadTooSmall();
+
+    error NotImplemented();
+    error ExclusiveTo(bytes32 solver);
 
     /**
      * @notice Sets outputs as filled by their solver identifier, such that outputs won't be filled twice.
@@ -72,64 +80,60 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
         payloadHash = _fillRecords[orderId][MandateOutputEncodingLib.getMandateOutputHash(output)];
     }
 
-    /**
-     * @dev Virtual function for extensions to implement output resolution logic.
-     * @param output The given output to resolve.
-     * @param proposedSolver The proposed solver to check exclusivity against.
-     * @return amount The computed amount for the output.
-     */
-    function _resolveOutput(
-        MandateOutput calldata output,
-        bytes32 proposedSolver
-    ) internal view virtual returns (uint256 amount) {
-        // Default implementation returns the output amount
-        return output.amount;
+    function _fill(bytes32 orderId, bytes calldata output, bytes32 proposedSolver) internal virtual returns (bytes32) {
+        uint256 amount = _resolveOutput(output, proposedSolver);
+        return _fill(orderId, output, amount, proposedSolver);
     }
 
-    function _fill(bytes32 orderId, bytes calldata output, bytes32 proposedSolver) internal virtual returns (bytes32);
+    function _dutchAuctionSlope(
+        uint256 minimumAmount,
+        uint256 slope,
+        uint32 startTime,
+        uint32 stopTime
+    ) internal view returns (uint256 currentAmount) {
+        uint32 currentTime = uint32(FixedPointMathLib.max(block.timestamp, uint256(startTime)));
+        if (stopTime < currentTime) return minimumAmount; // This check also catches stopTime < startTime.
 
-    /**
-     * @notice Performs basic validation and fills output if unfilled.
-     * If an order has already been filled given the output & fillDeadline, then this function does not "re"fill the
-     * order but returns early.
-     * @dev This fill function links the fill to the outcome of the external call. If the external call cannot execute,
-     * the output is not fillable.
-     * Does not automatically submit the order (send the proof).
-     *                          !Do not make orders with repeated outputs!.
-     * The implementation strategy (verify then fill) means that an order with repeat outputs
-     * (say 1 Ether to Alice & 1 Ether to Alice) can be filled by sending 1 Ether to Alice ONCE.
-     * @param orderId Input chain order identifier. Is used as is, not checked for validity.
-     * @param output The given output to fill. Is expected to belong to a greater order identified by orderId
-     * @param proposedSolver Solver identifier to be sent to input chain.
-     * @return fillRecordHash Hash of the fill record. Returns existing hash if already filled, new hash if successfully
-     * filled.
-     */
-    function _fill(
-        bytes32 orderId,
-        MandateOutput calldata output,
-        bytes32 proposedSolver
-    ) internal virtual returns (bytes32 fillRecordHash) {
-        if (proposedSolver == bytes32(0)) revert ZeroValue();
-        OutputVerificationLib._isThisChain(output.chainId);
-        OutputVerificationLib._isThisOutputSettler(output.settler);
+        uint256 timeDiff;
+        unchecked {
+            timeDiff = stopTime - currentTime; // unchecked: stopTime > currentTime
+        }
+        return minimumAmount + slope * timeDiff;
+    }
 
-        bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHash(output);
-        bytes32 existingFillRecordHash = _fillRecords[orderId][outputHash];
-        // Return existing record hash if already solved.
-        if (existingFillRecordHash != bytes32(0)) return existingFillRecordHash;
-        // The above and below lines act as a local re-entry check.
-        uint32 fillTimestamp = uint32(block.timestamp);
-        fillRecordHash = _getFillRecordHash(proposedSolver, fillTimestamp);
-        _fillRecords[orderId][outputHash] = fillRecordHash;
+    function _resolveOutput(bytes calldata output, bytes32 solver) internal view returns (uint256 amount) {
+        uint16 callDataLength = uint16(bytes2(output[0xc6:0xc8]));
+        amount = output.amount();
 
-        // Storage has been set. Fill the output.
-        uint256 outputAmount = _resolveOutput(output, proposedSolver);
-        address recipient = address(uint160(uint256(output.recipient)));
-        SafeTransferLib.safeTransferFrom(address(uint160(uint256(output.token))), msg.sender, recipient, outputAmount);
-        if (output.call.length > 0) IOIFCallback(recipient).outputFilled(output.token, outputAmount, output.call);
+        bytes calldata fulfilmentData = output.contextData();
 
-        //emit OutputFilled(orderId, proposedSolver, fillTimestamp, output, outputAmount);
-        return fillRecordHash;
+        uint16 fulfillmentLength = uint16(fulfilmentData.length);
+
+        if (fulfillmentLength == 0) return amount;
+
+        uint256 fulfilmentOffset = 0xc6 + 0x2 + callDataLength + 0x2; // callData offset, 2 bytes for call size,
+            // calldata length, 2 bytes for context size
+
+        bytes1 orderType = fulfilmentData.orderType();
+
+        if (orderType == OutputFillLib.LIMIT_ORDER && fulfillmentLength == 1) return amount;
+        if (orderType == OutputFillLib.DUTCH_AUCTION) {
+            (uint32 startTime, uint32 stopTime, uint256 slope) = fulfilmentData.getDutchAuctionData();
+            return _dutchAuctionSlope(amount, slope, startTime, stopTime);
+        }
+
+        if (orderType == OutputFillLib.EXCLUSIVE_LIMIT_ORDER) {
+            (bytes32 exclusiveFor, uint32 startTime) = fulfilmentData.getExclusiveLimitOrderData();
+            if (startTime > block.timestamp && exclusiveFor != solver) revert ExclusiveTo(exclusiveFor);
+            return amount;
+        }
+        if (orderType == OutputFillLib.EXCLUSIVE_DUTCH_AUCTION) {
+            (bytes32 exclusiveFor, uint32 startTime, uint32 stopTime, uint256 slope) =
+                fulfilmentData.getExclusiveDutchAuctionData();
+            if (startTime > block.timestamp && exclusiveFor != solver) revert ExclusiveTo(exclusiveFor);
+            return _dutchAuctionSlope(amount, slope, startTime, stopTime);
+        }
+        revert NotImplemented();
     }
 
     // --- External Solver Interface --- //
@@ -137,7 +141,7 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
     function fill(bytes32 orderId, bytes calldata originData, bytes calldata fillerData) external returns (bytes32) {
         // TODO: handle fill deadline
         bytes32 proposedSolver;
-        uint48 fillDeadline = uint48(bytes6(originData[0x00:0x06]));
+        uint48 fillDeadline = originData.fillDeadline();
         assembly ("memory-safe") {
             proposedSolver := calldataload(fillerData.offset)
         }
@@ -153,21 +157,12 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
         uint256 outputAmount,
         bytes32 proposedSolver
     ) internal virtual returns (bytes32 fillRecordHash) {
-        bytes32 oracle;
-        bytes32 settler;
-        uint256 chainId;
-        bytes32 token;
-        uint256 amount;
-        bytes32 recipientBytes;
-
-        assembly ("memory-safe") {
-            oracle := calldataload(add(output.offset, 0x06))
-            settler := calldataload(add(output.offset, 0x26))
-            chainId := calldataload(add(output.offset, 0x46))
-            token := calldataload(add(output.offset, 0x66))
-            amount := calldataload(add(output.offset, 0x86))
-            recipientBytes := calldataload(add(output.offset, 0xa6))
-        }
+        bytes32 oracle = output.oracle();
+        bytes32 settler = output.settler();
+        uint256 chainId = output.chainId();
+        bytes32 token = output.token();
+        uint256 amount = output.amount();
+        bytes32 recipientBytes = output.recipient();
 
         if (proposedSolver == bytes32(0)) revert ZeroValue();
         OutputVerificationLib._isThisChain(chainId);
@@ -186,12 +181,9 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
         address recipient = address(uint160(uint256(recipientBytes)));
         SafeTransferLib.safeTransferFrom(address(uint160(uint256(token))), msg.sender, recipient, outputAmount);
 
-        uint16 callDataLength = uint16(bytes2(output[0xc6:0xc8]));
+        bytes calldata callbackData = output.callbackData();
 
-        if (callDataLength > 0) {
-            bytes calldata callData = output[0xc8:0xc8 + callDataLength];
-            IOIFCallback(recipient).outputFilled(token, outputAmount, callData);
-        }
+        if (callbackData.length > 0) IOIFCallback(recipient).outputFilled(token, outputAmount, callbackData);
 
         emit OutputFilled(orderId, proposedSolver, fillTimestamp, output, outputAmount);
 
@@ -206,7 +198,7 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
             proposedSolver := calldataload(fillerData.offset)
         }
 
-        uint48 fillDeadline = uint48(bytes6(outputs[0][0x00:0x06]));
+        uint48 fillDeadline = outputs[0].fillDeadline();
 
         if (fillDeadline < block.timestamp) revert FillDeadline();
 
