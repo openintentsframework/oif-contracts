@@ -158,11 +158,9 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
         uint256 outputAmount,
         bytes32 proposedSolver
     ) internal virtual returns (bytes32 fillRecordHash) {
-        bytes32 oracle = output.oracle();
         bytes32 settler = output.settler();
         uint256 chainId = output.chainId();
         bytes32 token = output.token();
-        uint256 amount = output.amount();
         address recipient = address(uint160(uint256(output.recipient())));
 
         if (proposedSolver == bytes32(0)) revert ZeroValue();
