@@ -54,6 +54,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
     bytes1 internal constant SIGNATURE_TYPE_PERMIT2 = 0x00;
     bytes1 internal constant SIGNATURE_TYPE_3009 = 0x01;
+    bytes1 internal constant SIGNATURE_TYPE_SELF = 0xff;
 
     enum OrderStatus {
         None,
@@ -153,7 +154,6 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     function openFor(bytes calldata order, address sponsor, bytes calldata signature) external {
         // Validate the order structure.
         _validateInputChain(order.originChainId());
-        // _validateTimestampHasNotPassed(order.openDeadline);
         _validateTimestampHasNotPassed(order.fillDeadline());
         _validateTimestampHasNotPassed(order.expires());
 
@@ -165,10 +165,16 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         orderStatus[orderId] = OrderStatus.Deposited;
 
         // Check the first byte of the signature for signature type then collect inputs.
-        bytes1 signatureType = signature[0];
-        if (signatureType == SIGNATURE_TYPE_PERMIT2) _openForWithPermit2(order, sponsor, signature[1:], address(this));
-        else if (signatureType == SIGNATURE_TYPE_3009) _openForWithAuthorization(order, sponsor, signature[1:], orderId);
-        else revert SignatureNotSupported(signatureType);
+        bytes1 signatureType = signature.length > 0 ? signature[0] : SIGNATURE_TYPE_SELF;
+        if (signatureType == SIGNATURE_TYPE_PERMIT2) {
+            _openForWithPermit2(order, sponsor, signature[1:], address(this));
+        } else if (signatureType == SIGNATURE_TYPE_3009) {
+            _openForWithAuthorization(order, sponsor, signature[1:], orderId);
+        } else if (msg.sender == sponsor && signatureType == SIGNATURE_TYPE_SELF) {
+            _open(order);
+        } else {
+            revert SignatureNotSupported(signatureType);
+        }
 
         // Validate that there has been no reentrancy.
         if (orderStatus[orderId] != OrderStatus.Deposited) revert ReentrancyDetected();

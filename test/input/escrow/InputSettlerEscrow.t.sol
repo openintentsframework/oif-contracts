@@ -136,7 +136,9 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         assertEq(token.balanceOf(address(swapper)), amount);
 
         vm.prank(swapper);
-        IInputSettlerEscrow(inputSettlerEscrow).openFor(abi.encode(order), order.user, abi.encodePacked(bytes1(0x00), signature));
+        IInputSettlerEscrow(inputSettlerEscrow).openFor(
+            abi.encode(order), order.user, abi.encodePacked(bytes1(0x00), signature)
+        );
         vm.snapshotGasLastCall("inputSettler", "escrowOpenForPermit2");
 
         assertEq(token.balanceOf(address(swapper)), 0);
@@ -178,7 +180,9 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         assertEq(token.balanceOf(address(swapper)), amount);
 
         vm.prank(swapper);
-        IInputSettlerEscrow(inputSettlerEscrow).openFor(abi.encode(order), order.user, abi.encodePacked(bytes1(0x01), signature));
+        IInputSettlerEscrow(inputSettlerEscrow).openFor(
+            abi.encode(order), order.user, abi.encodePacked(bytes1(0x01), signature)
+        );
         vm.snapshotGasLastCall("inputSettler", "escrowOpenFor3009Single");
 
         assertEq(token.balanceOf(address(swapper)), 0);
