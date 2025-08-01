@@ -4,17 +4,12 @@ pragma solidity >=0.8.0;
 import { MandateOutput } from "../input/types/MandateOutputType.sol";
 import { OrderPurchase } from "../input/types/OrderPurchaseType.sol";
 import { StandardOrder } from "../input/types/StandardOrderType.sol";
-import { GaslessCrossChainOrder, OnchainCrossChainOrder, ResolvedCrossChainOrder } from "./IERC7683.sol";
 
 interface IInputSettlerEscrow {
-    function openFor(
-        StandardOrder calldata order,
-        bytes calldata signature,
-        bytes calldata /* originFillerData */
-    ) external;
+    function openFor(bytes calldata order, address sponsor, bytes calldata signature) external;
 
     function open(
-        StandardOrder calldata order
+        bytes calldata order
     ) external;
 
     function finalise(
@@ -33,6 +28,10 @@ interface IInputSettlerEscrow {
         bytes memory call,
         bytes memory orderOwnerSignature
     ) external;
+
+    function orderIdentifier(
+        bytes memory order
+    ) external view returns (bytes32);
 
     function orderIdentifier(
         StandardOrder memory order
