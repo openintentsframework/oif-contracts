@@ -158,32 +158,6 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
         return _fill(orderId, originData, proposedSolver);
     }
 
-    function _parseOutput(
-        bytes calldata originData
-    ) internal pure returns (bytes32, bytes32, uint256, bytes32, uint256, bytes32) {
-        bytes32 oracle;
-        bytes32 settler;
-        uint256 chainId;
-        bytes32 token;
-        uint256 amount;
-        bytes32 recipient;
-        uint256 callDataOffset;
-        uint256 contextOffset;
-
-        assembly ("memory-safe") {
-            oracle := calldataload(originData.offset)
-            settler := calldataload(add(originData.offset, 0x20))
-            chainId := calldataload(add(originData.offset, 0x40))
-            token := calldataload(add(originData.offset, 0x60))
-            amount := calldataload(add(originData.offset, 0x80))
-            recipient := calldataload(add(originData.offset, 0xa0))
-
-            callDataOffset := calldataload(add(originData.offset, 0xc0))
-        }
-
-        return (oracle, settler, chainId, token, amount, recipient);
-    }
-
     function _fill(
         bytes32 orderId,
         bytes calldata output,
@@ -236,44 +210,6 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
     }
 
     // -- Batch Solving -- //
-
-    /**
-     * @notice Atomic batch fill interface for filling multiple outputs (non-idempotent operation).
-     * @dev This function implements atomic batch filling with solver competition semantics. Unlike the single
-     * `fill()` function, this is NOT idempotent - it will revert if the first output has already been filled
-     * by another solver. This ensures that only one solver can "win" the entire order.
-     *
-     * **Behavioral differences from single fill():**
-     * - REVERTS with `AlreadyFilled()` if the first output is already filled (solver competition)
-     * - Subsequent outputs can be already filled (they are skipped)
-     * - All fills in the batch succeed or the entire transaction reverts (atomicity)
-     *
-     * **Solver Selection Logic:**
-     * The first output determines which solver "wins" the entire order. This prevents solver conflicts
-     * and ensures consistent solver attribution across all outputs in a multi-output order.
-     *
-     * @param fillDeadline If the transaction is executed after this timestamp, the call will fail.
-     * @param orderId Input chain order identifier. Is used as is, not checked for validity.
-     * @param outputs Given outputs to fill. Ensure that the **first** order output is the first output for this call.
-     * @param proposedSolver Solver to be sent to origin chain. If the first output has a different solver, reverts.
-     */
-    function fillOrderOutputs(
-        uint32 fillDeadline,
-        bytes32 orderId,
-        MandateOutput[] calldata outputs,
-        bytes32 proposedSolver
-    ) external checkFillDeadline(fillDeadline) {
-        // Atomic check: first output must not be already filled (solver competition)
-        bytes32 fillRecordHash = _fill(orderId, outputs[0], proposedSolver);
-        bytes32 expectedFillRecordHash = _getFillRecordHash(proposedSolver, uint32(block.timestamp));
-        if (fillRecordHash != expectedFillRecordHash) revert AlreadyFilled();
-
-        // Fill remaining outputs (can skip if already filled)
-        uint256 numOutputs = outputs.length;
-        for (uint256 i = 1; i < numOutputs; ++i) {
-            _fill(orderId, outputs[i], proposedSolver);
-        }
-    }
 
     function fillOrderOutputs(bytes32 orderId, bytes[] calldata outputs, bytes calldata fillerData) external {
         bytes32 proposedSolver;
