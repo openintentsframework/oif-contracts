@@ -43,6 +43,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     error InputTokenHasDirtyBits();
     error SignatureAndInputsNotEqual();
     error ReentrancyDetected();
+    error SignatureNotSupported(bytes1);
 
     event Open(bytes32 indexed orderId, StandardOrder order);
     event Refunded(bytes32 indexed orderId);
@@ -154,6 +155,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         bytes1 signatureType = signature[0];
         if (signatureType == SIGNATURE_TYPE_PERMIT2) _openForWithPermit2(order, signature[1:], address(this));
         else if (signatureType == SIGNATURE_TYPE_3009) _openForWithAuthorization(order, signature[1:], orderId);
+        else revert SignatureNotSupported(signatureType);
 
         // Validate that there has been no reentrancy.
         if (orderStatus[orderId] != OrderStatus.Deposited) revert ReentrancyDetected();
@@ -240,6 +242,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
                 orderId,
                 _signature_
             );
+            // The above calldata encoding is equivalent to:
             // IERC3009(EfficiencyLib.asSanitizedAddress(input[0])).receiveWithAuthorization({
             //     from: order.user,
             //     to: address(this),
