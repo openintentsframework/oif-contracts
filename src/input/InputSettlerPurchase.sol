@@ -7,7 +7,6 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { SignatureCheckerLib } from "solady/utils/SignatureCheckerLib.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
-import { IInputOracle } from "../interfaces/IInputOracle.sol";
 import { IOIFCallback } from "../interfaces/IOIFCallback.sol";
 
 import { AllowOpenType } from "./types/AllowOpenType.sol";
