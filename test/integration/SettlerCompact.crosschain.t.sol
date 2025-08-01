@@ -389,18 +389,40 @@ contract InputSettlerCompactTestCrossChain is Test {
         bytes memory signature = abi.encode(sponsorSig, allocatorSig);
 
         // Initiation is over. We need to fill the order.
+        bytes memory outputToFill = abi.encodePacked(
+            type(uint48).max, // fill deadline
+            outputs[0].oracle, // oracle
+            outputs[0].settler, // settler
+            outputs[0].chainId, // chainId
+            outputs[0].token, // token
+            outputs[0].amount, // amount
+            outputs[0].recipient, // recipient
+            uint16(outputs[0].call.length), // call length
+            outputs[0].call, // call
+            uint16(outputs[0].context.length), // context length
+            outputs[0].context // context
+        );
 
         bytes32 solverIdentifier = solver.toIdentifier();
+
+        bytes memory fillerData = abi.encodePacked(solverIdentifier);
 
         bytes32 orderId = IInputSettlerCompact(inputSettlerCompact).orderIdentifier(order);
 
         vm.prank(solver);
-        outputSettlerCoin.fill(type(uint32).max, orderId, outputs[0], solverIdentifier);
+        outputSettlerCoin.fill(orderId, outputToFill, fillerData);
         vm.snapshotGasLastCall("inputSettler", "IntegrationCoinFill");
 
         bytes[] memory payloads = new bytes[](1);
         payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
-            solverIdentifier, orderId, uint32(block.timestamp), outputs[0]
+            solverIdentifier,
+            orderId, 
+            uint32(block.timestamp),
+            outputs[0].token,
+            outputs[0].amount,
+            outputs[0].recipient,
+            outputs[0].call,
+            outputs[0].context
         );
 
         bytes memory expectedMessageEmitted = this.encodeMessage(outputs[0].settler, payloads);
