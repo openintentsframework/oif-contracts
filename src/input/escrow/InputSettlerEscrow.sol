@@ -9,9 +9,10 @@ import { IERC3009 } from "../../interfaces/IERC3009.sol";
 import { Output, ResolvedCrossChainOrder } from "../../interfaces/IERC7683.sol";
 
 import { IOriginSettler } from "../../interfaces/IERC7683.sol";
+
+import { IInputCallback } from "../../interfaces/IInputCallback.sol";
 import { IInputOracle } from "../../interfaces/IInputOracle.sol";
 import { IInputSettlerEscrow } from "../../interfaces/IInputSettlerEscrow.sol";
-import { IInputCallback } from "../../interfaces/IInputCallback.sol";
 
 import { BytesLib } from "../../libs/BytesLib.sol";
 import { IsContractLib } from "../../libs/IsContractLib.sol";
