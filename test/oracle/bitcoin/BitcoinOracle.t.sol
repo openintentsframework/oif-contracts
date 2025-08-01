@@ -968,7 +968,7 @@ contract BitcoinOracleTest is Test {
             bitcoinOracle.verify(orderId, output, BLOCK_HEIGHT, inclusionProof, TX_OUTPUT_INDEX);
             vm.snapshotGasLastCall("oracle", "bitcoinVerify");
         }
-        // Local oracle (as oracle)
+        // Input Oracle (as oracle)
         bytes memory payload =
             MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, uint32(BLOCK_TIME), output);
         bool oracleValid =
@@ -1120,7 +1120,7 @@ contract BitcoinOracleTest is Test {
 
         bitcoinOracle.verify(orderId, output, BLOCK_HEIGHT, inclusionProof, TX_OUTPUT_INDEX);
 
-        // Local oracle (as oracle)
+        // Input Oracle (as oracle)
         bytes memory payload =
             MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, uint32(BLOCK_TIME), output);
         bool oracleValid =
@@ -1315,7 +1315,7 @@ contract BitcoinOracleTest is Test {
         bitcoinOracle.verify(orderId, output, BLOCK_HEIGHT, inclusionProof, EMBED_TX_OUTPUT_INDEX);
         vm.snapshotGasLastCall("oracle", "bitcoinVerifyWithEmbed");
 
-        // Local oracle (as oracle)
+        // Input Oracle (as oracle)
         bytes memory payload =
             MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, uint32(BLOCK_TIME), output);
         bool oracleValid =

@@ -50,13 +50,13 @@ contract MockSettler is InputSettlerPurchase {
 
     function validateFills(
         uint32 fillDeadline,
-        address localOracle,
+        address inputOracle,
         MandateOutput[] calldata outputs,
         bytes32 orderId,
         uint32[] calldata timestamps,
         bytes32[] calldata solvers
     ) external view {
-        _validateFills(fillDeadline, localOracle, outputs, orderId, timestamps, solvers);
+        _validateFills(fillDeadline, inputOracle, outputs, orderId, timestamps, solvers);
     }
 }
 
@@ -184,12 +184,12 @@ contract BaseInputSettlerTest is Test {
             originChainId: 0, // not used.
             expires: 0, // not used
             fillDeadline: type(uint32).max,
-            localOracle: address(this),
+            inputOracle: address(this),
             inputs: new uint256[2][](0), // not used
             outputs: MandateOutputs
         });
 
-        settler.validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, timestamps, solvers);
+        settler.validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, timestamps, solvers);
         vm.snapshotGasLastCall("inputSettler", "validate2Fills");
     }
 
@@ -269,12 +269,12 @@ contract BaseInputSettlerTest is Test {
             originChainId: 0, // not used.
             expires: 0, // not used
             fillDeadline: type(uint32).max,
-            localOracle: address(this),
+            inputOracle: address(this),
             inputs: new uint256[2][](0), // not used
             outputs: MandateOutputs
         });
 
-        settler.validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, timestamps, solvers);
+        settler.validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, timestamps, solvers);
         vm.snapshotGasLastCall("inputSettler", "validate2FillsMultipleSolvers");
     }
 

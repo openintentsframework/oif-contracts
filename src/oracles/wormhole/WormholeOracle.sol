@@ -9,7 +9,7 @@ import { IPayloadCreator } from "../../interfaces/IPayloadCreator.sol";
 import { LibAddress } from "../../libs/LibAddress.sol";
 import { MessageEncodingLib } from "../../libs/MessageEncodingLib.sol";
 
-import { BaseOracle } from "../BaseOracle.sol";
+import { BaseInputOracle } from "../BaseInputOracle.sol";
 import { ChainMap } from "../ChainMap.sol";
 
 import { WormholeVerifier } from "./external/callworm/WormholeVerifier.sol";
@@ -22,7 +22,7 @@ import { IWormhole } from "./interfaces/IWormhole.sol";
  * @dev The contract is mostly trustless but requires someone to translate Wormhole chainIds into
  * proper chainIds. These maps once set are immutable and trustless.
  */
-contract WormholeOracle is ChainMap, BaseOracle, WormholeVerifier {
+contract WormholeOracle is ChainMap, BaseInputOracle, WormholeVerifier {
     using LibAddress for address;
 
     error NotAllPayloadsValid();

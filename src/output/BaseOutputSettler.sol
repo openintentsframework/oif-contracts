@@ -3,7 +3,7 @@ pragma solidity ^0.8.26;
 
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
-import { IOIFCallback } from "../interfaces/IOIFCallback.sol";
+import { IOutputCallback } from "../interfaces/IOutputCallback.sol";
 import { IPayloadCreator } from "../interfaces/IPayloadCreator.sol";
 
 import { IDestinationSettler } from "../interfaces/IERC7683.sol";
@@ -15,7 +15,7 @@ import { OutputVerificationLib } from "../libs/OutputVerificationLib.sol";
 
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 
-import { BaseOracle } from "../oracles/BaseOracle.sol";
+import { BaseInputOracle } from "../oracles/BaseInputOracle.sol";
 
 import { OutputFillLib } from "../libs/OutputFillLib.sol";
 import { FulfilmentLib } from "../libs/FulfilmentLib.sol";
@@ -43,7 +43,7 @@ import { FillerDataLib } from "../libs/FillerDataLib.sol";
  *
  * Choose the appropriate pattern based on your use case requirements.
  */
-abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseOracle {
+abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseInputOracle {
     using LibAddress for address;
     using OutputFillLib for bytes;
     using FulfilmentLib for bytes;
@@ -183,7 +183,7 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
 
         bytes calldata callbackData = output.callbackData();
 
-        if (callbackData.length > 0) IOIFCallback(recipient).outputFilled(token, outputAmount, callbackData);
+        if (callbackData.length > 0) IOutputCallback(recipient).outputFilled(token, outputAmount, callbackData);
 
         emit OutputFilled(orderId, proposedSolver, fillTimestamp, output, outputAmount);
 
@@ -226,7 +226,7 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
         // Disallow calling on-chain.
         require(msg.sender == address(0));
 
-        IOIFCallback(address(uint160(uint256(output.recipient)))).outputFilled(output.token, trueAmount, output.call);
+        IOutputCallback(address(uint160(uint256(output.recipient)))).outputFilled(output.token, trueAmount, output.call);
     }
 
     // --- IPayloadCreator --- //

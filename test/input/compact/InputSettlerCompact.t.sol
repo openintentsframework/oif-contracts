@@ -68,7 +68,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
             originChainId: block.chainid,
             fillDeadline: type(uint32).max,
             expires: type(uint32).max,
-            localOracle: alwaysYesOracle,
+            inputOracle: alwaysYesOracle,
             inputs: inputs,
             outputs: outputs
         });
@@ -139,14 +139,14 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
         vm.prank(swapper);
         uint256 tokenId = theCompact.depositERC20(address(token), alwaysOkAllocatorLockTag, amount, swapper);
 
-        address localOracle = address(alwaysYesOracle);
+        address inputOracle = address(alwaysYesOracle);
 
         uint256[2][] memory inputs = new uint256[2][](1);
         inputs[0] = [tokenId, amount];
         MandateOutput[] memory outputs = new MandateOutput[](1);
         outputs[0] = MandateOutput({
             settler: address(outputSettlerCoin).toIdentifier(),
-            oracle: localOracle.toIdentifier(),
+            oracle: inputOracle.toIdentifier(),
             chainId: block.chainid,
             token: address(anotherToken).toIdentifier(),
             amount: amount,
@@ -160,7 +160,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
             originChainId: block.chainid,
             fillDeadline: fillDeadline,
             expires: type(uint32).max,
-            localOracle: alwaysYesOracle,
+            inputOracle: alwaysYesOracle,
             inputs: inputs,
             outputs: outputs
         });
@@ -230,7 +230,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
             originChainId: block.chainid,
             fillDeadline: type(uint32).max,
             expires: type(uint32).max,
-            localOracle: alwaysYesOracle,
+            inputOracle: alwaysYesOracle,
             inputs: inputs,
             outputs: outputs
         });
@@ -314,7 +314,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
                 originChainId: block.chainid,
                 fillDeadline: type(uint32).max,
                 expires: type(uint32).max,
-                localOracle: alwaysYesOracle,
+                inputOracle: alwaysYesOracle,
                 inputs: inputs,
                 outputs: outputs
             });

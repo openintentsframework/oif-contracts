@@ -8,9 +8,9 @@ import { IdLib } from "the-compact/src/lib/IdLib.sol";
 import { BatchClaim } from "the-compact/src/types/BatchClaims.sol";
 import { BatchClaimComponent, Component } from "the-compact/src/types/Components.sol";
 
+import { IInputCallback } from "../../interfaces/IInputCallback.sol";
+import { IInputOracle } from "../../interfaces/IInputOracle.sol";
 import { IInputSettlerCompact } from "../../interfaces/IInputSettlerCompact.sol";
-import { IOIFCallback } from "../../interfaces/IOIFCallback.sol";
-import { IOracle } from "../../interfaces/IOracle.sol";
 
 import { BytesLib } from "../../libs/BytesLib.sol";
 import { MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
@@ -122,12 +122,12 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
         bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
         _orderOwnerIsCaller(orderOwner);
 
-        _validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, timestamps, solvers);
+        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, timestamps, solvers);
 
         _finalise(order, signatures, orderId, solvers[0], destination);
 
         if (call.length > 0) {
-            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
+            IInputCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
         }
     }
 
@@ -164,12 +164,12 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
             orderId, EfficiencyLib.asSanitizedAddress(uint256(orderOwner)), destination, call, orderOwnerSignature
         );
 
-        _validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, timestamps, solvers);
+        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, timestamps, solvers);
 
         _finalise(order, signatures, orderId, solvers[0], destination);
 
         if (call.length > 0) {
-            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
+            IInputCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
         }
     }
 
