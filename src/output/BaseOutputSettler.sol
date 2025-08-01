@@ -47,17 +47,6 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
     error PayloadTooSmall();
 
     /**
-     * @dev Validates that the fill deadline has not passed.
-     * @param fillDeadline The deadline timestamp to check against.
-     */
-    modifier checkFillDeadline(
-        uint32 fillDeadline
-    ) {
-        if (fillDeadline < block.timestamp) revert FillDeadline();
-        _;
-    }
-
-    /**
      * @notice Sets outputs as filled by their solver identifier, such that outputs won't be filled twice.
      */
     mapping(bytes32 orderId => mapping(bytes32 outputHash => bytes32 payloadHash)) internal _fillRecords;
