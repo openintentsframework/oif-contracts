@@ -4,7 +4,7 @@ pragma solidity ^0.8.26;
 import { IPayloadCreator } from "../../interfaces/IPayloadCreator.sol";
 import { LibAddress } from "../../libs/LibAddress.sol";
 import { MessageEncodingLib } from "../../libs/MessageEncodingLib.sol";
-import { BaseOracle } from "../BaseOracle.sol";
+import { BaseInputOracle } from "../BaseInputOracle.sol";
 
 import { MailboxClient } from "./external/hyperlane/MailboxClient.sol";
 
@@ -17,7 +17,7 @@ import { StandardHookMetadata } from "./external/hyperlane/libs/StandardHookMeta
  * Implements a transparent oracle that allows both sending and receiving messages using Hyperlane protocol along with
  * exposing the hash of received messages.
  */
-contract HyperlaneOracle is BaseOracle, MailboxClient, IMessageRecipient {
+contract HyperlaneOracle is BaseInputOracle, MailboxClient, IMessageRecipient {
     using LibAddress for address;
 
     error NotAllPayloadsValid();

@@ -3,12 +3,10 @@
   "bitcoinOPVerify": "87918",
   "bitcoinOutputClaim": "99534",
   "bitcoinOutputDispute": "71468",
-  "bitcoinVerify": "135554",
-  "bitcoinVerifyWithEmbed": "138172",
+  "bitcoinVerify": "135642",
+  "bitcoinVerifyWithEmbed": "138260",
   "hyperlaneOracleHandle": "25901",
   "hyperlaneOracleSubmit": "37581",
   "hyperlaneOracleSubmitCustomHook": "37577",
-  "bitcoinVerify": "135642",
-  "bitcoinVerifyWithEmbed": "138260",
   "wormholeOracleSubmit": "14037"
 }
