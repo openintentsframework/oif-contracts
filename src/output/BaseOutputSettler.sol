@@ -18,6 +18,8 @@ import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { BaseOracle } from "../oracles/BaseOracle.sol";
 
 import { OutputFillLib } from "../libs/OutputFillLib.sol";
+import { FulfilmentLib } from "../libs/FulfilmentLib.sol";
+import { FillerDataLib } from "../libs/FillerDataLib.sol";
 
 /**
  * @notice Base Output Settler implementing logic for settling outputs.
@@ -44,6 +46,8 @@ import { OutputFillLib } from "../libs/OutputFillLib.sol";
 abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseOracle {
     using LibAddress for address;
     using OutputFillLib for bytes;
+    using FulfilmentLib for bytes;
+    using FillerDataLib for bytes;
 
     error FillDeadline();
     error AlreadyFilled();
@@ -111,23 +115,23 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
 
         if (fulfillmentLength == 0) return amount;
 
-        uint256 fulfilmentOffset = 0xc6 + 0x2 + callDataLength + 0x2; // callData offset, 2 bytes for call size,
-            // calldata length, 2 bytes for context size
-
         bytes1 orderType = fulfilmentData.orderType();
 
-        if (orderType == OutputFillLib.LIMIT_ORDER && fulfillmentLength == 1) return amount;
-        if (orderType == OutputFillLib.DUTCH_AUCTION) {
+        if (orderType == FulfilmentLib.LIMIT_ORDER) {
+            if (fulfillmentLength != 1) revert FulfilmentLib.InvalidContextDataLength();
+            return amount;
+        }
+        if (orderType == FulfilmentLib.DUTCH_AUCTION) {
             (uint32 startTime, uint32 stopTime, uint256 slope) = fulfilmentData.getDutchAuctionData();
             return _dutchAuctionSlope(amount, slope, startTime, stopTime);
         }
 
-        if (orderType == OutputFillLib.EXCLUSIVE_LIMIT_ORDER) {
+        if (orderType == FulfilmentLib.EXCLUSIVE_LIMIT_ORDER) {
             (bytes32 exclusiveFor, uint32 startTime) = fulfilmentData.getExclusiveLimitOrderData();
             if (startTime > block.timestamp && exclusiveFor != solver) revert ExclusiveTo(exclusiveFor);
             return amount;
         }
-        if (orderType == OutputFillLib.EXCLUSIVE_DUTCH_AUCTION) {
+        if (orderType == FulfilmentLib.EXCLUSIVE_DUTCH_AUCTION) {
             (bytes32 exclusiveFor, uint32 startTime, uint32 stopTime, uint256 slope) =
                 fulfilmentData.getExclusiveDutchAuctionData();
             if (startTime > block.timestamp && exclusiveFor != solver) revert ExclusiveTo(exclusiveFor);
@@ -139,14 +143,11 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
     // --- External Solver Interface --- //
 
     function fill(bytes32 orderId, bytes calldata originData, bytes calldata fillerData) external returns (bytes32) {
-        // TODO: handle fill deadline
-        bytes32 proposedSolver;
         uint48 fillDeadline = originData.fillDeadline();
-        assembly ("memory-safe") {
-            proposedSolver := calldataload(fillerData.offset)
-        }
 
         if (fillDeadline < block.timestamp) revert FillDeadline();
+
+        bytes32 proposedSolver = fillerData.proposedSolver();
 
         return _fill(orderId, originData, proposedSolver);
     }
@@ -162,7 +163,7 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
         uint256 chainId = output.chainId();
         bytes32 token = output.token();
         uint256 amount = output.amount();
-        bytes32 recipientBytes = output.recipient();
+        address recipient = address(uint160(uint256(output.recipient())));
 
         if (proposedSolver == bytes32(0)) revert ZeroValue();
         OutputVerificationLib._isThisChain(chainId);
@@ -178,7 +179,6 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
         _fillRecords[orderId][outputHash] = fillRecordHash;
 
         // Storage has been set. Fill the output.
-        address recipient = address(uint160(uint256(recipientBytes)));
         SafeTransferLib.safeTransferFrom(address(uint160(uint256(token))), msg.sender, recipient, outputAmount);
 
         bytes calldata callbackData = output.callbackData();
