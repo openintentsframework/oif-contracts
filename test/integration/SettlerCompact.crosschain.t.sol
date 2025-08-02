@@ -11,7 +11,7 @@ import { AlwaysOKAllocator } from "the-compact/src/test/AlwaysOKAllocator.sol";
 import { ResetPeriod } from "the-compact/src/types/ResetPeriod.sol";
 import { Scope } from "the-compact/src/types/Scope.sol";
 
-import { OutputSettlerCoin } from "../../src/output/coin/OutputSettlerCoin.sol";
+import { BaseOutputSettler } from "../../src/output/BaseOutputSettler.sol";
 
 import { InputSettlerCompact } from "../../src/input/compact/InputSettlerCompact.sol";
 import { AllowOpenType } from "../../src/input/types/AllowOpenType.sol";
@@ -61,7 +61,7 @@ contract InputSettlerCompactTestCrossChain is Test {
     using LibAddress for address;
 
     address inputSettlerCompact;
-    OutputSettlerCoin outputSettlerCoin;
+    BaseOutputSettler outputSettlerCoin;
 
     // Oracles
     address alwaysYesOracle;
@@ -102,7 +102,7 @@ contract InputSettlerCompactTestCrossChain is Test {
         DOMAIN_SEPARATOR = EIP712(address(theCompact)).DOMAIN_SEPARATOR();
 
         inputSettlerCompact = address(new InputSettlerCompact(address(theCompact)));
-        outputSettlerCoin = new OutputSettlerCoin();
+        outputSettlerCoin = new BaseOutputSettler();
         alwaysYesOracle = address(new AlwaysYesOracle());
 
         token = new MockERC20("Mock ERC20", "MOCK", 18);

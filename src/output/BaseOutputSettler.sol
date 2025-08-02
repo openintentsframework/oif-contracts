@@ -43,7 +43,7 @@ import { OutputFillLib } from "../libs/OutputFillLib.sol";
  *
  * Choose the appropriate pattern based on your use case requirements.
  */
-abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseInputOracle {
+contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseInputOracle {
     using LibAddress for address;
     using OutputFillLib for bytes;
     using FulfilmentLib for bytes;
