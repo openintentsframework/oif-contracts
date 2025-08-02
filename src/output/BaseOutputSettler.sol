@@ -17,9 +17,9 @@ import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 
 import { BaseInputOracle } from "../oracles/BaseInputOracle.sol";
 
-import { OutputFillLib } from "../libs/OutputFillLib.sol";
-import { FulfilmentLib } from "../libs/FulfilmentLib.sol";
 import { FillerDataLib } from "../libs/FillerDataLib.sol";
+import { FulfilmentLib } from "../libs/FulfilmentLib.sol";
+import { OutputFillLib } from "../libs/OutputFillLib.sol";
 
 /**
  * @notice Base Output Settler implementing logic for settling outputs.

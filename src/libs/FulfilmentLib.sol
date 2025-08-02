@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-
 library FulfilmentLib {
     bytes1 constant LIMIT_ORDER = 0x00;
     bytes1 constant DUTCH_AUCTION = 0x01;
