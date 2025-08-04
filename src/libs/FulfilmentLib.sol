@@ -41,7 +41,7 @@ library FulfilmentLib {
     /// @dev Order type for exclusive Dutch auction orders
     bytes1 constant EXCLUSIVE_DUTCH_AUCTION = 0xe1;
 
-    /// @dev Reverted when context data length doesn't match expected length for the order type
+    /// @dev Invalid context data length
     error InvalidContextDataLength();
 
     /**

@@ -23,7 +23,7 @@ import { OutputFillLib } from "../libs/OutputFillLib.sol";
 
 /**
  * @notice Base Output Settler implementing logic for settling outputs.
- * Does not support native coins.
+ * Does not support native tokens
  * This base output settler implements logic to work as both a PayloadCreator (for oracles) and as an oracle itself.
  *
  * @dev **Fill Function Patterns:**
@@ -42,6 +42,11 @@ import { OutputFillLib } from "../libs/OutputFillLib.sol";
  *    - Use when you need to atomically claim an entire multi-output order
  *
  * Choose the appropriate pattern based on your use case requirements.
+ * This contract supports 4 order types:
+ * - Limit Order & Exclusive Limit Orders
+ * - Dutch Auctions & Exclusive Dutch Auctions
+ * Exclusive orders has a period in the beginning of the order where it can only be filled by a specific solver.
+ * @dev Tokens never touch this contract but goes directly from solver to user.
  */
 contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseInputOracle {
     using LibAddress for address;
@@ -49,13 +54,19 @@ contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseInputOra
     using FulfilmentLib for bytes;
     using FillerDataLib for bytes;
 
+    /// @dev Fill deadline has passed
     error FillDeadline();
+    /// @dev Attempting to fill an output that has already been filled by a different solver
     error AlreadyFilled();
+    /// @dev Oracle attestation doesn't match stored fill record
     error InvalidAttestation(bytes32 storedFillRecordHash, bytes32 givenFillRecordHash);
+    /// @dev Proposed solver is zero address
     error ZeroValue();
+    /// @dev Payload is too small to be a valid fill description
     error PayloadTooSmall();
-
+    /// @dev Order type not implemented
     error NotImplemented();
+    /// @dev Exclusive order is attempted by a different solver
     error ExclusiveTo(bytes32 solver);
 
     /**
@@ -63,16 +74,37 @@ contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseInputOra
      */
     mapping(bytes32 orderId => mapping(bytes32 outputHash => bytes32 payloadHash)) internal _fillRecords;
 
+    /**
+     * @notice Emitted when an output is successfully filled.
+     */
     event OutputFilled(bytes32 indexed orderId, bytes32 solver, uint32 timestamp, bytes output, uint256 finalAmount);
 
+    /**
+     * @dev Computes the fill record hash for a given solver and timestamp.
+     * @param solver The address of the solver.
+     * @param timestamp The timestamp when the fill occurred.
+     * @return fillRecordHash The computed hash used to track fills.
+     */
     function _getFillRecordHash(bytes32 solver, uint32 timestamp) internal pure returns (bytes32 fillRecordHash) {
         fillRecordHash = keccak256(abi.encodePacked(solver, timestamp));
     }
 
+    /**
+     * @dev Retrieves the fill record for a specific order output by hash.
+     * @param orderId The unique identifier of the order.
+     * @param outputHash The hash of the output to check.
+     * @return payloadHash The fill record hash if the output has been filled, zero otherwise.
+     */
     function getFillRecord(bytes32 orderId, bytes32 outputHash) public view returns (bytes32 payloadHash) {
         payloadHash = _fillRecords[orderId][outputHash];
     }
 
+    /**
+     * @dev Retrieves the fill record for a specific order output by MandateOutput struct.
+     * @param orderId The unique identifier of the order.
+     * @param output The MandateOutput struct to check.
+     * @return payloadHash The fill record hash if the output has been filled, zero otherwise.
+     */
     function getFillRecord(bytes32 orderId, MandateOutput calldata output) public view returns (bytes32 payloadHash) {
         payloadHash = _fillRecords[orderId][MandateOutputEncodingLib.getMandateOutputHash(output)];
     }
@@ -82,6 +114,17 @@ contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseInputOra
         return _fill(orderId, output, amount, proposedSolver);
     }
 
+    /**
+     * @dev Computes a dutch auction slope.
+     * @dev The auction function is fixed until x=startTime at y=minimumAmount + slope · (stopTime - startTime) then it
+     * linearly decreases until x=stopTime at y=minimumAmount which it remains at.
+     *  If stopTime <= startTime return minimumAmount.
+     * @param minimumAmount After stoptime, this will be the price. The returned amount is never less.
+     * @param slope Every second the auction function is decreased by the slope.
+     * @param startTime Timestamp when the returned amount begins decreasing. Returns a fixed maximum amount otherwise.
+     * @param stopTime Timestamp when the slope stops counting and returns minimumAmount perpetually.
+     * @return currentAmount Computed dutch auction amount.
+     */
     function _dutchAuctionSlope(
         uint256 minimumAmount,
         uint256 slope,
@@ -98,6 +141,17 @@ contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseInputOra
         return minimumAmount + slope * timeDiff;
     }
 
+    /**
+     * @dev Executes order specific logic and returns the amount.
+     * @param output The serialized output data to resolve.
+     * @param solver The address of the solver attempting to fill the output.
+     * @return amount The final amount to be transferred (may differ from base amount for Dutch auctions).
+     * @dev This function implements order type-specific logic:
+     * - Limit orders: Returns the base amount
+     * - Dutch auctions: Calculates time-based price using slope
+     * - Exclusive orders: Validates solver permissions and returns appropriate amount
+     * - Reverts with NotImplemented() for unsupported order types
+     */
     function _resolveOutput(bytes calldata output, bytes32 solver) internal view returns (uint256 amount) {
         amount = output.amount();
 
@@ -134,6 +188,16 @@ contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseInputOra
 
     // --- External Solver Interface --- //
 
+    /**
+     * @dev External fill interface for filling a single output (idempotent operation).
+     * @dev This function is idempotent - it can be called multiple times safely. If the output is already filled,
+     * it returns the existing fill record hash without reverting. This makes it suitable for retry mechanisms
+     * and scenarios where multiple parties might attempt to fill the same output.
+     * @param orderId The unique identifier of the order.
+     * @param originData The serialized output data to fill.
+     * @param fillerData The solver data containing the proposed solver.
+     * @return fillRecordHash The hash of the fill record.
+     */
     function fill(bytes32 orderId, bytes calldata originData, bytes calldata fillerData) external returns (bytes32) {
         uint48 fillDeadline = originData.fillDeadline();
 
@@ -144,6 +208,22 @@ contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseInputOra
         return _fill(orderId, originData, proposedSolver);
     }
 
+    /**
+     * @dev Performs basic validation and fills output if unfilled.
+     * If an order has already been filled given the output & fillDeadline, then this function does not "re"fill the
+     * order but returns early.
+     * @dev This fill function links the fill to the outcome of the external call. If the external call cannot execute,
+     * the output is not fillable.
+     * Does not automatically submit the order (send the proof).
+     *                          !Do not make orders with repeated outputs!.
+     * The implementation strategy (verify then fill) means that an order with repeat outputs
+     * (say 1 Ether to Alice & 1 Ether to Alice) can be filled by sending 1 Ether to Alice ONCE.
+     * @param orderId The unique identifier of the order.
+     * @param output The serialized output data to fill.
+     * @param outputAmount The amount to transfer (already resolved based on order type).
+     * @param proposedSolver The address of the solver filling the output.
+     * @return fillRecordHash The hash of the fill record.
+     */
     function _fill(
         bytes32 orderId,
         bytes calldata output,
@@ -182,11 +262,26 @@ contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseInputOra
 
     // -- Batch Solving -- //
 
+    /**
+     * @notice Atomic batch fill interface for filling multiple outputs (non-idempotent operation).
+     * @dev This function implements atomic batch filling with solver competition semantics. Unlike the single
+     * `fill()` function, this is NOT idempotent - it will revert if the first output has already been filled
+     * by another solver. This ensures that only one solver can "win" the entire order.
+     *
+     * **Behavioral differences from single fill():**
+     * - REVERTS with `AlreadyFilled()` if the first output is already filled (solver competition)
+     * - Subsequent outputs can be already filled (they are skipped)
+     * - All fills in the batch succeed or the entire transaction reverts (atomicity)
+     *
+     * **Solver Selection Logic:**
+     * The first output determines which solver "wins" the entire order. This prevents solver conflicts
+     * and ensures consistent solver attribution across all outputs in a multi-output order.
+     * @param orderId The unique identifier of the order.
+     * @param outputs Array of serialized output data to fill.
+     * @param fillerData The solver data containing the proposed solver.
+     */
     function fillOrderOutputs(bytes32 orderId, bytes[] calldata outputs, bytes calldata fillerData) external {
-        bytes32 proposedSolver;
-        assembly ("memory-safe") {
-            proposedSolver := calldataload(fillerData.offset)
-        }
+        bytes32 proposedSolver = fillerData.proposedSolver();
 
         uint48 fillDeadline = outputs[0].fillDeadline();
 
@@ -265,6 +360,13 @@ contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseInputOra
 
     // --- Oracle Interfaces --- //
 
+    /**
+     * @notice Sets an attestation for a fill description to enable cross-chain validation.
+     * @param orderId The unique identifier of the order.
+     * @param solver The address of the solver who filled the output.
+     * @param timestamp The timestamp when the fill occurred.
+     * @param output The MandateOutput struct that was filled.
+     */
     function setAttestation(
         bytes32 orderId,
         bytes32 solver,
