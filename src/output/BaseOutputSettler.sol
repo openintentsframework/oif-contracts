@@ -9,7 +9,6 @@ import { IPayloadCreator } from "../interfaces/IPayloadCreator.sol";
 import { IDestinationSettler } from "../interfaces/IERC7683.sol";
 
 import { AssemblyLib } from "../libs/AssemblyLib.sol";
-import { LibAddress } from "../libs/LibAddress.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../libs/MandateOutputEncodingLib.sol";
 import { OutputVerificationLib } from "../libs/OutputVerificationLib.sol";
 
@@ -49,7 +48,6 @@ import { OutputFillLib } from "../libs/OutputFillLib.sol";
  * @dev Tokens never touch this contract but goes directly from solver to user.
  */
 contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseInputOracle {
-    using LibAddress for address;
     using OutputFillLib for bytes;
     using FulfilmentLib for bytes;
     using FillerDataLib for bytes;
