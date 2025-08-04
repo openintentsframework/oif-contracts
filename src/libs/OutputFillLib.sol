@@ -1,60 +1,61 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+
 library OutputFillLib {
     function fillDeadline(
         bytes calldata output
-    ) internal pure returns (uint48 fillDeadline) {
+    ) internal pure returns (uint48 _fillDeadline) {
         assembly ("memory-safe") {
-            fillDeadline := shr(208, calldataload(add(output.offset, 0x00)))
+            _fillDeadline := shr(208, calldataload(add(output.offset, 0x00)))
         }
     }
 
     function oracle(
         bytes calldata output
-    ) internal pure returns (bytes32 oracle) {
+    ) internal pure returns (bytes32 _oracle) {
         assembly ("memory-safe") {
-            oracle := calldataload(add(output.offset, 0x06))
+            _oracle := calldataload(add(output.offset, 0x06))
         }
     }
 
     function settler(
         bytes calldata output
-    ) internal pure returns (bytes32 settler) {
+    ) internal pure returns (bytes32 _settler) {
         assembly ("memory-safe") {
-            settler := calldataload(add(output.offset, 0x26))
+            _settler := calldataload(add(output.offset, 0x26))
         }
     }
 
     function chainId(
         bytes calldata output
-    ) internal pure returns (uint256 chainId) {
+    ) internal pure returns (uint256 _chainId) {
         assembly ("memory-safe") {
-            chainId := calldataload(add(output.offset, 0x46))
+            _chainId := calldataload(add(output.offset, 0x46))
         }
     }
 
     function token(
         bytes calldata output
-    ) internal pure returns (bytes32 token) {
+    ) internal pure returns (bytes32 _token) {
         assembly ("memory-safe") {
-            token := calldataload(add(output.offset, 0x66))
+            _token := calldataload(add(output.offset, 0x66))
         }
     }
 
     function amount(
         bytes calldata output
-    ) internal pure returns (uint256 amount) {
+    ) internal pure returns (uint256 _amount) {
         assembly ("memory-safe") {
-            amount := calldataload(add(output.offset, 0x86))
+            _amount := calldataload(add(output.offset, 0x86))
         }
     }
 
     function recipient(
         bytes calldata output
-    ) internal pure returns (bytes32 recipient) {
+    ) internal pure returns (bytes32 _recipient) {
         assembly ("memory-safe") {
-            recipient := calldataload(add(output.offset, 0xa6))
+            _recipient := calldataload(add(output.offset, 0xa6))
         }
     }
 

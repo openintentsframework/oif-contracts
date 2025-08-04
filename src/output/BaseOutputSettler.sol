@@ -63,13 +63,6 @@ contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseInputOra
      */
     mapping(bytes32 orderId => mapping(bytes32 outputHash => bytes32 payloadHash)) internal _fillRecords;
 
-    /**
-     * @notice Output has been filled.
-     */
-    // event OutputFilled(
-    //     bytes32 indexed orderId, bytes32 solver, uint32 timestamp, MandateOutput output, uint256 finalAmount
-    // );
-
     event OutputFilled(bytes32 indexed orderId, bytes32 solver, uint32 timestamp, bytes output, uint256 finalAmount);
 
     function _getFillRecordHash(bytes32 solver, uint32 timestamp) internal pure returns (bytes32 fillRecordHash) {
@@ -106,7 +99,6 @@ contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseInputOra
     }
 
     function _resolveOutput(bytes calldata output, bytes32 solver) internal view returns (uint256 amount) {
-        uint16 callDataLength = uint16(bytes2(output[0xc6:0xc8]));
         amount = output.amount();
 
         bytes calldata fulfilmentData = output.contextData();
