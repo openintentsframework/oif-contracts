@@ -222,22 +222,27 @@ contract OutputSettlerCoinTestFill is Test {
         uint64 slope,
         uint16 currentTime
     ) public {
-        uint32 stopTime = uint32(startTime) + uint32(runTime);
-        vm.assume(filler != bytes32(0) && swapper != sender);
-        vm.warp(currentTime);
+        bytes memory context;
+        uint256 finalAmount;
+        {
+            uint32 stopTime = uint32(startTime) + uint32(runTime);
+            vm.assume(filler != bytes32(0) && swapper != sender);
+            vm.warp(currentTime);
 
-        uint256 minAmount = amount;
-        uint256 maxAmount = amount + uint256(slope) * uint256(stopTime - startTime);
-        uint256 finalAmount = startTime > currentTime
-            ? maxAmount
-            : (stopTime < currentTime ? minAmount : (amount + uint256(slope) * uint256(stopTime - currentTime)));
+            uint256 minAmount = amount;
+            uint256 maxAmount = amount + uint256(slope) * uint256(stopTime - startTime);
+            finalAmount = startTime > currentTime
+                ? maxAmount
+                : (stopTime < currentTime ? minAmount : (amount + uint256(slope) * uint256(stopTime - currentTime)));
 
-        outputToken.mint(sender, finalAmount);
-        vm.prank(sender);
-        outputToken.approve(outputSettlerCoinAddress, finalAmount);
+            outputToken.mint(sender, finalAmount);
+            vm.prank(sender);
+            outputToken.approve(outputSettlerCoinAddress, finalAmount);
 
-        bytes memory context =
-            abi.encodePacked(bytes1(0x01), bytes4(uint32(startTime)), bytes4(uint32(stopTime)), bytes32(uint256(slope)));
+            context = abi.encodePacked(
+                bytes1(0x01), bytes4(uint32(startTime)), bytes4(uint32(stopTime)), bytes32(uint256(slope))
+            );
+        }
 
         bytes memory output = abi.encodePacked(
             type(uint48).max, // fill deadline
@@ -295,27 +300,31 @@ contract OutputSettlerCoinTestFill is Test {
         uint16 currentTime,
         bytes32 exclusiveFor
     ) public {
-        uint32 stopTime = uint32(startTime) + uint32(runTime);
-        vm.assume(exclusiveFor != bytes32(0) && swapper != sender);
-        vm.warp(currentTime);
+        bytes memory context;
+        uint256 finalAmount;
+        {
+            uint32 stopTime = uint32(startTime) + uint32(runTime);
+            vm.assume(exclusiveFor != bytes32(0) && swapper != sender);
+            vm.warp(currentTime);
 
-        uint256 minAmount = amount;
-        uint256 maxAmount = amount + uint256(slope) * uint256(stopTime - startTime);
-        uint256 finalAmount = startTime > currentTime
-            ? maxAmount
-            : (stopTime < currentTime ? minAmount : (amount + uint256(slope) * uint256(stopTime - currentTime)));
+            uint256 minAmount = amount;
+            uint256 maxAmount = amount + uint256(slope) * uint256(stopTime - startTime);
+            finalAmount = startTime > currentTime
+                ? maxAmount
+                : (stopTime < currentTime ? minAmount : (amount + uint256(slope) * uint256(stopTime - currentTime)));
 
-        outputToken.mint(sender, finalAmount);
-        vm.prank(sender);
-        outputToken.approve(outputSettlerCoinAddress, finalAmount);
+            outputToken.mint(sender, finalAmount);
+            vm.prank(sender);
+            outputToken.approve(outputSettlerCoinAddress, finalAmount);
 
-        bytes memory context = abi.encodePacked(
-            bytes1(0xe1),
-            bytes32(exclusiveFor),
-            bytes4(uint32(startTime)),
-            bytes4(uint32(stopTime)),
-            bytes32(uint256(slope))
-        );
+            context = abi.encodePacked(
+                bytes1(0xe1),
+                bytes32(exclusiveFor),
+                bytes4(uint32(startTime)),
+                bytes4(uint32(stopTime)),
+                bytes32(uint256(slope))
+            );
+        }
 
         bytes memory output = abi.encodePacked(
             type(uint48).max, // fill deadline
@@ -361,27 +370,30 @@ contract OutputSettlerCoinTestFill is Test {
         bytes32 exclusiveFor,
         bytes32 solverIdentifier
     ) public {
-        uint32 stopTime = uint32(startTime) + uint32(runTime);
-        vm.assume(solverIdentifier != bytes32(0) && swapper != sender);
-        vm.assume(solverIdentifier != exclusiveFor);
-        vm.warp(currentTime);
+        bytes memory context;
+        {
+            uint32 stopTime = uint32(startTime) + uint32(runTime);
+            vm.assume(solverIdentifier != bytes32(0) && swapper != sender);
+            vm.assume(solverIdentifier != exclusiveFor);
+            vm.warp(currentTime);
 
-        uint256 maxAmount = amount + uint256(slope) * uint256(stopTime - startTime);
-        uint256 finalAmount = startTime > currentTime
-            ? maxAmount
-            : (stopTime < currentTime ? amount : (amount + uint256(slope) * uint256(stopTime - currentTime)));
+            context = abi.encodePacked(
+                bytes1(0xe1),
+                bytes32(exclusiveFor),
+                bytes4(uint32(startTime)),
+                bytes4(uint32(stopTime)),
+                bytes32(uint256(slope))
+            );
 
-        outputToken.mint(sender, finalAmount);
-        vm.prank(sender);
-        outputToken.approve(outputSettlerCoinAddress, finalAmount);
+            uint256 maxAmount = amount + uint256(slope) * uint256(stopTime - startTime);
+            uint256 finalAmount = startTime > currentTime
+                ? maxAmount
+                : (stopTime < currentTime ? amount : (amount + uint256(slope) * uint256(stopTime - currentTime)));
 
-        bytes memory context = abi.encodePacked(
-            bytes1(0xe1),
-            bytes32(exclusiveFor),
-            bytes4(uint32(startTime)),
-            bytes4(uint32(stopTime)),
-            bytes32(uint256(slope))
-        );
+            outputToken.mint(sender, finalAmount);
+            vm.prank(sender);
+            outputToken.approve(outputSettlerCoinAddress, finalAmount);
+        }
 
         bytes memory output = abi.encodePacked(
             type(uint48).max, // fill deadline
@@ -393,15 +405,13 @@ contract OutputSettlerCoinTestFill is Test {
             bytes32(uint256(uint160(swapper))), // recipient
             uint16(0), // call length
             bytes(""), // call
-            uint16(context.length), // context length
+            uint16(73), // context length
             context
         );
 
-        bytes memory fillerData = abi.encodePacked(solverIdentifier);
-
         vm.prank(sender);
         if (startTime > currentTime) vm.expectRevert(abi.encodeWithSignature("ExclusiveTo(bytes32)", exclusiveFor));
-        outputSettlerCoin.fill(orderId, output, fillerData);
+        outputSettlerCoin.fill(orderId, output, abi.encodePacked(solverIdentifier));
     }
 
     // --- FAILURE CASES --- //

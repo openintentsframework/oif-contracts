@@ -529,40 +529,40 @@ contract InputSettlerCompactTestCrossChain is Test {
         }
         // Initiation is over. We need to fill the order.
 
-        bytes[] memory outputsToFill = new bytes[](2);
-
-        outputsToFill[0] = abi.encodePacked(
-            type(uint48).max, // fill deadline
-            outputs[0].oracle, // oracle
-            outputs[0].settler, // settler
-            uint256(outputs[0].chainId), // chainId
-            outputs[0].token, // token
-            outputs[0].amount, // amount
-            outputs[0].recipient, // recipient
-            uint16(outputs[0].call.length), // call length
-            bytes(""), // call
-            uint16(outputs[0].context.length), // context length
-            bytes("") // context
-        );
-
-        outputsToFill[1] = abi.encodePacked(
-            type(uint48).max, // fill deadline
-            outputs[1].oracle, // oracle
-            outputs[1].settler, // settler
-            uint256(outputs[1].chainId), // chainId
-            outputs[1].token, // token
-            outputs[1].amount, // amount
-            outputs[1].recipient, // recipient
-            uint16(outputs[1].call.length), // call length
-            bytes(""), // call
-            uint16(outputs[1].context.length), // context length
-            bytes("") // context
-        );
-
-        bytes memory fillerData1 = abi.encodePacked(solverIdentifier);
-        bytes memory fillerData2 = abi.encodePacked(solverIdentifier2);
-
         {
+            bytes[] memory outputsToFill = new bytes[](2);
+
+            outputsToFill[0] = abi.encodePacked(
+                type(uint48).max, // fill deadline
+                outputs[0].oracle, // oracle
+                outputs[0].settler, // settler
+                uint256(outputs[0].chainId), // chainId
+                outputs[0].token, // token
+                outputs[0].amount, // amount
+                outputs[0].recipient, // recipient
+                uint16(outputs[0].call.length), // call length
+                bytes(""), // call
+                uint16(outputs[0].context.length), // context length
+                bytes("") // context
+            );
+
+            outputsToFill[1] = abi.encodePacked(
+                type(uint48).max, // fill deadline
+                outputs[1].oracle, // oracle
+                outputs[1].settler, // settler
+                uint256(outputs[1].chainId), // chainId
+                outputs[1].token, // token
+                outputs[1].amount, // amount
+                outputs[1].recipient, // recipient
+                uint16(outputs[1].call.length), // call length
+                bytes(""), // call
+                uint16(outputs[1].context.length), // context length
+                bytes("") // context
+            );
+
+            bytes memory fillerData1 = abi.encodePacked(solverIdentifier);
+            bytes memory fillerData2 = abi.encodePacked(solverIdentifier2);
+
             bytes32 orderId = IInputSettlerCompact(inputSettlerCompact).orderIdentifier(order);
 
             vm.prank(solver);
