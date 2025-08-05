@@ -405,7 +405,7 @@ contract OutputSettlerCoinTestFill is Test {
             bytes32(uint256(uint160(swapper))), // recipient
             uint16(0), // call length
             bytes(""), // call
-            uint16(73), // context length
+            uint16(context.length), // context length
             context
         );
 
