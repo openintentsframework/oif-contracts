@@ -152,4 +152,18 @@ library OutputFillLib {
             _contextData.length := contextLength
         }
     }
+
+    /**
+     * @notice Removes the fill deadline from the output.
+     * @param output Serialised output.
+     * @return _trimmedOutput Trimmed output without the fill deadline.
+     */
+    function removeFillDeadline(
+        bytes calldata output
+    ) internal pure returns (bytes calldata _trimmedOutput) {
+        assembly ("memory-safe") {
+            _trimmedOutput.offset := add(output.offset, 0x06)
+            _trimmedOutput.length := sub(output.length, 0x06)
+        }
+    }
 }
