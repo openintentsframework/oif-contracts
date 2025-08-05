@@ -287,22 +287,6 @@ contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseInputOra
         }
     }
 
-    // --- External Calls --- //
-
-    /**
-     * @notice Allows estimating the gas used for an external call.
-     * @dev To call, set msg.sender to address(0). This call can never be executed on-chain. It should also be noted
-     * that application can cheat and implement special logic for tx.origin == 0.
-     * @param trueAmount Amount computed for the order.
-     * @param output Order output to simulate the call for.
-     */
-    function call(uint256 trueAmount, MandateOutput calldata output) external {
-        // Disallow calling on-chain.
-        require(msg.sender == address(0));
-
-        IOutputCallback(address(uint160(uint256(output.recipient)))).outputFilled(output.token, trueAmount, output.call);
-    }
-
     // --- IPayloadCreator --- //
 
     /**
