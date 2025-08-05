@@ -106,10 +106,54 @@ contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseInputOra
     function getFillRecord(bytes32 orderId, MandateOutput calldata output) public view returns (bytes32 payloadHash) {
         payloadHash = _fillRecords[orderId][MandateOutputEncodingLib.getMandateOutputHash(output)];
     }
+    /**
+     * @dev Performs basic validation and fills output if unfilled.
+     * If an order has already been filled given the output & fillDeadline, then this function does not "re"fill the
+     * order but returns early.
+     * @dev This function links the fill to the outcome of the external call. If the external call cannot execute,
+     * the output is not fillable.
+     * Does not automatically submit the order (send the proof).
+     *                          !Do not make orders with repeated outputs!.
+     * The implementation strategy (verify then fill) means that an order with repeat outputs
+     * (say 1 Ether to Alice & 1 Ether to Alice) can be filled by sending 1 Ether to Alice ONCE.
+     * @param orderId The unique identifier of the order.
+     * @param output The serialized output data to fill.
+     * @param proposedSolver The address of the solver filling the output.
+     * @return fillRecordHash The hash of the fill record.
+     */
 
-    function _fill(bytes32 orderId, bytes calldata output, bytes32 proposedSolver) internal virtual returns (bytes32) {
-        uint256 amount = _resolveOutput(output, proposedSolver);
-        return _fill(orderId, output, amount, proposedSolver);
+    function _fill(
+        bytes32 orderId,
+        bytes calldata output,
+        bytes32 proposedSolver
+    ) internal virtual returns (bytes32 fillRecordHash) {
+        bytes32 token = output.token();
+        address recipient = address(uint160(uint256(output.recipient())));
+
+        if (proposedSolver == bytes32(0)) revert ZeroValue();
+        OutputVerificationLib._isThisChain(output.chainId());
+        OutputVerificationLib._isThisOutputSettler(output.settler());
+
+        bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHashFromBytes(output.removeFillDeadline());
+        bytes32 existingFillRecordHash = _fillRecords[orderId][outputHash];
+        if (existingFillRecordHash != bytes32(0)) return existingFillRecordHash; // Early return if already solved.
+
+        // The above and below lines act as a local re-entry check.
+        uint32 fillTimestamp = uint32(block.timestamp);
+        fillRecordHash = _getFillRecordHash(proposedSolver, fillTimestamp);
+        _fillRecords[orderId][outputHash] = fillRecordHash;
+
+        // Storage has been set. Fill the output.
+        uint256 outputAmount = _resolveOutput(output, proposedSolver);
+        SafeTransferLib.safeTransferFrom(address(uint160(uint256(token))), msg.sender, recipient, outputAmount);
+
+        bytes calldata callbackData = output.callbackData();
+
+        if (callbackData.length > 0) IOutputCallback(recipient).outputFilled(token, outputAmount, callbackData);
+
+        emit OutputFilled(orderId, proposedSolver, fillTimestamp, output, outputAmount);
+
+        return fillRecordHash;
     }
 
     /**
@@ -205,57 +249,6 @@ contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseInputOra
 
         return _fill(orderId, originData, proposedSolver);
     }
-
-    /**
-     * @dev Performs basic validation and fills output if unfilled.
-     * If an order has already been filled given the output & fillDeadline, then this function does not "re"fill the
-     * order but returns early.
-     * @dev This fill function links the fill to the outcome of the external call. If the external call cannot execute,
-     * the output is not fillable.
-     * Does not automatically submit the order (send the proof).
-     *                          !Do not make orders with repeated outputs!.
-     * The implementation strategy (verify then fill) means that an order with repeat outputs
-     * (say 1 Ether to Alice & 1 Ether to Alice) can be filled by sending 1 Ether to Alice ONCE.
-     * @param orderId The unique identifier of the order.
-     * @param output The serialized output data to fill.
-     * @param outputAmount The amount to transfer (already resolved based on order type).
-     * @param proposedSolver The address of the solver filling the output.
-     * @return fillRecordHash The hash of the fill record.
-     */
-    function _fill(
-        bytes32 orderId,
-        bytes calldata output,
-        uint256 outputAmount,
-        bytes32 proposedSolver
-    ) internal virtual returns (bytes32 fillRecordHash) {
-        bytes32 token = output.token();
-        address recipient = address(uint160(uint256(output.recipient())));
-
-        if (proposedSolver == bytes32(0)) revert ZeroValue();
-        OutputVerificationLib._isThisChain(output.chainId());
-        OutputVerificationLib._isThisOutputSettler(output.settler());
-
-        bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHashFromBytes(output.removeFillDeadline());
-        bytes32 existingFillRecordHash = _fillRecords[orderId][outputHash];
-        if (existingFillRecordHash != bytes32(0)) return existingFillRecordHash; // Early return if already solved.
-
-        // The above and below lines act as a local re-entry check.
-        uint32 fillTimestamp = uint32(block.timestamp);
-        fillRecordHash = _getFillRecordHash(proposedSolver, fillTimestamp);
-        _fillRecords[orderId][outputHash] = fillRecordHash;
-
-        // Storage has been set. Fill the output.
-        SafeTransferLib.safeTransferFrom(address(uint160(uint256(token))), msg.sender, recipient, outputAmount);
-
-        bytes calldata callbackData = output.callbackData();
-
-        if (callbackData.length > 0) IOutputCallback(recipient).outputFilled(token, outputAmount, callbackData);
-
-        emit OutputFilled(orderId, proposedSolver, fillTimestamp, output, outputAmount);
-
-        return fillRecordHash;
-    }
-
     // -- Batch Solving -- //
 
     /**
