@@ -391,50 +391,54 @@ contract InputSettlerCompactTestCrossChain is Test {
         // Initiation is over. We need to fill the order.
         bytes memory outputToFill = abi.encodePacked(
             type(uint48).max, // fill deadline
-            outputs[0].oracle, // oracle
-            outputs[0].settler, // settler
-            outputs[0].chainId, // chainId
-            outputs[0].token, // token
-            outputs[0].amount, // amount
-            outputs[0].recipient, // recipient
-            uint16(outputs[0].call.length), // call length
-            outputs[0].call, // call
-            uint16(outputs[0].context.length), // context length
-            outputs[0].context // context
+            inputOracle.toIdentifier(), // oracle
+            address(outputSettlerCoin).toIdentifier(), // settler
+            uint256(block.chainid), // chainId
+            address(anotherToken).toIdentifier(), // token
+            amount, // amount
+            swapper.toIdentifier(), // recipient
+            uint16(0), // call length
+            hex"", // call
+            uint16(0), // context length
+            hex"" // context
         );
 
-        bytes32 solverIdentifier = solver.toIdentifier();
+        {
+            bytes32 solverIdentifier = solver.toIdentifier();
 
-        bytes memory fillerData = abi.encodePacked(solverIdentifier);
+            bytes memory fillerData = abi.encodePacked(solverIdentifier);
 
-        bytes32 orderId = IInputSettlerCompact(inputSettlerCompact).orderIdentifier(order);
+            bytes32 orderId = IInputSettlerCompact(inputSettlerCompact).orderIdentifier(order);
 
-        vm.prank(solver);
-        outputSettlerCoin.fill(orderId, outputToFill, fillerData);
-        vm.snapshotGasLastCall("inputSettler", "IntegrationCoinFill");
+            vm.prank(solver);
+            outputSettlerCoin.fill(orderId, outputToFill, fillerData);
+            vm.snapshotGasLastCall("inputSettler", "IntegrationCoinFill");
 
-        bytes[] memory payloads = new bytes[](1);
-        payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
-            solverIdentifier,
-            orderId,
-            uint32(block.timestamp),
-            outputs[0].token,
-            outputs[0].amount,
-            outputs[0].recipient,
-            outputs[0].call,
-            outputs[0].context
-        );
+            bytes[] memory payloads = new bytes[](1);
+            payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
+                solverIdentifier,
+                orderId,
+                uint32(block.timestamp),
+                address(anotherToken).toIdentifier(),
+                amount,
+                swapper.toIdentifier(),
+                hex"",
+                hex""
+            );
 
-        bytes memory expectedMessageEmitted = this.encodeMessage(outputs[0].settler, payloads);
-        vm.expectEmit();
-        emit PackagePublished(0, expectedMessageEmitted, 15);
-        wormholeOracle.submit(address(outputSettlerCoin), payloads);
-        vm.snapshotGasLastCall("inputSettler", "IntegrationWormholeSubmit");
-        bytes memory vaa =
-            makeValidVAA(uint16(block.chainid), address(wormholeOracle).toIdentifier(), expectedMessageEmitted);
+            bytes memory expectedMessageEmitted =
+                this.encodeMessage(address(outputSettlerCoin).toIdentifier(), payloads);
+            vm.expectEmit();
+            emit PackagePublished(0, expectedMessageEmitted, 15);
+            wormholeOracle.submit(address(outputSettlerCoin), payloads);
 
-        wormholeOracle.receiveMessage(vaa);
-        vm.snapshotGasLastCall("inputSettler", "IntegrationWormholeReceiveMessage");
+            vm.snapshotGasLastCall("inputSettler", "IntegrationWormholeSubmit");
+            bytes memory vaa =
+                makeValidVAA(uint16(block.chainid), address(wormholeOracle).toIdentifier(), expectedMessageEmitted);
+
+            wormholeOracle.receiveMessage(vaa);
+            vm.snapshotGasLastCall("inputSettler", "IntegrationWormholeReceiveMessage");
+        }
 
         uint32[] memory timestamps = new uint32[](1);
         timestamps[0] = uint32(block.timestamp);
