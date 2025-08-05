@@ -270,6 +270,25 @@ contract InputSettlerCompactTestCrossChain is Test {
         return bytes.concat(r, s, bytes1(v));
     }
 
+    function getOutputToFillFromMandateOutput(
+        uint48 fillDeadline,
+        MandateOutput memory output
+    ) internal pure returns (bytes memory) {
+        return abi.encodePacked(
+            fillDeadline, // fill deadline
+            output.oracle, // oracle
+            output.settler, // settler
+            uint256(output.chainId), // chainId
+            output.token, // token
+            output.amount, // amount
+            output.recipient, // recipient
+            uint16(output.call.length), // call length
+            output.call, // call
+            uint16(output.context.length), // context length
+            output.context // context
+        );
+    }
+
     function test_deposit_compact() external {
         vm.prank(swapper);
         theCompact.depositERC20(address(token), alwaysOkAllocatorLockTag, 1e18 / 10, swapper);
@@ -379,41 +398,42 @@ contract InputSettlerCompactTestCrossChain is Test {
         uint256[2][] memory idsAndAmounts = new uint256[2][](1);
         idsAndAmounts[0] = [tokenId, amount];
 
-        bytes memory sponsorSig = getCompactBatchWitnessSignature(
-            swapperPrivateKey, inputSettlerCompact, swapper, 0, type(uint32).max, idsAndAmounts, witnessHash(order)
-        );
-        bytes memory allocatorSig = getCompactBatchWitnessSignature(
-            allocatorPrivateKey, inputSettlerCompact, swapper, 0, type(uint32).max, idsAndAmounts, witnessHash(order)
-        );
+        bytes memory signature;
+        {
+            bytes memory sponsorSig = getCompactBatchWitnessSignature(
+                swapperPrivateKey, inputSettlerCompact, swapper, 0, type(uint32).max, idsAndAmounts, witnessHash(order)
+            );
+            bytes memory allocatorSig = getCompactBatchWitnessSignature(
+                allocatorPrivateKey,
+                inputSettlerCompact,
+                swapper,
+                0,
+                type(uint32).max,
+                idsAndAmounts,
+                witnessHash(order)
+            );
 
-        bytes memory signature = abi.encode(sponsorSig, allocatorSig);
+            signature = abi.encode(sponsorSig, allocatorSig);
+        }
 
         // Initiation is over. We need to fill the order.
-        bytes memory outputToFill = abi.encodePacked(
-            type(uint48).max, // fill deadline
-            inputOracle.toIdentifier(), // oracle
-            address(outputSettlerCoin).toIdentifier(), // settler
-            uint256(block.chainid), // chainId
-            address(anotherToken).toIdentifier(), // token
-            amount, // amount
-            swapper.toIdentifier(), // recipient
-            uint16(0), // call length
-            hex"", // call
-            uint16(0), // context length
-            hex"" // context
-        );
 
+        bytes32 solverIdentifier = solver.toIdentifier();
+        bytes32 orderId = IInputSettlerCompact(inputSettlerCompact).orderIdentifier(order);
         {
-            bytes32 solverIdentifier = solver.toIdentifier();
+            //bytes32 solverIdentifier = solver.toIdentifier();
 
             bytes memory fillerData = abi.encodePacked(solverIdentifier);
+            bytes memory outputToFill = getOutputToFillFromMandateOutput(type(uint48).max, outputs[0]);
 
-            bytes32 orderId = IInputSettlerCompact(inputSettlerCompact).orderIdentifier(order);
+            //bytes32 orderId = IInputSettlerCompact(inputSettlerCompact).orderIdentifier(order);
 
             vm.prank(solver);
             outputSettlerCoin.fill(orderId, outputToFill, fillerData);
-            vm.snapshotGasLastCall("inputSettler", "IntegrationCoinFill");
 
+            vm.snapshotGasLastCall("inputSettler", "IntegrationCoinFill");
+        }
+        {
             bytes[] memory payloads = new bytes[](1);
             payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
                 solverIdentifier,
