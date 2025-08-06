@@ -118,19 +118,19 @@ contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseInputOra
      * (say 1 Ether to Alice & 1 Ether to Alice) can be filled by sending 1 Ether to Alice ONCE.
      * @param orderId The unique identifier of the order.
      * @param output The serialized output data to fill.
-     * @param proposedSolver The address of the solver filling the output.
+     * @param solver The address of the solver filling the output.
      * @return fillRecordHash The hash of the fill record.
      */
 
     function _fill(
         bytes32 orderId,
         bytes calldata output,
-        bytes32 proposedSolver
+        bytes32 solver
     ) internal virtual returns (bytes32 fillRecordHash) {
         bytes32 token = output.token();
         address recipient = address(uint160(uint256(output.recipient())));
 
-        if (proposedSolver == bytes32(0)) revert ZeroValue();
+        if (solver == bytes32(0)) revert ZeroValue();
         OutputVerificationLib._isThisChain(output.chainId());
         OutputVerificationLib._isThisOutputSettler(output.settler());
 
@@ -140,18 +140,18 @@ contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseInputOra
 
         // The above and below lines act as a local re-entry check.
         uint32 fillTimestamp = uint32(block.timestamp);
-        fillRecordHash = _getFillRecordHash(proposedSolver, fillTimestamp);
+        fillRecordHash = _getFillRecordHash(solver, fillTimestamp);
         _fillRecords[orderId][outputHash] = fillRecordHash;
 
         // Storage has been set. Fill the output.
-        uint256 outputAmount = _resolveOutput(output, proposedSolver);
+        uint256 outputAmount = _resolveOutput(output, solver);
         SafeTransferLib.safeTransferFrom(address(uint160(uint256(token))), msg.sender, recipient, outputAmount);
 
         bytes calldata callbackData = output.callbackData();
 
         if (callbackData.length > 0) IOutputCallback(recipient).outputFilled(token, outputAmount, callbackData);
 
-        emit OutputFilled(orderId, proposedSolver, fillTimestamp, output, outputAmount);
+        emit OutputFilled(orderId, solver, fillTimestamp, output, outputAmount);
 
         return fillRecordHash;
     }
@@ -245,9 +245,9 @@ contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseInputOra
 
         if (fillDeadline < block.timestamp) revert FillDeadline();
 
-        bytes32 proposedSolver = fillerData.proposedSolver();
+        bytes32 solver = fillerData.solver();
 
-        return _fill(orderId, originData, proposedSolver);
+        return _fill(orderId, originData, solver);
     }
     // -- Batch Solving -- //
 
@@ -270,20 +270,20 @@ contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseInputOra
      * @param fillerData The solver data containing the proposed solver.
      */
     function fillOrderOutputs(bytes32 orderId, bytes[] calldata outputs, bytes calldata fillerData) external {
-        bytes32 proposedSolver = fillerData.proposedSolver();
+        bytes32 solver = fillerData.solver();
 
         uint48 fillDeadline = outputs[0].fillDeadline();
 
         if (fillDeadline < block.timestamp) revert FillDeadline();
 
-        bytes32 fillRecordHash = _fill(orderId, outputs[0], proposedSolver);
-        bytes32 expectedFillRecordHash = _getFillRecordHash(proposedSolver, uint32(block.timestamp));
+        bytes32 fillRecordHash = _fill(orderId, outputs[0], solver);
+        bytes32 expectedFillRecordHash = _getFillRecordHash(solver, uint32(block.timestamp));
 
         if (fillRecordHash != expectedFillRecordHash) revert AlreadyFilled();
 
         uint256 numOutputs = outputs.length;
         for (uint256 i = 1; i < numOutputs; ++i) {
-            _fill(orderId, outputs[i], proposedSolver);
+            _fill(orderId, outputs[i], solver);
         }
     }
 

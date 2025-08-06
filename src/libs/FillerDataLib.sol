@@ -15,13 +15,13 @@ library FillerDataLib {
     /**
      * @notice Loads the proposed solver from the filler data.
      * @param fillerData Serialised filler data.
-     * @return _proposedSolver Proposed solver associated with the filler data.
+     * @return _solver Proposed solver associated with the filler data.
      */
-    function proposedSolver(
+    function solver(
         bytes calldata fillerData
-    ) internal pure returns (bytes32 _proposedSolver) {
+    ) internal pure returns (bytes32 _solver) {
         assembly ("memory-safe") {
-            _proposedSolver := calldataload(fillerData.offset)
+            _solver := calldataload(fillerData.offset)
         }
     }
 }
