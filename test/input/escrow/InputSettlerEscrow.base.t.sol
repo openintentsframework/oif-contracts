@@ -10,7 +10,7 @@ import { AllowOpenType } from "../../../src/input/types/AllowOpenType.sol";
 import { MandateOutput } from "../../../src/input/types/MandateOutputType.sol";
 import { StandardOrder } from "../../../src/input/types/StandardOrderType.sol";
 import { IInputSettlerEscrow } from "../../../src/interfaces/IInputSettlerEscrow.sol";
-import { BaseOutputSettler } from "../../../src/output/BaseOutputSettler.sol";
+import { OutputSettlerOrderTypes } from "../../../src/output/OutputSettlerOrderTypes.sol";
 
 import { AlwaysYesOracle } from "../../mocks/AlwaysYesOracle.sol";
 import { MockERC20 } from "../../mocks/MockERC20.sol";
@@ -33,7 +33,7 @@ contract InputSettlerEscrowTestBase is Permit2Test {
     uint64 constant MAX_GOVERNANCE_FEE = 10 ** 18 * 0.05; // 10%
 
     address inputSettlerEscrow;
-    BaseOutputSettler outputSettlerCoin;
+    OutputSettlerOrderTypes outputSettlerCoin;
 
     address alwaysYesOracle;
 
@@ -69,7 +69,7 @@ contract InputSettlerEscrowTestBase is Permit2Test {
 
         DOMAIN_SEPARATOR = EIP712(inputSettlerEscrow).DOMAIN_SEPARATOR();
 
-        outputSettlerCoin = new BaseOutputSettler();
+        outputSettlerCoin = new OutputSettlerOrderTypes();
 
         token = new MockERC20("Mock ERC20", "MOCK", 18);
         anotherToken = new MockERC20("Mock2 ERC20", "MOCK2", 18);
