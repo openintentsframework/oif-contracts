@@ -105,30 +105,33 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
      * (say 1 Ether to Alice & 1 Ether to Alice) can be filled by sending 1 Ether to Alice ONCE.
      * @param orderId The unique identifier of the order.
      * @param output The serialized output data to fill.
-     * @param proposedSolver The address of the solver filling the output.
+     * @param fillerData The solver data.
      * @return fillRecordHash The hash of the fill record.
      */
 
     function _fill(
         bytes32 orderId,
         bytes calldata output,
-        bytes32 proposedSolver
+        bytes calldata fillerData
     ) internal virtual returns (bytes32 fillRecordHash) {
         bytes32 token = output.token();
         address recipient = address(uint160(uint256(output.recipient())));
+        bytes32 proposedSolver = fillerData.proposedSolver();
 
         if (proposedSolver == bytes32(0)) revert ZeroValue();
         OutputVerificationLib._isThisChain(output.chainId());
         OutputVerificationLib._isThisOutputSettler(output.settler());
 
-        bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHashFromBytes(output.removeFillDeadline());
-        bytes32 existingFillRecordHash = _fillRecords[orderId][outputHash];
-        if (existingFillRecordHash != bytes32(0)) return existingFillRecordHash; // Early return if already solved.
-
-        // The above and below lines act as a local re-entry check.
         uint32 fillTimestamp = uint32(block.timestamp);
-        fillRecordHash = _getFillRecordHash(proposedSolver, fillTimestamp);
-        _fillRecords[orderId][outputHash] = fillRecordHash;
+        {
+            bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHashFromBytes(output.removeFillDeadline());
+            bytes32 existingFillRecordHash = _fillRecords[orderId][outputHash];
+            if (existingFillRecordHash != bytes32(0)) return existingFillRecordHash; // Early return if already solved.
+
+            // The above and below lines act as a local re-entry check.
+            fillRecordHash = _getFillRecordHash(proposedSolver, fillTimestamp);
+            _fillRecords[orderId][outputHash] = fillRecordHash;
+        }
 
         // Storage has been set. Fill the output.
         uint256 outputAmount = _resolveOutput(output, proposedSolver);
@@ -199,9 +202,7 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
 
         if (fillDeadline < block.timestamp) revert FillDeadline();
 
-        bytes32 proposedSolver = fillerData.proposedSolver();
-
-        return _fill(orderId, originData, proposedSolver);
+        return _fill(orderId, originData, fillerData);
     }
     // -- Batch Solving -- //
 
@@ -230,14 +231,14 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
 
         if (fillDeadline < block.timestamp) revert FillDeadline();
 
-        bytes32 fillRecordHash = _fill(orderId, outputs[0], proposedSolver);
+        bytes32 fillRecordHash = _fill(orderId, outputs[0], fillerData);
         bytes32 expectedFillRecordHash = _getFillRecordHash(proposedSolver, uint32(block.timestamp));
 
         if (fillRecordHash != expectedFillRecordHash) revert AlreadyFilled();
 
         uint256 numOutputs = outputs.length;
         for (uint256 i = 1; i < numOutputs; ++i) {
-            _fill(orderId, outputs[i], proposedSolver);
+            _fill(orderId, outputs[i], fillerData);
         }
     }
 
