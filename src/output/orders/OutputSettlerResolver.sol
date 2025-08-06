@@ -3,8 +3,11 @@ pragma solidity ^0.8.26;
 
 import { BaseOutputSettler } from "../BaseOutputSettler.sol";
 
+import { FillerDataLib } from "../../libs/FillerDataLib.sol";
 import { OutputFillLib } from "../../libs/OutputFillLib.sol";
 import { FulfilmentLib } from "./FulfilmentLib.sol";
+
+import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 
 /**
  * @notice OutputSettlerResolver extends BaseOutputSettler to support order type-specific resolution logic.
@@ -22,6 +25,7 @@ import { FulfilmentLib } from "./FulfilmentLib.sol";
 contract OutputSettlerResolver is BaseOutputSettler {
     using OutputFillLib for bytes;
     using FulfilmentLib for bytes;
+    using FillerDataLib for bytes;
 
     /// @dev Order type not implemented
     error NotImplemented();
@@ -29,10 +33,14 @@ contract OutputSettlerResolver is BaseOutputSettler {
     /// @dev Exclusive order is attempted by a different solver
     error ExclusiveTo(bytes32 solver);
 
+    /// @dev Proposed solver is zero address
+    error ZeroValue();
+
     /**
      * @dev Executes order specific logic and returns the amount.
      * @param output The serialized output data to resolve.
-     * @param solver The address of the solver attempting to fill the output.
+     * @param fillerData The solver data.
+     * @return solver The address of the solver filling the output.
      * @return amount The final amount to be transferred (may differ from base amount for Dutch auctions).
      * @dev This function implements order type-specific logic:
      * - Limit orders: Returns the base amount
@@ -40,37 +48,70 @@ contract OutputSettlerResolver is BaseOutputSettler {
      * - Exclusive orders: Validates solver permissions and returns appropriate amount
      * - Reverts with NotImplemented() for unsupported order types
      */
-    function _resolveOutput(bytes calldata output, bytes32 solver) internal view override returns (uint256 amount) {
+    function _resolveOutput(
+        bytes calldata output,
+        bytes calldata fillerData
+    ) internal view override returns (bytes32 solver, uint256 amount) {
         amount = output.amount();
+        solver = fillerData.proposedSolver();
+
+        if (solver == bytes32(0)) revert ZeroValue();
 
         bytes calldata fulfilmentData = output.contextData();
 
         uint16 fulfillmentLength = uint16(fulfilmentData.length);
 
-        if (fulfillmentLength == 0) return amount;
+        if (fulfillmentLength == 0) return (solver, amount);
 
         bytes1 orderType = fulfilmentData.orderType();
 
         if (orderType == FulfilmentLib.LIMIT_ORDER) {
             if (fulfillmentLength != 1) revert FulfilmentLib.InvalidContextDataLength();
-            return amount;
+            return (solver, amount);
         }
         if (orderType == FulfilmentLib.DUTCH_AUCTION) {
             (uint32 startTime, uint32 stopTime, uint256 slope) = fulfilmentData.getDutchAuctionData();
-            return _dutchAuctionSlope(amount, slope, startTime, stopTime);
+            return (solver, _dutchAuctionSlope(amount, slope, startTime, stopTime));
         }
 
         if (orderType == FulfilmentLib.EXCLUSIVE_LIMIT_ORDER) {
             (bytes32 exclusiveFor, uint32 startTime) = fulfilmentData.getExclusiveLimitOrderData();
             if (startTime > block.timestamp && exclusiveFor != solver) revert ExclusiveTo(exclusiveFor);
-            return amount;
+            return (solver, amount);
         }
         if (orderType == FulfilmentLib.EXCLUSIVE_DUTCH_AUCTION) {
             (bytes32 exclusiveFor, uint32 startTime, uint32 stopTime, uint256 slope) =
                 fulfilmentData.getExclusiveDutchAuctionData();
             if (startTime > block.timestamp && exclusiveFor != solver) revert ExclusiveTo(exclusiveFor);
-            return _dutchAuctionSlope(amount, slope, startTime, stopTime);
+            return (solver, _dutchAuctionSlope(amount, slope, startTime, stopTime));
         }
         revert NotImplemented();
+    }
+
+    /**
+     * @dev Computes a dutch auction slope.
+     * @dev The auction function is fixed until x=startTime at y=minimumAmount + slope · (stopTime - startTime) then it
+     * linearly decreases until x=stopTime at y=minimumAmount which it remains at.
+     *  If stopTime <= startTime return minimumAmount.
+     * @param minimumAmount After stoptime, this will be the price. The returned amount is never less.
+     * @param slope Every second the auction function is decreased by the slope.
+     * @param startTime Timestamp when the returned amount begins decreasing. Returns a fixed maximum amount otherwise.
+     * @param stopTime Timestamp when the slope stops counting and returns minimumAmount perpetually.
+     * @return currentAmount Computed dutch auction amount.
+     */
+    function _dutchAuctionSlope(
+        uint256 minimumAmount,
+        uint256 slope,
+        uint32 startTime,
+        uint32 stopTime
+    ) internal view returns (uint256 currentAmount) {
+        uint32 currentTime = uint32(FixedPointMathLib.max(block.timestamp, uint256(startTime)));
+        if (stopTime < currentTime) return minimumAmount; // This check also catches stopTime < startTime.
+
+        uint256 timeDiff;
+        unchecked {
+            timeDiff = stopTime - currentTime; // unchecked: stopTime > currentTime
+        }
+        return minimumAmount + slope * timeDiff;
     }
 }

@@ -12,11 +12,8 @@ import { AssemblyLib } from "../libs/AssemblyLib.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../libs/MandateOutputEncodingLib.sol";
 import { OutputVerificationLib } from "../libs/OutputVerificationLib.sol";
 
-import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
-
 import { BaseInputOracle } from "../oracles/BaseInputOracle.sol";
 
-import { FillerDataLib } from "../libs/FillerDataLib.sol";
 import { OutputFillLib } from "../libs/OutputFillLib.sol";
 
 /**
@@ -41,7 +38,6 @@ import { OutputFillLib } from "../libs/OutputFillLib.sol";
  */
 abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseInputOracle {
     using OutputFillLib for bytes;
-    using FillerDataLib for bytes;
 
     /// @dev Fill deadline has passed
     error FillDeadline();
@@ -49,8 +45,6 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
     error AlreadyFilled();
     /// @dev Oracle attestation doesn't match stored fill record
     error InvalidAttestation(bytes32 storedFillRecordHash, bytes32 givenFillRecordHash);
-    /// @dev Proposed solver is zero address
-    error ZeroValue();
     /// @dev Payload is too small to be a valid fill description
     error PayloadTooSmall();
 
@@ -113,20 +107,20 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
         bytes32 orderId,
         bytes calldata output,
         bytes calldata fillerData
-    ) internal virtual returns (bytes32 fillRecordHash) {
+    ) internal virtual returns (bytes32 fillRecordHash, bytes32 proposedSolver) {
         bytes32 token = output.token();
         address recipient = address(uint160(uint256(output.recipient())));
-        bytes32 proposedSolver = fillerData.proposedSolver();
 
-        if (proposedSolver == bytes32(0)) revert ZeroValue();
         OutputVerificationLib._isThisChain(output.chainId());
         OutputVerificationLib._isThisOutputSettler(output.settler());
 
         uint32 fillTimestamp = uint32(block.timestamp);
+        uint256 outputAmount;
+        (proposedSolver, outputAmount) = _resolveOutput(output, fillerData);
         {
             bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHashFromBytes(output.removeFillDeadline());
             bytes32 existingFillRecordHash = _fillRecords[orderId][outputHash];
-            if (existingFillRecordHash != bytes32(0)) return existingFillRecordHash; // Early return if already solved.
+            if (existingFillRecordHash != bytes32(0)) return (existingFillRecordHash, proposedSolver); // Early return if already solved.
 
             // The above and below lines act as a local re-entry check.
             fillRecordHash = _getFillRecordHash(proposedSolver, fillTimestamp);
@@ -134,7 +128,6 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
         }
 
         // Storage has been set. Fill the output.
-        uint256 outputAmount = _resolveOutput(output, proposedSolver);
         SafeTransferLib.safeTransferFrom(address(uint160(uint256(token))), msg.sender, recipient, outputAmount);
 
         bytes calldata callbackData = output.callbackData();
@@ -143,43 +136,20 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
 
         emit OutputFilled(orderId, proposedSolver, fillTimestamp, output, outputAmount);
 
-        return fillRecordHash;
-    }
-
-    /**
-     * @dev Computes a dutch auction slope.
-     * @dev The auction function is fixed until x=startTime at y=minimumAmount + slope · (stopTime - startTime) then it
-     * linearly decreases until x=stopTime at y=minimumAmount which it remains at.
-     *  If stopTime <= startTime return minimumAmount.
-     * @param minimumAmount After stoptime, this will be the price. The returned amount is never less.
-     * @param slope Every second the auction function is decreased by the slope.
-     * @param startTime Timestamp when the returned amount begins decreasing. Returns a fixed maximum amount otherwise.
-     * @param stopTime Timestamp when the slope stops counting and returns minimumAmount perpetually.
-     * @return currentAmount Computed dutch auction amount.
-     */
-    function _dutchAuctionSlope(
-        uint256 minimumAmount,
-        uint256 slope,
-        uint32 startTime,
-        uint32 stopTime
-    ) internal view returns (uint256 currentAmount) {
-        uint32 currentTime = uint32(FixedPointMathLib.max(block.timestamp, uint256(startTime)));
-        if (stopTime < currentTime) return minimumAmount; // This check also catches stopTime < startTime.
-
-        uint256 timeDiff;
-        unchecked {
-            timeDiff = stopTime - currentTime; // unchecked: stopTime > currentTime
-        }
-        return minimumAmount + slope * timeDiff;
+        return (fillRecordHash, proposedSolver);
     }
 
     /**
      * @dev Executes order specific logic and returns the amount.
      * @param output The serialized output data to resolve.
-     * @param solver The address of the solver attempting to fill the output.
+     * @param fillerData The solver data.
+     * @return solver The address of the solver filling the output.
      * @return amount The final amount to be transferred (may differ from base amount for Dutch auctions).
      */
-    function _resolveOutput(bytes calldata output, bytes32 solver) internal view virtual returns (uint256 amount);
+    function _resolveOutput(
+        bytes calldata output,
+        bytes calldata fillerData
+    ) internal view virtual returns (bytes32 solver, uint256 amount);
 
     // --- External Solver Interface --- //
 
@@ -197,12 +167,12 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
         bytes32 orderId,
         bytes calldata originData,
         bytes calldata fillerData
-    ) external virtual returns (bytes32) {
+    ) external virtual returns (bytes32 fillRecordHash) {
         uint48 fillDeadline = originData.fillDeadline();
 
         if (fillDeadline < block.timestamp) revert FillDeadline();
 
-        return _fill(orderId, originData, fillerData);
+        (fillRecordHash,) = _fill(orderId, originData, fillerData);
     }
     // -- Batch Solving -- //
 
@@ -225,13 +195,11 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
      * @param fillerData The solver data containing the proposed solver.
      */
     function fillOrderOutputs(bytes32 orderId, bytes[] calldata outputs, bytes calldata fillerData) external virtual {
-        bytes32 proposedSolver = fillerData.proposedSolver();
-
         uint48 fillDeadline = outputs[0].fillDeadline();
 
         if (fillDeadline < block.timestamp) revert FillDeadline();
 
-        bytes32 fillRecordHash = _fill(orderId, outputs[0], fillerData);
+        (bytes32 fillRecordHash, bytes32 proposedSolver) = _fill(orderId, outputs[0], fillerData);
         bytes32 expectedFillRecordHash = _getFillRecordHash(proposedSolver, uint32(block.timestamp));
 
         if (fillRecordHash != expectedFillRecordHash) revert AlreadyFilled();

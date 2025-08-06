@@ -422,8 +422,8 @@ contract OutputSettlerCoinTestFill is Test {
         bytes memory output = abi.encodePacked(
             type(uint48).max, // fill deadline
             bytes32(0), // oracle
-            bytes32(0), // settler
-            uint256(0), // chainId
+            bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
+            uint256(block.chainid), // chainId
             bytes32(0), // token
             uint256(0), //amount
             bytes32(0), // recipient
