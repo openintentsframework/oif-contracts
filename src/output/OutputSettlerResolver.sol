@@ -6,7 +6,7 @@ import { BaseOutputSettler } from "./BaseOutputSettler.sol";
 import { FulfilmentLib } from "../libs/FulfilmentLib.sol";
 import { OutputFillLib } from "../libs/OutputFillLib.sol";
 
-contract OutputSettlerOrderTypes is BaseOutputSettler {
+contract OutputSettlerResolver is BaseOutputSettler {
     using OutputFillLib for bytes;
     using FulfilmentLib for bytes;
 
