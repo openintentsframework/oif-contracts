@@ -120,7 +120,8 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
         {
             bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHashFromBytes(output.removeFillDeadline());
             bytes32 existingFillRecordHash = _fillRecords[orderId][outputHash];
-            if (existingFillRecordHash != bytes32(0)) return (existingFillRecordHash, proposedSolver); // Early return if already solved.
+            if (existingFillRecordHash != bytes32(0)) return (existingFillRecordHash, proposedSolver); // Early return
+                // if already solved.
 
             // The above and below lines act as a local re-entry check.
             fillRecordHash = _getFillRecordHash(proposedSolver, fillTimestamp);

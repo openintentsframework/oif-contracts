@@ -3,8 +3,8 @@ pragma solidity ^0.8.26;
 
 import { BaseOutputSettler } from "../BaseOutputSettler.sol";
 
-import { FillerDataLib } from "../../libs/FillerDataLib.sol";
 import { OutputFillLib } from "../../libs/OutputFillLib.sol";
+import { FillerDataLib } from "./FillerDataLib.sol";
 import { FulfilmentLib } from "./FulfilmentLib.sol";
 
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
