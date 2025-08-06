@@ -21,7 +21,7 @@ import { WormholeOracle } from "../../../src/oracles/wormhole/WormholeOracle.sol
 import { Messages } from "../../../src/oracles/wormhole/external/wormhole/Messages.sol";
 import { Setters } from "../../../src/oracles/wormhole/external/wormhole/Setters.sol";
 import { Structs } from "../../../src/oracles/wormhole/external/wormhole/Structs.sol";
-import { OutputSettlerCoin } from "../../../src/output/coin/OutputSettlerCoin.sol";
+import { BaseOutputSettler } from "../../../src/output/BaseOutputSettler.sol";
 
 import { AlwaysYesOracle } from "../../mocks/AlwaysYesOracle.sol";
 import { MockERC20 } from "../../mocks/MockERC20.sol";
@@ -49,7 +49,7 @@ contract ExportedMessages is Messages, Setters {
 
 contract InputSettlerCompactTestBase is Test {
     address inputSettlerCompact;
-    OutputSettlerCoin outputSettlerCoin;
+    BaseOutputSettler outputSettlerCoin;
 
     // Oracles
     address alwaysYesOracle;
@@ -90,7 +90,7 @@ contract InputSettlerCompactTestBase is Test {
         DOMAIN_SEPARATOR = EIP712(address(theCompact)).DOMAIN_SEPARATOR();
 
         inputSettlerCompact = address(new InputSettlerCompact(address(theCompact)));
-        outputSettlerCoin = new OutputSettlerCoin();
+        outputSettlerCoin = new BaseOutputSettler();
         alwaysYesOracle = address(new AlwaysYesOracle());
 
         token = new MockERC20("Mock ERC20", "MOCK", 18);
