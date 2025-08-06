@@ -10,7 +10,7 @@ import { MessageEncodingLib } from "../../../src/libs/MessageEncodingLib.sol";
 import { WormholeOracle } from "../../../src/oracles/wormhole/WormholeOracle.sol";
 import "../../../src/oracles/wormhole/external/wormhole/Messages.sol";
 import "../../../src/oracles/wormhole/external/wormhole/Setters.sol";
-import { OutputSettlerResolver } from "../../../src/output/OutputSettlerResolver.sol";
+import { OutputSettlerResolver } from "../../../src/output/orders/OutputSettlerResolver.sol";
 
 import { MockERC20 } from "../../mocks/MockERC20.sol";
 

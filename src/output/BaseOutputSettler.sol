@@ -17,7 +17,6 @@ import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 import { BaseInputOracle } from "../oracles/BaseInputOracle.sol";
 
 import { FillerDataLib } from "../libs/FillerDataLib.sol";
-import { FulfilmentLib } from "../libs/FulfilmentLib.sol";
 import { OutputFillLib } from "../libs/OutputFillLib.sol";
 
 /**
@@ -39,17 +38,9 @@ import { OutputFillLib } from "../libs/OutputFillLib.sol";
  *    - Reverts if first output already filled by different solver
  *    - Ensures atomic all-or-nothing batch filling
  *    - Use when you need to atomically claim an entire multi-output order
- *
- * Choose the appropriate pattern based on your use case requirements.
- * This contract supports 4 order types:
- * - Limit Order & Exclusive Limit Orders
- * - Dutch Auctions & Exclusive Dutch Auctions
- * Exclusive orders has a period in the beginning of the order where it can only be filled by a specific solver.
- * @dev Tokens never touch this contract but goes directly from solver to user.
  */
 abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseInputOracle {
     using OutputFillLib for bytes;
-    using FulfilmentLib for bytes;
     using FillerDataLib for bytes;
 
     /// @dev Fill deadline has passed
@@ -62,10 +53,6 @@ abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, Bas
     error ZeroValue();
     /// @dev Payload is too small to be a valid fill description
     error PayloadTooSmall();
-    /// @dev Order type not implemented
-    error NotImplemented();
-    /// @dev Exclusive order is attempted by a different solver
-    error ExclusiveTo(bytes32 solver);
 
     /**
      * @notice Sets outputs as filled by their solver identifier, such that outputs won't be filled twice.

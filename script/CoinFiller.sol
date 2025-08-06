@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 
 import { Script } from "forge-std/Script.sol";
 
-import { OutputSettlerResolver } from "../src/output/OutputSettlerResolver.sol";
+import { OutputSettlerResolver } from "../src/output/orders/OutputSettlerResolver.sol";
 
 contract DeployOutputSettlerCoin is Script {
     function deploy() external {
