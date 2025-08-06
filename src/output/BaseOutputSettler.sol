@@ -194,7 +194,7 @@ contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseInputOra
      * - Exclusive orders: Validates solver permissions and returns appropriate amount
      * - Reverts with NotImplemented() for unsupported order types
      */
-    function _resolveOutput(bytes calldata output, bytes32 solver) internal view returns (uint256 amount) {
+    function _resolveOutput(bytes calldata output, bytes32 solver) internal view virtual returns (uint256 amount) {
         amount = output.amount();
 
         bytes calldata fulfilmentData = output.contextData();
@@ -240,7 +240,11 @@ contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseInputOra
      * @param fillerData The solver data containing the proposed solver.
      * @return fillRecordHash The hash of the fill record.
      */
-    function fill(bytes32 orderId, bytes calldata originData, bytes calldata fillerData) external returns (bytes32) {
+    function fill(
+        bytes32 orderId,
+        bytes calldata originData,
+        bytes calldata fillerData
+    ) external virtual returns (bytes32) {
         uint48 fillDeadline = originData.fillDeadline();
 
         if (fillDeadline < block.timestamp) revert FillDeadline();
@@ -269,7 +273,7 @@ contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseInputOra
      * @param outputs Array of serialized output data to fill.
      * @param fillerData The solver data containing the proposed solver.
      */
-    function fillOrderOutputs(bytes32 orderId, bytes[] calldata outputs, bytes calldata fillerData) external {
+    function fillOrderOutputs(bytes32 orderId, bytes[] calldata outputs, bytes calldata fillerData) external virtual {
         bytes32 proposedSolver = fillerData.proposedSolver();
 
         uint48 fillDeadline = outputs[0].fillDeadline();
