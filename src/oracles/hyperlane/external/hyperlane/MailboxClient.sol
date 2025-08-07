@@ -7,8 +7,8 @@ import { IPostDispatchHook } from "./interfaces/hooks/IPostDispatchHook.sol";
 
 /**
  * @notice This smart contract is a simplified version of the
- * [Hyperlane's
- * MailboxClient](https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/solidity/contracts/client/MailboxClient.sol)
+ * [Hyperlane's MailboxClient]
+ * (https://github.com/hyperlane-xyz/hyperlane-monorepo/blob/main/solidity/contracts/client/MailboxClient.sol)
  * to make it non-upgradable and ownerless.
  *
  */
