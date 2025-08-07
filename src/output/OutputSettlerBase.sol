@@ -9,6 +9,7 @@ import { IPayloadCreator } from "../interfaces/IPayloadCreator.sol";
 import { IDestinationSettler } from "../interfaces/IERC7683.sol";
 
 import { AssemblyLib } from "../libs/AssemblyLib.sol";
+import { LibAddress } from "../libs/LibAddress.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../libs/MandateOutputEncodingLib.sol";
 import { OutputVerificationLib } from "../libs/OutputVerificationLib.sol";
 
@@ -38,6 +39,7 @@ import { OutputFillLib } from "../libs/OutputFillLib.sol";
  */
 abstract contract OutputSettlerBase is IDestinationSettler, IPayloadCreator, BaseInputOracle {
     using OutputFillLib for bytes;
+    using LibAddress for bytes32;
 
     /// @dev Fill deadline has passed
     error FillDeadline();
@@ -108,8 +110,8 @@ abstract contract OutputSettlerBase is IDestinationSettler, IPayloadCreator, Bas
         bytes calldata output,
         bytes calldata fillerData
     ) internal virtual returns (bytes32 fillRecordHash, bytes32 proposedSolver) {
-        bytes32 token = output.token();
-        address recipient = address(uint160(uint256(output.recipient())));
+        bytes32 tokenIdentifier = output.token();
+        address recipient = output.recipient().fromIdentifier();
 
         OutputVerificationLib._isThisChain(output.chainId());
         OutputVerificationLib._isThisOutputSettler(output.settler());
@@ -129,11 +131,13 @@ abstract contract OutputSettlerBase is IDestinationSettler, IPayloadCreator, Bas
         }
 
         // Storage has been set. Fill the output.
-        SafeTransferLib.safeTransferFrom(address(uint160(uint256(token))), msg.sender, recipient, outputAmount);
+        SafeTransferLib.safeTransferFrom(tokenIdentifier.fromIdentifier(), msg.sender, recipient, outputAmount);
 
         bytes calldata callbackData = output.callbackData();
 
-        if (callbackData.length > 0) IOutputCallback(recipient).outputFilled(token, outputAmount, callbackData);
+        if (callbackData.length > 0) {
+            IOutputCallback(recipient).outputFilled(tokenIdentifier, outputAmount, callbackData);
+        }
 
         emit OutputFilled(orderId, proposedSolver, fillTimestamp, output, outputAmount);
 
@@ -224,7 +228,7 @@ abstract contract OutputSettlerBase is IDestinationSettler, IPayloadCreator, Bas
         // Disallow calling on-chain.
         require(msg.sender == address(0));
 
-        IOutputCallback(address(uint160(uint256(output.recipient)))).outputFilled(output.token, trueAmount, output.call);
+        IOutputCallback(output.recipient.fromIdentifier()).outputFilled(output.token, trueAmount, output.call);
     }
 
     // --- IPayloadCreator --- //
