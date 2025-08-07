@@ -54,17 +54,13 @@ contract OutputSettlerResolver is OutputSettlerBase {
     ) internal view override returns (bytes32 solver, uint256 amount) {
         amount = output.amount();
         solver = fillerData.proposedSolver();
-
         if (solver == bytes32(0)) revert ZeroValue();
 
         bytes calldata fulfilmentData = output.contextData();
-
         uint16 fulfillmentLength = uint16(fulfilmentData.length);
-
         if (fulfillmentLength == 0) return (solver, amount);
 
         bytes1 orderType = fulfilmentData.orderType();
-
         if (orderType == FulfilmentLib.LIMIT_ORDER) {
             if (fulfillmentLength != 1) revert FulfilmentLib.InvalidContextDataLength();
             return (solver, amount);
@@ -73,7 +69,6 @@ contract OutputSettlerResolver is OutputSettlerBase {
             (uint32 startTime, uint32 stopTime, uint256 slope) = fulfilmentData.getDutchAuctionData();
             return (solver, _dutchAuctionSlope(amount, slope, startTime, stopTime));
         }
-
         if (orderType == FulfilmentLib.EXCLUSIVE_LIMIT_ORDER) {
             (bytes32 exclusiveFor, uint32 startTime) = fulfilmentData.getExclusiveLimitOrderData();
             if (startTime > block.timestamp && exclusiveFor != solver) revert ExclusiveTo(exclusiveFor);
@@ -107,7 +102,6 @@ contract OutputSettlerResolver is OutputSettlerBase {
     ) internal view returns (uint256 currentAmount) {
         uint32 currentTime = uint32(FixedPointMathLib.max(block.timestamp, uint256(startTime)));
         if (stopTime < currentTime) return minimumAmount; // This check also catches stopTime < startTime.
-
         uint256 timeDiff;
         unchecked {
             timeDiff = stopTime - currentTime; // unchecked: stopTime > currentTime

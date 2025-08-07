@@ -129,16 +129,13 @@ abstract contract OutputSettlerBase is IDestinationSettler, IPayloadCreator, Bas
             fillRecordHash = _getFillRecordHash(proposedSolver, fillTimestamp);
             _fillRecords[orderId][outputHash] = fillRecordHash;
         }
-
         // Storage has been set. Fill the output.
         SafeTransferLib.safeTransferFrom(tokenIdentifier.fromIdentifier(), msg.sender, recipient, outputAmount);
 
         bytes calldata callbackData = output.callbackData();
-
         if (callbackData.length > 0) {
             IOutputCallback(recipient).outputFilled(tokenIdentifier, outputAmount, callbackData);
         }
-
         emit OutputFilled(orderId, proposedSolver, fillTimestamp, output, outputAmount);
 
         return (fillRecordHash, proposedSolver);
@@ -174,9 +171,7 @@ abstract contract OutputSettlerBase is IDestinationSettler, IPayloadCreator, Bas
         bytes calldata fillerData
     ) external virtual returns (bytes32 fillRecordHash) {
         uint48 fillDeadline = originData.fillDeadline();
-
         if (fillDeadline < block.timestamp) revert FillDeadline();
-
         (fillRecordHash,) = _fill(orderId, originData, fillerData);
     }
     // -- Batch Solving -- //
@@ -201,12 +196,10 @@ abstract contract OutputSettlerBase is IDestinationSettler, IPayloadCreator, Bas
      */
     function fillOrderOutputs(bytes32 orderId, bytes[] calldata outputs, bytes calldata fillerData) external virtual {
         uint48 fillDeadline = outputs[0].fillDeadline();
-
         if (fillDeadline < block.timestamp) revert FillDeadline();
 
         (bytes32 fillRecordHash, bytes32 proposedSolver) = _fill(orderId, outputs[0], fillerData);
         bytes32 expectedFillRecordHash = _getFillRecordHash(proposedSolver, uint32(block.timestamp));
-
         if (fillRecordHash != expectedFillRecordHash) revert AlreadyFilled();
 
         uint256 numOutputs = outputs.length;
