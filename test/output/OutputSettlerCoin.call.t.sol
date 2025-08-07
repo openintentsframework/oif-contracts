@@ -4,19 +4,19 @@ pragma solidity ^0.8.22;
 import { Test } from "forge-std/Test.sol";
 
 import { MandateOutput } from "../../src/input/types/MandateOutputType.sol";
-import { OutputSettlerResolver } from "../../src/output/orders/OutputSettlerResolver.sol";
+import { OutputSettlerOrderTypes } from "../../src/output/orders/OutputSettlerOrderTypes.sol";
 
 import { MockERC20 } from "../mocks/MockERC20.sol";
 
 contract OutputSettlerCoinTestCall is Test {
-    OutputSettlerResolver outputSettlerCoin;
+    OutputSettlerOrderTypes outputSettlerCoin;
 
     MockERC20 outputToken;
 
     address swapper;
 
     function setUp() public {
-        outputSettlerCoin = new OutputSettlerResolver();
+        outputSettlerCoin = new OutputSettlerOrderTypes();
         outputToken = new MockERC20("TEST", "TEST", 18);
 
         swapper = makeAddr("swapper");

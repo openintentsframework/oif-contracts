@@ -5,7 +5,7 @@ import { Test } from "forge-std/Test.sol";
 
 import { InputSettlerCompact } from "../../src/input/compact/InputSettlerCompact.sol";
 import { IsContractLib } from "../../src/libs/IsContractLib.sol";
-import { OutputSettlerResolver } from "../../src/output/orders/OutputSettlerResolver.sol";
+import { OutputSettlerOrderTypes } from "../../src/output/orders/OutputSettlerOrderTypes.sol";
 
 import { MockERC20 } from "../mocks/MockERC20.sol";
 
@@ -27,7 +27,7 @@ contract IsContractLibTest is Test {
 
     function setUp() public {
         isContractLib = new IsContractLibHarness();
-        outputSettlerCoin = address(new OutputSettlerResolver());
+        outputSettlerCoin = address(new OutputSettlerOrderTypes());
         outputToken = address(new MockERC20("TEST", "TEST", 18));
         inputSettlerCompact = address(new InputSettlerCompact(address(0)));
     }
