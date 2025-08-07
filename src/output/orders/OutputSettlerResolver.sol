@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { BaseOutputSettler } from "../BaseOutputSettler.sol";
+import { OutputSettlerBase } from "../OutputSettlerBase.sol";
 
 import { OutputFillLib } from "../../libs/OutputFillLib.sol";
 import { FillerDataLib } from "./FillerDataLib.sol";
@@ -10,7 +10,7 @@ import { FulfilmentLib } from "./FulfilmentLib.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 
 /**
- * @notice OutputSettlerResolver extends BaseOutputSettler to support order type-specific resolution logic.
+ * @notice OutputSettlerResolver extends OutputSettlerBase to support order type-specific resolution logic.
  * @dev This contract implements the `_resolveOutput` function to handle four distinct order types:
  *
  * **Supported Order Types:**
@@ -22,7 +22,7 @@ import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
  * Order types are determined by the first byte of context data. Invalid or unsupported order types revert with
  * `NotImplemented()`.
  */
-contract OutputSettlerResolver is BaseOutputSettler {
+contract OutputSettlerResolver is OutputSettlerBase {
     using OutputFillLib for bytes;
     using FulfilmentLib for bytes;
     using FillerDataLib for bytes;

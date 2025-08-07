@@ -36,7 +36,7 @@ import { OutputFillLib } from "../libs/OutputFillLib.sol";
  *    - Ensures atomic all-or-nothing batch filling
  *    - Use when you need to atomically claim an entire multi-output order
  */
-abstract contract BaseOutputSettler is IDestinationSettler, IPayloadCreator, BaseInputOracle {
+abstract contract OutputSettlerBase is IDestinationSettler, IPayloadCreator, BaseInputOracle {
     using OutputFillLib for bytes;
 
     /// @dev Fill deadline has passed
