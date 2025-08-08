@@ -10,7 +10,7 @@ import { MessageEncodingLib } from "../../../src/libs/MessageEncodingLib.sol";
 import { WormholeOracle } from "../../../src/oracles/wormhole/WormholeOracle.sol";
 import "../../../src/oracles/wormhole/external/wormhole/Messages.sol";
 import "../../../src/oracles/wormhole/external/wormhole/Setters.sol";
-import { OutputSettlerOrderTypes } from "../../../src/output/orders/OutputSettlerOrderTypes.sol";
+import { OutputSettlerSimple } from "../../../src/output/orders/OutputSettlerSimple.sol";
 
 import { MockERC20 } from "../../mocks/MockERC20.sol";
 
@@ -34,7 +34,7 @@ contract ExportedMessages is Messages, Setters {
 contract WormholeOracleTestSubmit is Test {
     WormholeOracle oracle;
     ExportedMessages messages;
-    OutputSettlerOrderTypes outputSettler;
+    OutputSettlerSimple outputSettler;
     MockERC20 token;
 
     uint256 expectedValueOnCall;
@@ -43,7 +43,7 @@ contract WormholeOracleTestSubmit is Test {
     function setUp() external {
         messages = new ExportedMessages();
         oracle = new WormholeOracle(address(this), address(messages));
-        outputSettler = new OutputSettlerOrderTypes();
+        outputSettler = new OutputSettlerSimple();
 
         token = new MockERC20("TEST", "TEST", 18);
     }

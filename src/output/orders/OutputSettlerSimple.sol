@@ -10,7 +10,7 @@ import { FulfilmentLib } from "./FulfilmentLib.sol";
 import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
 
 /**
- * @notice OutputSettlerOrderTypes extends OutputSettlerBase to support order type-specific resolution logic.
+ * @notice OutputSettlerSimple extends OutputSettlerBase to support order type-specific resolution logic.
  * @dev This contract implements the `_resolveOutput` function to handle four distinct order types:
  *
  * **Supported Order Types:**
@@ -22,7 +22,7 @@ import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
  * Order types are determined by the first byte of context data. Invalid or unsupported order types revert with
  * `NotImplemented()`.
  */
-contract OutputSettlerOrderTypes is OutputSettlerBase {
+contract OutputSettlerSimple is OutputSettlerBase {
     using OutputFillLib for bytes;
     using FulfilmentLib for bytes;
     using FillerDataLib for bytes;

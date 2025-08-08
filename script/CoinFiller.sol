@@ -3,11 +3,11 @@ pragma solidity ^0.8.22;
 
 import { Script } from "forge-std/Script.sol";
 
-import { OutputSettlerOrderTypes } from "../src/output/orders/OutputSettlerOrderTypes.sol";
+import { OutputSettlerSimple } from "../src/output/orders/OutputSettlerSimple.sol";
 
 contract DeployOutputSettlerCoin is Script {
     function deploy() external {
         vm.broadcast();
-        address(new OutputSettlerOrderTypes{ salt: bytes32(0) }());
+        address(new OutputSettlerSimple{ salt: bytes32(0) }());
     }
 }
