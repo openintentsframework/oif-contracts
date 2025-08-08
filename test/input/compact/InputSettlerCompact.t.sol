@@ -9,8 +9,6 @@ import { StandardOrder, StandardOrderType } from "../../../src/input/types/Stand
 import { IInputSettlerCompact } from "../../../src/interfaces/IInputSettlerCompact.sol";
 import { LibAddress } from "../../../src/libs/LibAddress.sol";
 import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
-import { OutputSettlerCoin } from "../../../src/output/coin/OutputSettlerCoin.sol";
-
 import { AlwaysYesOracle } from "../../mocks/AlwaysYesOracle.sol";
 import { MockERC20 } from "../../mocks/MockERC20.sol";
 import { InputSettlerCompactTestBase } from "./InputSettlerCompact.base.t.sol";
