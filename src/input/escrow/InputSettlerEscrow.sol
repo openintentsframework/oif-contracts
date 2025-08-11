@@ -257,15 +257,9 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         if (numInputs == 1) {
             // If there is only 1 input, try using the provided signature as is.
             uint256[2] calldata input = inputs[0];
-            bytes memory callData = abi.encodeWithSelector(
-                IERC3009.receiveWithAuthorization.selector,
-                signer,
-                address(this),
-                input[1],
-                0,
-                fillDeadline,
-                orderId,
-                _signature_
+            bytes memory callData = abi.encodeCall(
+                IERC3009.receiveWithAuthorization,
+                (signer, address(this), input[1], 0, fillDeadline, orderId, _signature_)
             );
             // The above calldata encoding is equivalent to:
             // IERC3009(EfficiencyLib.asSanitizedAddress(input[0])).receiveWithAuthorization({
