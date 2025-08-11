@@ -149,10 +149,16 @@ library OutputFillLib {
         bytes calldata output
     ) internal pure returns (bytes calldata _contextData) {
         assembly ("memory-safe") {
+            let outputLength := output.length
+            if lt(outputLength, 0xc8) { revert(0x00, 0x00) }
+
             let callbackDataLength := shr(240, calldataload(add(output.offset, 0xc6)))
+            if lt(outputLength, add(add(0xc8, callbackDataLength), 0x02)) { revert(0x00, 0x00) }
+
             let contextLengthOffset := add(add(output.offset, 0xc8), callbackDataLength)
             let contextLength := shr(240, calldataload(contextLengthOffset))
 
+            if lt(outputLength, add(add(add(0xc8, callbackDataLength), 0x02), contextLength)) { revert(0x00, 0x00) }
             _contextData.offset := add(contextLengthOffset, 0x02)
             _contextData.length := contextLength
         }
