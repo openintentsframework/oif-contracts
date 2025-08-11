@@ -5,5 +5,8 @@
   "bitcoinOutputDispute": "33690",
   "bitcoinVerify": "133446",
   "bitcoinVerifyWithEmbed": "133657",
+  "hyperlaneOracleHandle": "27605",
+  "hyperlaneOracleSubmit": "44889",
+  "hyperlaneOracleSubmitCustomHook": "45068",
   "wormholeOracleSubmit": "19634"
 }
