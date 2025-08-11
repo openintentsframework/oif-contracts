@@ -126,8 +126,13 @@ library OutputFillLib {
         bytes calldata output
     ) internal pure returns (bytes calldata _callbackData) {
         assembly ("memory-safe") {
+            let outputLength := output.length
+            // revert if there's no enough space for the calldata length
+            if lt(outputLength, 0xc8) { revert(0x00, 0x00) }
+            // load the callback data length
             let length := shr(240, calldataload(add(output.offset, 0xc6)))
-
+            // revert if there's no enough space for the callback data
+            if gt(add(0xc8, length), outputLength) { revert(0x00, 0x00) }
             _callbackData.offset := add(output.offset, 0xc8)
             _callbackData.length := length
         }
