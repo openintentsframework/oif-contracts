@@ -10,7 +10,7 @@ import { AllowOpenType } from "../../../src/input/types/AllowOpenType.sol";
 import { MandateOutput } from "../../../src/input/types/MandateOutputType.sol";
 import { StandardOrder } from "../../../src/input/types/StandardOrderType.sol";
 import { IInputSettlerEscrow } from "../../../src/interfaces/IInputSettlerEscrow.sol";
-import { OutputSettlerSimple } from "../../../src/output/orders/OutputSettlerSimple.sol";
+import { OutputSettlerSimple } from "../../../src/output/simple/OutputSettlerSimple.sol";
 
 import { AlwaysYesOracle } from "../../mocks/AlwaysYesOracle.sol";
 import { MockERC20 } from "../../mocks/MockERC20.sol";

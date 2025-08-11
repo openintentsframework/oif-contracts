@@ -11,7 +11,7 @@ import { AlwaysOKAllocator } from "the-compact/src/test/AlwaysOKAllocator.sol";
 import { ResetPeriod } from "the-compact/src/types/ResetPeriod.sol";
 import { Scope } from "the-compact/src/types/Scope.sol";
 
-import { OutputSettlerSimple } from "../../src/output/orders/OutputSettlerSimple.sol";
+import { OutputSettlerSimple } from "../../src/output/simple/OutputSettlerSimple.sol";
 
 import { InputSettlerCompact } from "../../src/input/compact/InputSettlerCompact.sol";
 import { AllowOpenType } from "../../src/input/types/AllowOpenType.sol";

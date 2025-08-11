@@ -5,7 +5,7 @@ import { Test } from "forge-std/Test.sol";
 
 import { InputSettlerCompact } from "../../src/input/compact/InputSettlerCompact.sol";
 import { IsContractLib } from "../../src/libs/IsContractLib.sol";
-import { OutputSettlerSimple } from "../../src/output/orders/OutputSettlerSimple.sol";
+import { OutputSettlerSimple } from "../../src/output/simple/OutputSettlerSimple.sol";
 
 import { MockERC20 } from "../mocks/MockERC20.sol";
 

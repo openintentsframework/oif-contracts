@@ -21,7 +21,7 @@ import { WormholeOracle } from "../../../src/oracles/wormhole/WormholeOracle.sol
 import { Messages } from "../../../src/oracles/wormhole/external/wormhole/Messages.sol";
 import { Setters } from "../../../src/oracles/wormhole/external/wormhole/Setters.sol";
 import { Structs } from "../../../src/oracles/wormhole/external/wormhole/Structs.sol";
-import { OutputSettlerSimple } from "../../../src/output/orders/OutputSettlerSimple.sol";
+import { OutputSettlerSimple } from "../../../src/output/simple/OutputSettlerSimple.sol";
 
 import { AlwaysYesOracle } from "../../mocks/AlwaysYesOracle.sol";
 import { MockERC20 } from "../../mocks/MockERC20.sol";
