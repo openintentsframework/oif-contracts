@@ -110,9 +110,6 @@ abstract contract OutputSettlerBase is IDestinationSettler, IPayloadCreator, Bas
         bytes calldata output,
         bytes calldata fillerData
     ) internal virtual returns (bytes32 fillRecordHash, bytes32 proposedSolver) {
-        bytes32 tokenIdentifier = output.token();
-        address recipient = output.recipient().fromIdentifier();
-
         OutputVerificationLib._isThisChain(output.chainId());
         OutputVerificationLib._isThisOutputSettler(output.settler());
 
@@ -130,6 +127,8 @@ abstract contract OutputSettlerBase is IDestinationSettler, IPayloadCreator, Bas
             _fillRecords[orderId][outputHash] = fillRecordHash;
         }
         // Storage has been set. Fill the output.
+        bytes32 tokenIdentifier = output.token();
+        address recipient = output.recipient().fromIdentifier();
         SafeTransferLib.safeTransferFrom(tokenIdentifier.fromIdentifier(), msg.sender, recipient, outputAmount);
 
         bytes calldata callbackData = output.callbackData();
