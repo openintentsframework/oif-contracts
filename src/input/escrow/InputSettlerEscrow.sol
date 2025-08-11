@@ -283,14 +283,17 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
             if (success) return;
             // Otherwise it could be because of a lot of reasons. One being the signature is abi.encoded as bytes[].
         }
-        uint256 numSignatures = BytesLib.getLengthOfBytesArray(_signature_);
-        if (numInputs != numSignatures) revert SignatureAndInputsNotEqual();
+        {
+            uint256 numSignatures = BytesLib.getLengthOfBytesArray(_signature_);
+            if (numInputs != numSignatures) revert SignatureAndInputsNotEqual();
+        }
         for (uint256 i; i < numInputs; ++i) {
+            uint256[2] calldata input = inputs[i];
             bytes calldata signature = BytesLib.getBytesOfArray(_signature_, i);
-            IERC3009(EfficiencyLib.asSanitizedAddress(inputs[i][0])).receiveWithAuthorization({
+            IERC3009(EfficiencyLib.asSanitizedAddress(input[0])).receiveWithAuthorization({
                 from: signer,
                 to: address(this),
-                value: inputs[i][1],
+                value: input[1],
                 validAfter: 0,
                 validBefore: fillDeadline,
                 nonce: orderId,
