@@ -156,7 +156,7 @@ contract InputSettlerEscrowTestBase is Permit2Test {
         bytes memory tokenPermissionsHashes = hex"";
         for (uint256 i; i < inputs.length; ++i) {
             uint256[2] memory input = inputs[i];
-            address inputToken = EfficiencyLib.asSanitizedAddress(input[0]);
+            address inputToken = input[0].fromIdentifier();
             uint256 amount = input[1];
             tokenPermissionsHashes = abi.encodePacked(
                 tokenPermissionsHashes,
