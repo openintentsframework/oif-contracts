@@ -67,7 +67,6 @@ library FulfilmentLib {
     function getDutchAuctionData(
         bytes calldata contextData
     ) internal pure returns (uint32 startTime, uint32 stopTime, uint256 slope) {
-        if (contextData.length != 41) revert InvalidContextDataLength();
         assembly ("memory-safe") {
             startTime := shr(224, calldataload(add(contextData.offset, 0x01))) // bytes[1:5]
             stopTime := shr(224, calldataload(add(contextData.offset, 0x05))) // bytes[5:9]
@@ -84,7 +83,6 @@ library FulfilmentLib {
     function getExclusiveLimitOrderData(
         bytes calldata contextData
     ) internal pure returns (bytes32 exclusiveFor, uint32 startTime) {
-        if (contextData.length != 37) revert InvalidContextDataLength();
         assembly ("memory-safe") {
             exclusiveFor := calldataload(add(contextData.offset, 0x01)) // bytes[1:33]
             startTime := shr(224, calldataload(add(contextData.offset, 0x21))) // bytes[33:37]
@@ -102,7 +100,6 @@ library FulfilmentLib {
     function getExclusiveDutchAuctionData(
         bytes calldata contextData
     ) internal pure returns (bytes32 exclusiveFor, uint32 startTime, uint32 stopTime, uint256 slope) {
-        if (contextData.length != 73) revert InvalidContextDataLength();
         assembly ("memory-safe") {
             exclusiveFor := calldataload(add(contextData.offset, 0x01)) // bytes[1:33]
             startTime := shr(224, calldataload(add(contextData.offset, 0x21))) // bytes[33:37]

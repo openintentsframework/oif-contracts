@@ -66,15 +66,18 @@ contract OutputSettlerSimple is OutputSettlerBase {
             return (solver, amount);
         }
         if (orderType == FulfilmentLib.DUTCH_AUCTION) {
+            if (fulfillmentLength != 41) revert FulfilmentLib.InvalidContextDataLength();
             (uint32 startTime, uint32 stopTime, uint256 slope) = fulfilmentData.getDutchAuctionData();
             return (solver, _dutchAuctionSlope(amount, slope, startTime, stopTime));
         }
         if (orderType == FulfilmentLib.EXCLUSIVE_LIMIT_ORDER) {
+            if (fulfillmentLength != 37) revert FulfilmentLib.InvalidContextDataLength();
             (bytes32 exclusiveFor, uint32 startTime) = fulfilmentData.getExclusiveLimitOrderData();
             if (startTime > block.timestamp && exclusiveFor != solver) revert ExclusiveTo(exclusiveFor);
             return (solver, amount);
         }
         if (orderType == FulfilmentLib.EXCLUSIVE_DUTCH_AUCTION) {
+            if (fulfillmentLength != 73) revert FulfilmentLib.InvalidContextDataLength();
             (bytes32 exclusiveFor, uint32 startTime, uint32 stopTime, uint256 slope) =
                 fulfilmentData.getExclusiveDutchAuctionData();
             if (startTime > block.timestamp && exclusiveFor != solver) revert ExclusiveTo(exclusiveFor);
