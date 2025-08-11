@@ -9,7 +9,7 @@ import { OutputSettlerSimple } from "../../src/output/simple/OutputSettlerSimple
 import { MockCallbackExecutor } from "../mocks/MockCallbackExecutor.sol";
 import { MockERC20 } from "../mocks/MockERC20.sol";
 
-contract OutputSettlerCoinTestFill is Test {
+contract OutputSettlerSimpleTestFill is Test {
     error ZeroValue();
     error WrongChain(uint256 expected, uint256 actual);
     error WrongOutputSettler(bytes32 addressThis, bytes32 expected);

@@ -8,7 +8,7 @@ import { OutputSettlerSimple } from "../../src/output/simple/OutputSettlerSimple
 
 import { MockERC20 } from "../mocks/MockERC20.sol";
 
-contract OutputSettlerCoinTestfillOrderOutputs is Test {
+contract OutputSettlerSimpleTestfillOrderOutputs is Test {
     error FilledBySomeoneElse(bytes32 solver);
 
     event OutputFilled(bytes32 indexed orderId, bytes32 solver, uint32 timestamp, bytes output, uint256 finalAmount);

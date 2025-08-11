@@ -8,7 +8,7 @@ import { OutputSettlerSimple } from "../../src/output/simple/OutputSettlerSimple
 
 import { MockERC20 } from "../mocks/MockERC20.sol";
 
-contract OutputSettlerCoinTestCall is Test {
+contract OutputSettlerSimpleTestCall is Test {
     OutputSettlerSimple outputSettlerCoin;
 
     MockERC20 outputToken;
