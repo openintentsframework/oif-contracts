@@ -5,7 +5,7 @@ import { Script } from "forge-std/Script.sol";
 
 import { OutputSettlerSimple } from "../src/output/simple/OutputSettlerSimple.sol";
 
-contract DeployOutputSettlerCoin is Script {
+contract DeployOutputSettlerSimple is Script {
     function deploy() external {
         vm.broadcast();
         address(new OutputSettlerSimple{ salt: bytes32(0) }());
