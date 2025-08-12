@@ -461,6 +461,10 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         // Sanity check to ensure the user thinks they are buying the right order.
         if (computedOrderId != orderPurchase.orderId) revert OrderIdMismatch(orderPurchase.orderId, computedOrderId);
 
+        // Validate that the order has been opened.
+        OrderStatus status = orderStatus[computedOrderId];
+        if (status != OrderStatus.Deposited) revert InvalidOrderStatus();
+
         _purchaseOrder(
             orderPurchase, order.inputs, orderSolvedByIdentifier, purchaser, expiryTimestamp, solverSignature
         );
