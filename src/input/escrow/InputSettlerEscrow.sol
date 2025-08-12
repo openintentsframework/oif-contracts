@@ -6,9 +6,6 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
 import { IERC3009 } from "../../interfaces/IERC3009.sol";
-import { Output, ResolvedCrossChainOrder } from "../../interfaces/IERC7683.sol";
-
-import { IOriginSettler } from "../../interfaces/IERC7683.sol";
 
 import { IInputCallback } from "../../interfaces/IInputCallback.sol";
 import { IInputOracle } from "../../interfaces/IInputOracle.sol";
