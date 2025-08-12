@@ -9,8 +9,7 @@ import { MandateOutput } from "../../../src/input/types/MandateOutputType.sol";
 import { LibAddress } from "../../../src/libs/LibAddress.sol";
 import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
 import { MessageEncodingLib } from "../../../src/libs/MessageEncodingLib.sol";
-import { OutputSettlerCoin } from "../../../src/output/coin/OutputSettlerCoin.sol";
-import { OutputSettlerCoin } from "../../../src/output/coin/OutputSettlerCoin.sol";
+import { OutputSettlerSimple } from "../../../src/output/simple/OutputSettlerSimple.sol";
 import { MockERC20 } from "../../mocks/MockERC20.sol";
 
 import { HyperlaneOracle } from "../../../src/oracles/hyperlane/HyperlaneOracle.sol";
@@ -55,7 +54,7 @@ contract HyperlaneOracleTest is Test {
     MailboxMock internal _mailbox;
     HyperlaneOracle internal _oracle;
 
-    OutputSettlerCoin _outputSettler;
+    OutputSettlerSimple _outputSettler;
     MockERC20 _token;
 
     uint256 internal _gasPaymentQuote = 1e18;
@@ -65,7 +64,7 @@ contract HyperlaneOracleTest is Test {
     address internal _recipientOracle = makeAddr("vegeta");
 
     function setUp() public {
-        _outputSettler = new OutputSettlerCoin();
+        _outputSettler = new OutputSettlerSimple();
         _token = new MockERC20("TEST", "TEST", 18);
 
         _mailbox = new MailboxMock();
@@ -78,23 +77,34 @@ contract HyperlaneOracleTest is Test {
         address recipient,
         bytes32 orderId,
         bytes32 solverIdentifier
-    ) internal returns (MandateOutput memory, bytes memory) {
+    ) internal returns (bytes memory output, bytes memory payload) {
         _token.mint(sender, amount);
         vm.prank(sender);
         _token.approve(address(_outputSettler), amount);
 
-        MandateOutput memory output = MandateOutput({
-            oracle: address(_oracle).toIdentifier(),
-            settler: address(_outputSettler).toIdentifier(),
-            token: bytes32(abi.encode(address(_token))),
-            amount: amount,
-            recipient: bytes32(abi.encode(recipient)),
-            chainId: uint32(block.chainid),
-            call: hex"",
-            context: hex""
-        });
-        bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionMemory(
-            solverIdentifier, orderId, uint32(block.timestamp), output
+        output = abi.encodePacked(
+            type(uint48).max, // fill deadline
+            address(_oracle).toIdentifier(), // oracle
+            address(_outputSettler).toIdentifier(), // settler
+            uint256(block.chainid), // chainId
+            bytes32(abi.encode(address(_token))), // token
+            amount, // amount
+            bytes32(abi.encode(recipient)), // recipient
+            uint16(0), // call length
+            bytes(""), // call
+            uint16(0), // context length
+            bytes("") // context
+        );
+
+        payload = MandateOutputEncodingLib.encodeFillDescriptionMemory(
+            solverIdentifier,
+            orderId,
+            uint32(block.timestamp),
+            bytes32(abi.encode(address(_token))),
+            amount,
+            bytes32(abi.encode(recipient)),
+            bytes(""),
+            bytes("")
         );
 
         return (output, payload);
@@ -122,7 +132,7 @@ contract HyperlaneOracleTest is Test {
     ) public {
         vm.assume(solverIdentifier != bytes32(0) && sender != address(0) && recipient != address(0));
 
-        MandateOutput memory output;
+        bytes memory output;
         bytes[] memory payloads = new bytes[](1);
         (output, payloads[0]) = _getMandatePayload(sender, amount, recipient, orderId, solverIdentifier);
 
@@ -152,7 +162,7 @@ contract HyperlaneOracleTest is Test {
     ) public {
         vm.assume(solverIdentifier != bytes32(0) && sender != address(0) && recipient != address(0));
 
-        MandateOutput memory output;
+        bytes memory output;
         bytes[] memory payloads = new bytes[](1);
         (output, payloads[0]) = _getMandatePayload(sender, amount, recipient, orderId, solverIdentifier);
 
@@ -161,8 +171,10 @@ contract HyperlaneOracleTest is Test {
             abi.encodeWithSignature("transferFrom(address,address,uint256)", address(sender), recipient, amount)
         );
 
+        bytes memory fillerData = abi.encodePacked(solverIdentifier);
+
         vm.prank(sender);
-        _outputSettler.fill(type(uint32).max, orderId, output, solverIdentifier);
+        _outputSettler.fill(orderId, output, fillerData);
 
         bytes memory customMetadata = bytes("customMetadata");
 
@@ -172,7 +184,7 @@ contract HyperlaneOracleTest is Test {
                 MailboxMock.dispatch.selector,
                 _destination,
                 _recipientOracle.toIdentifier(),
-                this.encodeMessageCalldata(output.settler, payloads),
+                this.encodeMessageCalldata(address(_outputSettler).toIdentifier(), payloads),
                 StandardHookMetadata.formatMetadata(0, _gasLimit, address(this), customMetadata),
                 _oracle.hook()
             )
@@ -205,7 +217,7 @@ contract HyperlaneOracleTest is Test {
     ) public {
         vm.assume(solverIdentifier != bytes32(0) && sender != address(0) && recipient != address(0));
 
-        MandateOutput memory output;
+        bytes memory output;
         bytes[] memory payloads = new bytes[](1);
         (output, payloads[0]) = _getMandatePayload(sender, amount, recipient, orderId, solverIdentifier);
 
@@ -214,8 +226,10 @@ contract HyperlaneOracleTest is Test {
             abi.encodeWithSignature("transferFrom(address,address,uint256)", address(sender), recipient, amount)
         );
 
+        bytes memory fillerData = abi.encodePacked(solverIdentifier);
+
         vm.prank(sender);
-        _outputSettler.fill(type(uint32).max, orderId, output, solverIdentifier);
+        _outputSettler.fill(orderId, output, fillerData);
 
         bytes memory customMetadata = bytes("customMetadata");
 
@@ -225,7 +239,7 @@ contract HyperlaneOracleTest is Test {
                 MailboxMock.dispatch.selector,
                 _destination,
                 _recipientOracle.toIdentifier(),
-                this.encodeMessageCalldata(output.settler, payloads),
+                this.encodeMessageCalldata(address(_outputSettler).toIdentifier(), payloads),
                 StandardHookMetadata.formatMetadata(0, _gasLimit, address(this), customMetadata),
                 IPostDispatchHook(customHook)
             )
@@ -252,11 +266,11 @@ contract HyperlaneOracleTest is Test {
     ) external {
         vm.assume(solverIdentifier != bytes32(0) && sender != address(0) && recipient != address(0));
 
-        MandateOutput memory output;
+        bytes memory output;
         bytes[] memory payloads = new bytes[](1);
         (output, payloads[0]) = _getMandatePayload(sender, amount, recipient, orderId, solverIdentifier);
 
-        bytes memory message = this.encodeMessageCalldata(output.settler, payloads);
+        bytes memory message = this.encodeMessageCalldata(address(_outputSettler).toIdentifier(), payloads);
 
         vm.expectRevert(abi.encodeWithSignature("SenderNotMailbox()"));
         _oracle.handle(_origin, makeAddr("messageSender").toIdentifier(), message);
@@ -281,11 +295,11 @@ contract HyperlaneOracleTest is Test {
     ) public {
         vm.assume(solverIdentifier != bytes32(0) && sender != address(0) && recipient != address(0));
 
-        MandateOutput memory output;
+        bytes memory output;
         bytes[] memory payloads = new bytes[](1);
         (output, payloads[0]) = _getMandatePayload(sender, amount, recipient, orderId, solverIdentifier);
 
-        bytes memory message = this.encodeMessageCalldata(output.settler, payloads);
+        bytes memory message = this.encodeMessageCalldata(address(_outputSettler).toIdentifier(), payloads);
 
         (bytes32 application, bytes32[] memory payloadHashes) = this.getHashesOfEncodedPayloads(message);
 

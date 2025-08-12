@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import { Test, console } from "forge-std/Test.sol";
+import { Test } from "forge-std/Test.sol";
 
 import { TheCompact } from "the-compact/src/TheCompact.sol";
 import { SimpleAllocator } from "the-compact/src/examples/allocator/SimpleAllocator.sol";
@@ -11,7 +11,7 @@ import { AlwaysOKAllocator } from "the-compact/src/test/AlwaysOKAllocator.sol";
 import { ResetPeriod } from "the-compact/src/types/ResetPeriod.sol";
 import { Scope } from "the-compact/src/types/Scope.sol";
 
-import { OutputSettlerCoin } from "../../src/output/coin/OutputSettlerCoin.sol";
+import { OutputSettlerSimple } from "../../src/output/simple/OutputSettlerSimple.sol";
 
 import { InputSettlerCompact } from "../../src/input/compact/InputSettlerCompact.sol";
 import { AllowOpenType } from "../../src/input/types/AllowOpenType.sol";
@@ -61,7 +61,7 @@ contract InputSettlerCompactTestCrossChain is Test {
     using LibAddress for address;
 
     address inputSettlerCompact;
-    OutputSettlerCoin outputSettlerCoin;
+    OutputSettlerSimple outputSettlerCoin;
 
     // Oracles
     address alwaysYesOracle;
@@ -102,7 +102,7 @@ contract InputSettlerCompactTestCrossChain is Test {
         DOMAIN_SEPARATOR = EIP712(address(theCompact)).DOMAIN_SEPARATOR();
 
         inputSettlerCompact = address(new InputSettlerCompact(address(theCompact)));
-        outputSettlerCoin = new OutputSettlerCoin();
+        outputSettlerCoin = new OutputSettlerSimple();
         alwaysYesOracle = address(new AlwaysYesOracle());
 
         token = new MockERC20("Mock ERC20", "MOCK", 18);
@@ -270,6 +270,25 @@ contract InputSettlerCompactTestCrossChain is Test {
         return bytes.concat(r, s, bytes1(v));
     }
 
+    function getOutputToFillFromMandateOutput(
+        uint48 fillDeadline,
+        MandateOutput memory output
+    ) internal pure returns (bytes memory) {
+        return abi.encodePacked(
+            fillDeadline, // fill deadline
+            output.oracle, // oracle
+            output.settler, // settler
+            uint256(output.chainId), // chainId
+            output.token, // token
+            output.amount, // amount
+            output.recipient, // recipient
+            uint16(output.call.length), // call length
+            output.call, // call
+            uint16(output.context.length), // context length
+            output.context // context
+        );
+    }
+
     function test_deposit_compact() external {
         vm.prank(swapper);
         theCompact.depositERC20(address(token), alwaysOkAllocatorLockTag, 1e18 / 10, swapper);
@@ -379,42 +398,67 @@ contract InputSettlerCompactTestCrossChain is Test {
         uint256[2][] memory idsAndAmounts = new uint256[2][](1);
         idsAndAmounts[0] = [tokenId, amount];
 
-        bytes memory sponsorSig = getCompactBatchWitnessSignature(
-            swapperPrivateKey, inputSettlerCompact, swapper, 0, type(uint32).max, idsAndAmounts, witnessHash(order)
-        );
-        bytes memory allocatorSig = getCompactBatchWitnessSignature(
-            allocatorPrivateKey, inputSettlerCompact, swapper, 0, type(uint32).max, idsAndAmounts, witnessHash(order)
-        );
+        bytes memory signature;
+        {
+            bytes memory sponsorSig = getCompactBatchWitnessSignature(
+                swapperPrivateKey, inputSettlerCompact, swapper, 0, type(uint32).max, idsAndAmounts, witnessHash(order)
+            );
+            bytes memory allocatorSig = getCompactBatchWitnessSignature(
+                allocatorPrivateKey,
+                inputSettlerCompact,
+                swapper,
+                0,
+                type(uint32).max,
+                idsAndAmounts,
+                witnessHash(order)
+            );
 
-        bytes memory signature = abi.encode(sponsorSig, allocatorSig);
+            signature = abi.encode(sponsorSig, allocatorSig);
+        }
 
         // Initiation is over. We need to fill the order.
 
         bytes32 solverIdentifier = solver.toIdentifier();
-
         bytes32 orderId = IInputSettlerCompact(inputSettlerCompact).orderIdentifier(order);
+        {
+            //bytes32 solverIdentifier = solver.toIdentifier();
 
-        vm.prank(solver);
-        outputSettlerCoin.fill(type(uint32).max, orderId, outputs[0], solverIdentifier);
-        vm.snapshotGasLastCall("inputSettler", "IntegrationCoinFill");
+            bytes memory fillerData = abi.encodePacked(solverIdentifier);
+            bytes memory outputToFill = getOutputToFillFromMandateOutput(type(uint48).max, outputs[0]);
 
-        bytes[] memory payloads = new bytes[](1);
-        payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
-            solverIdentifier, orderId, uint32(block.timestamp), outputs[0]
-        );
+            //bytes32 orderId = IInputSettlerCompact(inputSettlerCompact).orderIdentifier(order);
 
-        bytes memory expectedMessageEmitted = this.encodeMessage(outputs[0].settler, payloads);
+            vm.prank(solver);
+            outputSettlerCoin.fill(orderId, outputToFill, fillerData);
 
-        vm.expectEmit();
-        emit PackagePublished(0, expectedMessageEmitted, 15);
-        wormholeOracle.submit(address(outputSettlerCoin), payloads);
-        vm.snapshotGasLastCall("inputSettler", "IntegrationWormholeSubmit");
+            vm.snapshotGasLastCall("inputSettler", "IntegrationCoinFill");
+        }
+        {
+            bytes[] memory payloads = new bytes[](1);
+            payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
+                solverIdentifier,
+                orderId,
+                uint32(block.timestamp),
+                address(anotherToken).toIdentifier(),
+                amount,
+                swapper.toIdentifier(),
+                hex"",
+                hex""
+            );
 
-        bytes memory vaa =
-            makeValidVAA(uint16(block.chainid), address(wormholeOracle).toIdentifier(), expectedMessageEmitted);
+            bytes memory expectedMessageEmitted =
+                this.encodeMessage(address(outputSettlerCoin).toIdentifier(), payloads);
+            vm.expectEmit();
+            emit PackagePublished(0, expectedMessageEmitted, 15);
+            wormholeOracle.submit(address(outputSettlerCoin), payloads);
 
-        wormholeOracle.receiveMessage(vaa);
-        vm.snapshotGasLastCall("inputSettler", "IntegrationWormholeReceiveMessage");
+            vm.snapshotGasLastCall("inputSettler", "IntegrationWormholeSubmit");
+            bytes memory vaa =
+                makeValidVAA(uint16(block.chainid), address(wormholeOracle).toIdentifier(), expectedMessageEmitted);
+
+            wormholeOracle.receiveMessage(vaa);
+            vm.snapshotGasLastCall("inputSettler", "IntegrationWormholeReceiveMessage");
+        }
 
         uint32[] memory timestamps = new uint32[](1);
         timestamps[0] = uint32(block.timestamp);
@@ -486,20 +530,67 @@ contract InputSettlerCompactTestCrossChain is Test {
         // Initiation is over. We need to fill the order.
 
         {
+            bytes[] memory outputsToFill = new bytes[](2);
+
+            outputsToFill[0] = abi.encodePacked(
+                type(uint48).max, // fill deadline
+                outputs[0].oracle, // oracle
+                outputs[0].settler, // settler
+                uint256(outputs[0].chainId), // chainId
+                outputs[0].token, // token
+                outputs[0].amount, // amount
+                outputs[0].recipient, // recipient
+                uint16(outputs[0].call.length), // call length
+                bytes(""), // call
+                uint16(outputs[0].context.length), // context length
+                bytes("") // context
+            );
+
+            outputsToFill[1] = abi.encodePacked(
+                type(uint48).max, // fill deadline
+                outputs[1].oracle, // oracle
+                outputs[1].settler, // settler
+                uint256(outputs[1].chainId), // chainId
+                outputs[1].token, // token
+                outputs[1].amount, // amount
+                outputs[1].recipient, // recipient
+                uint16(outputs[1].call.length), // call length
+                bytes(""), // call
+                uint16(outputs[1].context.length), // context length
+                bytes("") // context
+            );
+
+            bytes memory fillerData1 = abi.encodePacked(solverIdentifier);
+            bytes memory fillerData2 = abi.encodePacked(solverIdentifier2);
+
             bytes32 orderId = IInputSettlerCompact(inputSettlerCompact).orderIdentifier(order);
 
             vm.prank(solver);
-            outputSettlerCoin.fill(type(uint32).max, orderId, outputs[0], solverIdentifier);
+            outputSettlerCoin.fill(orderId, outputsToFill[0], fillerData1);
 
             vm.prank(solver);
-            outputSettlerCoin.fill(type(uint32).max, orderId, outputs[1], solverIdentifier2);
+            outputSettlerCoin.fill(orderId, outputsToFill[1], fillerData2);
 
             bytes[] memory payloads = new bytes[](2);
             payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
-                solverIdentifier, orderId, uint32(block.timestamp), outputs[0]
+                solverIdentifier,
+                orderId,
+                uint32(block.timestamp),
+                outputs[0].token,
+                outputs[0].amount,
+                outputs[0].recipient,
+                outputs[0].call,
+                outputs[0].context
             );
             payloads[1] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
-                solverIdentifier2, orderId, uint32(block.timestamp), outputs[1]
+                solverIdentifier2,
+                orderId,
+                uint32(block.timestamp),
+                outputs[1].token,
+                outputs[1].amount,
+                outputs[1].recipient,
+                outputs[1].call,
+                outputs[1].context
             );
 
             bytes memory expectedMessageEmitted = this.encodeMessage(outputs[0].settler, payloads);
