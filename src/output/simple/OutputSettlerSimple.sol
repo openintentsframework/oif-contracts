@@ -53,7 +53,7 @@ contract OutputSettlerSimple is OutputSettlerBase {
         bytes calldata fillerData
     ) internal view override returns (bytes32 solver, uint256 amount) {
         amount = output.amount();
-        solver = fillerData.proposedSolver();
+        solver = fillerData.solver();
         if (solver == bytes32(0)) revert ZeroValue();
 
         bytes calldata fulfilmentData = output.contextData();
