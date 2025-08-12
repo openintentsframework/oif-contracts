@@ -43,7 +43,7 @@ abstract contract InputSettlerBase is EIP712 {
 
     /**
      * @notice Checks that a timestamp has not expired.
-     * @param timestamp The timestamp to validate that it is not less than block.timestamp
+     * @param timestamp The timestamp to validate that it is at least equal to block.timestamp
      */
     function _validateTimestampHasNotPassed(
         uint32 timestamp
@@ -73,13 +73,13 @@ abstract contract InputSettlerBase is EIP712 {
 
     /**
      * @notice Validates that the rightmost 20 bytes are not 0.
-     * @param destination The timestamp to validate that it is not less than block.timestamp
+     * @param destination Destination of the funds
      */
     function _validateDestination(
         bytes32 destination
     ) internal pure {
         bool isZero;
-        // Check if the rigthmost 20 bytes are not all 0. That is a stronger check than the entire 32 bytes.
+        // Check if the rightmost 20 bytes are not all 0. That is a stronger check than the entire 32 bytes.
         assembly ("memory-safe") {
             isZero := iszero(shl(96, destination))
         }

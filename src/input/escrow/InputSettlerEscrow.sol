@@ -93,7 +93,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
     /**
      * @notice Opens an intent for `order.user`. `order.input` tokens are collected from msg.sender.
-     * @param order  bytes representing an encoded StandadrdOrder.
+     * @param order bytes representing an encoded StandardOrder, encoded via abi.encode().
      */
     function open(
         bytes calldata order
@@ -120,7 +120,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
     /**
      * @notice Collect input tokens directly from msg.sender.
-     * @param order bytes representing an encoded StandadrdOrder.
+     * @param order bytes representing an encoded StandardOrder, encoded via abi.encode().
      */
     function _open(
         bytes calldata order
@@ -137,15 +137,15 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     }
 
     /**
-     * @notice Opens an intent for `order.user`. `order.input` tokens are collected from `sponsor` through either
-     * permit2 or ERC3009.
+     * @notice Opens an intent for `order.user`. `order.input` tokens are collected from `sponsor` through transferFrom,
+     * permit2 or ERC-3009.
      * @dev This function may make multiple sub-call calls either directly from this contract or from deeper inside the
      * call tree. To protect against reentry, the function uses the `orderStatus`. Local reentry (calling twice) is
      * protected through a checks-effect pattern while global reentry is enforced by not allowing existing the function
      * with `orderStatus` not set to `Deposited`
-     * @param order  bytes representing an encoded StandadrdOrder.
+     * @param order bytes representing an encoded StandardOrder, encoded via abi.encode().
      * @param sponsor Address to collect tokens from.
-     * @param signature Allowance signature from user with a signature type encoded as:
+     * @param signature Allowance signature from sponsor with a signature type encoded as:
      * - SIGNATURE_TYPE_PERMIT2:  b1:0x00 | bytes:signature
      * - SIGNATURE_TYPE_3009:     b1:0x01 | bytes:signature OR abi.encode(bytes[]:signatures)
      */
@@ -408,7 +408,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
     /**
      * @dev This function employs a local reentry guard: we check the order status and then we update it afterwards.
-     * This is an important check as it is indeed to process external ERC20 transfers.
+     * This is an important check as it is intended to process external ERC20 transfers.
      * @param newStatus specifies the new status to set the order to. Should never be OrderStatus.Deposited.
      */
     function _resolveLock(
