@@ -3,19 +3,17 @@ pragma solidity ^0.8.26;
 
 import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 
+import { IDestinationSettler } from "../interfaces/IERC7683.sol";
 import { IOutputCallback } from "../interfaces/IOutputCallback.sol";
 import { IPayloadCreator } from "../interfaces/IPayloadCreator.sol";
-
-import { IDestinationSettler } from "../interfaces/IERC7683.sol";
 
 import { AssemblyLib } from "../libs/AssemblyLib.sol";
 import { LibAddress } from "../libs/LibAddress.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../libs/MandateOutputEncodingLib.sol";
+import { OutputFillLib } from "../libs/OutputFillLib.sol";
 import { OutputVerificationLib } from "../libs/OutputVerificationLib.sol";
 
 import { BaseInputOracle } from "../oracles/BaseInputOracle.sol";
-
-import { OutputFillLib } from "../libs/OutputFillLib.sol";
 
 /**
  * @notice Base Output Settler implementing logic for settling outputs.
