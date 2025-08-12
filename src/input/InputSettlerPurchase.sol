@@ -44,7 +44,9 @@ abstract contract InputSettlerPurchase is InputSettlerBase {
 
     /**
      * @notice Enforces that the caller is the order owner.
-     * @dev Only reads the rightmost 20 bytes to allow solvers to opt-in to Compact transfers instead of withdrawals.
+     * @dev Only reads the rightmost 20 bytes to verify the owner/purchaser. This allows implementations to use the
+     * leftmost 12 bytes to encode further withdrawal logic.
+     * For TheCompact, 12 zero bytes indicates a withdrawals instead of a transfer.
      * @param orderOwner The order owner. The leftmost 12 bytes are not read.
      */
     function _orderOwnerIsCaller(

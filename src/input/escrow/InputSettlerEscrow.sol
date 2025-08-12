@@ -6,9 +6,6 @@ import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
 import { IERC3009 } from "../../interfaces/IERC3009.sol";
-import { Output, ResolvedCrossChainOrder } from "../../interfaces/IERC7683.sol";
-
-import { IOriginSettler } from "../../interfaces/IERC7683.sol";
 
 import { IInputCallback } from "../../interfaces/IInputCallback.sol";
 import { IInputOracle } from "../../interfaces/IInputOracle.sol";
@@ -96,12 +93,13 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
     /**
      * @notice Opens an intent for `order.user`. `order.input` tokens are collected from msg.sender.
-     * @param order  bytes representing an encoded StandadrdOrder.
+     * @param order bytes representing an encoded StandardOrder, encoded via abi.encode().
      */
     function open(
         bytes calldata order
     ) external {
         // Validate the order structure.
+        _validateInputChain(order.originChainId());
         _validateTimestampHasNotPassed(order.fillDeadline());
         _validateTimestampHasNotPassed(order.expires());
 
@@ -123,7 +121,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
     /**
      * @notice Collect input tokens directly from msg.sender.
-     * @param order bytes representing an encoded StandadrdOrder.
+     * @param order bytes representing an encoded StandardOrder, encoded via abi.encode().
      */
     function _open(
         bytes calldata order
@@ -140,15 +138,15 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     }
 
     /**
-     * @notice Opens an intent for `order.user`. `order.input` tokens are collected from `sponsor` through either
-     * permit2 or ERC3009.
+     * @notice Opens an intent for `order.user`. `order.input` tokens are collected from `sponsor` through transferFrom,
+     * permit2 or ERC-3009.
      * @dev This function may make multiple sub-call calls either directly from this contract or from deeper inside the
      * call tree. To protect against reentry, the function uses the `orderStatus`. Local reentry (calling twice) is
      * protected through a checks-effect pattern while global reentry is enforced by not allowing existing the function
      * with `orderStatus` not set to `Deposited`
-     * @param order  bytes representing an encoded StandadrdOrder.
+     * @param order bytes representing an encoded StandardOrder, encoded via abi.encode().
      * @param sponsor Address to collect tokens from.
-     * @param signature Allowance signature from user with a signature type encoded as:
+     * @param signature Allowance signature from sponsor with a signature type encoded as:
      * - SIGNATURE_TYPE_PERMIT2:  b1:0x00 | bytes:signature
      * - SIGNATURE_TYPE_3009:     b1:0x01 | bytes:signature OR abi.encode(bytes[]:signatures)
      */
@@ -257,15 +255,9 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         if (numInputs == 1) {
             // If there is only 1 input, try using the provided signature as is.
             uint256[2] calldata input = inputs[0];
-            bytes memory callData = abi.encodeWithSelector(
-                IERC3009.receiveWithAuthorization.selector,
-                signer,
-                address(this),
-                input[1],
-                0,
-                fillDeadline,
-                orderId,
-                _signature_
+            bytes memory callData = abi.encodeCall(
+                IERC3009.receiveWithAuthorization,
+                (signer, address(this), input[1], 0, fillDeadline, orderId, _signature_)
             );
             // The above calldata encoding is equivalent to:
             // IERC3009(EfficiencyLib.asSanitizedAddress(input[0])).receiveWithAuthorization({
@@ -420,7 +412,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
     /**
      * @dev This function employs a local reentry guard: we check the order status and then we update it afterwards.
-     * This is an important check as it is indeed to process external ERC20 transfers.
+     * This is an important check as it is intended to process external ERC20 transfers.
      * @param newStatus specifies the new status to set the order to. Should never be OrderStatus.Deposited.
      */
     function _resolveLock(
