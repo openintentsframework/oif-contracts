@@ -582,7 +582,7 @@ contract OutputSettlerSimpleTestFill is Test {
         vm.assume(bytes1(outputContext) != 0x01 && outputContext.length != 41);
         vm.assume(bytes1(outputContext) != 0xe0 && outputContext.length != 37);
         vm.assume(bytes1(outputContext) != 0xe1 && outputContext.length != 73);
-        vm.assume(filler != bytes32(0));
+        vm.assume(filler != bytes32(0) && sender != address(0));
 
         outputToken.mint(sender, amount);
         vm.prank(sender);
