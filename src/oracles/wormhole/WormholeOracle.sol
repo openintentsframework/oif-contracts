@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { Ownable } from "solady/auth/Ownable.sol";
-
 import { IPayloadCreator } from "../../interfaces/IPayloadCreator.sol";
 
 import { LibAddress } from "../../libs/LibAddress.sol";
