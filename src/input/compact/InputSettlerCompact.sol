@@ -7,6 +7,8 @@ import { IdLib } from "the-compact/src/lib/IdLib.sol";
 import { BatchClaim } from "the-compact/src/types/BatchClaims.sol";
 import { BatchClaimComponent, Component } from "the-compact/src/types/Components.sol";
 
+import { EIP712 } from "openzeppelin/utils/cryptography/EIP712.sol";
+
 import { IInputCallback } from "../../interfaces/IInputCallback.sol";
 import { IInputOracle } from "../../interfaces/IInputOracle.sol";
 import { IInputSettlerCompact } from "../../interfaces/IInputSettlerCompact.sol";
@@ -41,20 +43,8 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
 
     constructor(
         address compact
-    ) {
+    ) EIP712("OIFCompact", "1") {
         COMPACT = TheCompact(compact);
-    }
-
-    /// @notice EIP712
-    function _domainNameAndVersion()
-        internal
-        pure
-        virtual
-        override
-        returns (string memory name, string memory version)
-    {
-        name = "OIFCompact";
-        version = "1";
     }
 
     // --- Generic order identifier --- //

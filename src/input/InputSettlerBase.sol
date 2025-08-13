@@ -3,8 +3,8 @@ pragma solidity ^0.8.26;
 
 import { LibAddress } from "../libs/LibAddress.sol";
 
+import { EIP712 } from "openzeppelin/utils/cryptography/EIP712.sol";
 import { SignatureChecker } from "openzeppelin/utils/cryptography/SignatureChecker.sol";
-import { EIP712 } from "solady/utils/EIP712.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
 import { IInputCallback } from "../interfaces/IInputCallback.sol";
@@ -36,7 +36,7 @@ abstract contract InputSettlerBase is EIP712 {
     event Finalised(bytes32 indexed orderId, bytes32 solver, bytes32 destination);
 
     function DOMAIN_SEPARATOR() external view returns (bytes32) {
-        return _domainSeparator();
+        return _domainSeparatorV4();
     }
 
     // --- Validation --- //
@@ -138,7 +138,7 @@ abstract contract InputSettlerBase is EIP712 {
         bytes calldata call,
         bytes calldata orderOwnerSignature
     ) internal view {
-        bytes32 digest = _hashTypedData(AllowOpenType.hashAllowOpen(orderId, nextDestination, call));
+        bytes32 digest = _hashTypedDataV4(AllowOpenType.hashAllowOpen(orderId, nextDestination, call));
         bool isValid = SignatureChecker.isValidSignatureNowCalldata(orderOwner, digest, orderOwnerSignature);
         if (!isValid) revert InvalidSigner();
     }

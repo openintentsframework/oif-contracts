@@ -5,7 +5,6 @@ import { LibAddress } from "../libs/LibAddress.sol";
 
 import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
-import { EIP712 } from "solady/utils/EIP712.sol";
 
 import { SignatureChecker } from "openzeppelin/utils/cryptography/SignatureChecker.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
@@ -125,7 +124,7 @@ abstract contract InputSettlerPurchase is InputSettlerBase {
 
         {
             address orderSolvedByAddress = orderSolvedByIdentifier.fromIdentifier();
-            bytes32 digest = _hashTypedData(OrderPurchaseType.hashOrderPurchase(orderPurchase));
+            bytes32 digest = _hashTypedDataV4(OrderPurchaseType.hashOrderPurchase(orderPurchase));
             bool isValid = SignatureChecker.isValidSignatureNowCalldata(orderSolvedByAddress, digest, solverSignature);
             if (!isValid) revert InvalidSigner();
         }

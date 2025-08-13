@@ -3,6 +3,8 @@ pragma solidity ^0.8.26;
 
 import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
+
+import { EIP712 } from "openzeppelin/utils/cryptography/EIP712.sol";
 import { ISignatureTransfer } from "permit2/src/interfaces/ISignatureTransfer.sol";
 
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
@@ -68,16 +70,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     // Address of the Permit2 contract.
     ISignatureTransfer constant PERMIT2 = ISignatureTransfer(0x000000000022D473030F116dDEE9F6B43aC78BA3);
 
-    function _domainNameAndVersion()
-        internal
-        pure
-        virtual
-        override
-        returns (string memory name, string memory version)
-    {
-        name = "OIFEscrow";
-        version = "1";
-    }
+    constructor() EIP712("OIFEscrow", "1") { }
 
     // --- Generic order identifier --- //
 
