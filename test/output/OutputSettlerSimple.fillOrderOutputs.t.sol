@@ -52,7 +52,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
     ) public {
         vm.assume(
             filler != bytes32(0) && swapper != sender && nextFiller != filler && nextFiller != bytes32(0)
-                && amount != amount2
+                && amount != amount2 && sender != address(0)
         );
 
         outputToken.mint(sender, uint256(amount) + uint256(amount2));

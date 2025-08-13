@@ -72,7 +72,7 @@ contract WormholeOracleTestSubmit is Test {
         bytes32 orderId,
         bytes32 solverIdentifier
     ) public {
-        vm.assume(solverIdentifier != bytes32(0));
+        vm.assume(solverIdentifier != bytes32(0) && sender != address(0));
 
         token.mint(sender, amount);
         vm.prank(sender);

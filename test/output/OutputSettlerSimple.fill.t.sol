@@ -47,7 +47,7 @@ contract OutputSettlerSimpleTestFill is Test {
     }
 
     function test_fill(bytes32 orderId, address sender, bytes32 filler, uint256 amount) public {
-        vm.assume(filler != bytes32(0) && swapper != sender);
+        vm.assume(filler != bytes32(0) && swapper != sender && sender != address(0));
 
         outputToken.mint(sender, amount);
         vm.prank(sender);
@@ -107,7 +107,7 @@ contract OutputSettlerSimpleTestFill is Test {
         uint32 startTime,
         uint32 currentTime
     ) public {
-        vm.assume(solverIdentifier != bytes32(0) && swapper != sender);
+        vm.assume(solverIdentifier != bytes32(0) && swapper != sender && sender != address(0));
         vm.warp(currentTime);
 
         outputToken.mint(sender, amount);
@@ -148,7 +148,7 @@ contract OutputSettlerSimpleTestFill is Test {
         bytes32 filler,
         bytes memory remoteCallData
     ) public {
-        vm.assume(filler != bytes32(0));
+        vm.assume(filler != bytes32(0) && sender != address(0));
         vm.assume(sender != mockCallbackExecutorAddress);
         vm.assume(remoteCallData.length != 0);
 
@@ -222,6 +222,7 @@ contract OutputSettlerSimpleTestFill is Test {
         uint64 slope,
         uint16 currentTime
     ) public {
+        vm.assume(sender != address(0));
         bytes memory context;
         uint256 finalAmount;
         {
@@ -300,6 +301,7 @@ contract OutputSettlerSimpleTestFill is Test {
         uint16 currentTime,
         bytes32 exclusiveFor
     ) public {
+        vm.assume(sender != address(0));
         bytes memory context;
         uint256 finalAmount;
         {
@@ -370,6 +372,7 @@ contract OutputSettlerSimpleTestFill is Test {
         bytes32 exclusiveFor,
         bytes32 solverIdentifier
     ) public {
+        vm.assume(sender != address(0));
         bytes memory context;
         {
             uint32 stopTime = uint32(startTime) + uint32(runTime);
@@ -534,7 +537,7 @@ contract OutputSettlerSimpleTestFill is Test {
         bytes32 orderId,
         uint256 amount
     ) public {
-        vm.assume(filler != bytes32(0));
+        vm.assume(filler != bytes32(0) && sender != address(0));
         vm.assume(filler != differentFiller && differentFiller != bytes32(0));
 
         outputToken.mint(sender, amount);
@@ -548,7 +551,7 @@ contract OutputSettlerSimpleTestFill is Test {
             block.chainid, // chainId
             bytes32(uint256(uint160(outputTokenAddress))), // token
             amount, //amount
-            bytes32(0), // recipient,
+            bytes32(uint256(uint160(sender))), // recipient,
             uint16(0), // call length
             bytes(""), // call
             uint16(0), // context length
