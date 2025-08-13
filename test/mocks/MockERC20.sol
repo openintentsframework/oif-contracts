@@ -4,10 +4,8 @@ pragma solidity ^0.8.26;
 import { IERC3009 } from "../../src/interfaces/IERC3009.sol";
 
 import { ERC20 } from "openzeppelin/token/ERC20/ERC20.sol";
-import { EIP712 } from "solady/utils/EIP712.sol";
+import { EIP712 } from "openzeppelin/utils/cryptography/EIP712.sol";
 import { SignatureChecker } from "openzeppelin/utils/cryptography/SignatureChecker.sol";
-
-import { console } from "forge-std/console.sol";
 
 contract MockERC20 is ERC20, IERC3009, EIP712 {
     string internal _name;
@@ -15,18 +13,7 @@ contract MockERC20 is ERC20, IERC3009, EIP712 {
     uint8 internal _decimals;
     bytes32 internal immutable _nameHash;
 
-    function _domainNameAndVersion()
-        internal
-        view
-        virtual
-        override
-        returns (string memory __name, string memory version)
-    {
-        __name = name();
-        version = "1";
-    }
-
-    constructor(string memory name_, string memory symbol_, uint8 decimals_) ERC20(name_, symbol_) {
+    constructor(string memory name_, string memory symbol_, uint8 decimals_) ERC20(name_, symbol_) EIP712(name_, "1") {
         _name = name_;
         _symbol = symbol_;
         _decimals = decimals_;
@@ -34,23 +21,7 @@ contract MockERC20 is ERC20, IERC3009, EIP712 {
     }
 
     function DOMAIN_SEPARATOR() public view virtual returns (bytes32) {
-        return _domainSeparator();
-    }
-
-    function _domainNameAndVersionMayChange() internal pure override returns (bool result) {
-        return true;
-    }
-
-    function _constantNameHash() internal view returns (bytes32) {
-        return _nameHash;
-    }
-
-    function name() public view virtual override returns (string memory) {
-        return _name;
-    }
-
-    function symbol() public view virtual override returns (string memory) {
-        return _symbol;
+        return _domainSeparatorV4();
     }
 
     function decimals() public view virtual override returns (uint8) {
@@ -119,7 +90,7 @@ contract MockERC20 is ERC20, IERC3009, EIP712 {
 
         bytes32 data =
             keccak256(abi.encode(RECEIVE_WITH_AUTHORIZATION_TYPEHASH, from, to, value, validAfter, validBefore, nonce));
-        bytes32 digest = _hashTypedData(data);
+        bytes32 digest = _hashTypedDataV4(data);
         bool isValid = SignatureChecker.isValidSignatureNowCalldata(from, digest, signature);
         require(isValid, "Signature invalid");
 
