@@ -20,20 +20,24 @@ library LibAddress {
     /// @notice Converts a bytes32 identifier back to an Ethereum address
     /// @dev Reverses the toIdentifier operation by casting through uint256 and uint160
     /// @param identifier The bytes32 identifier to convert
-    /// @return _ The address representation of the identifier
+    /// @return addr The address representation of the identifier
     function fromIdentifier(
         bytes32 identifier
-    ) internal pure returns (address) {
-        return address(uint160(uint256(identifier)));
+    ) internal pure returns (address addr) {
+        assembly ("memory-safe") {
+            addr := shr(96, shl(96, identifier))
+        }
     }
 
     /// @notice Converts a uint256 identifier back to an Ethereum address
     /// @dev Reverses the toIdentifier operation by casting through uint160
     /// @param identifier The uint256 identifier to convert
-    /// @return _ The address representation of the identifier
+    /// @return addr The address representation of the identifier
     function fromIdentifier(
         uint256 identifier
-    ) internal pure returns (address) {
-        return address(uint160(identifier));
+    ) internal pure returns (address addr) {
+        assembly ("memory-safe") {
+            addr := shr(96, shl(96, identifier))
+        }
     }
 }
