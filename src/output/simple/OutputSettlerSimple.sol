@@ -7,7 +7,7 @@ import { OutputFillLib } from "../../libs/OutputFillLib.sol";
 import { FillerDataLib } from "./FillerDataLib.sol";
 import { FulfilmentLib } from "./FulfilmentLib.sol";
 
-import { FixedPointMathLib } from "solady/utils/FixedPointMathLib.sol";
+import { Math } from "openzeppelin/utils/math/Math.sol";
 
 /**
  * @notice OutputSettlerSimple extends OutputSettlerBase to support order type-specific resolution logic.
@@ -103,7 +103,7 @@ contract OutputSettlerSimple is OutputSettlerBase {
         uint32 startTime,
         uint32 stopTime
     ) internal view returns (uint256 currentAmount) {
-        uint32 currentTime = uint32(FixedPointMathLib.max(block.timestamp, uint256(startTime)));
+        uint32 currentTime = uint32(Math.max(block.timestamp, uint256(startTime)));
         if (stopTime < currentTime) return minimumAmount; // This check also catches stopTime < startTime.
         uint256 timeDiff;
         unchecked {
