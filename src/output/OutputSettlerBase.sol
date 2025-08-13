@@ -107,22 +107,22 @@ abstract contract OutputSettlerBase is IDestinationSettler, IPayloadCreator, Bas
         bytes32 orderId,
         bytes calldata output,
         bytes calldata fillerData
-    ) internal virtual returns (bytes32 fillRecordHash, bytes32 proposedSolver) {
+    ) internal virtual returns (bytes32 fillRecordHash, bytes32 solver) {
         OutputVerificationLib._isThisChain(output.chainId());
         OutputVerificationLib._isThisOutputSettler(output.settler());
 
         uint32 fillTimestamp = uint32(block.timestamp);
         uint256 outputAmount;
-        (proposedSolver, outputAmount) = _resolveOutput(output, fillerData);
+        (solver, outputAmount) = _resolveOutput(output, fillerData);
         {
             bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHashFromBytes(output.removeFillDeadline());
             bytes32 existingFillRecordHash = _fillRecords[orderId][outputHash];
 
             // Early return if already filled.
-            if (existingFillRecordHash != bytes32(0)) return (existingFillRecordHash, proposedSolver);
+            if (existingFillRecordHash != bytes32(0)) return (existingFillRecordHash, solver);
 
             // The above and below lines act as a local re-entry check.
-            fillRecordHash = _getFillRecordHash(proposedSolver, fillTimestamp);
+            fillRecordHash = _getFillRecordHash(solver, fillTimestamp);
             _fillRecords[orderId][outputHash] = fillRecordHash;
         }
         // Storage has been set. Fill the output.
@@ -134,9 +134,9 @@ abstract contract OutputSettlerBase is IDestinationSettler, IPayloadCreator, Bas
         if (callbackData.length > 0) {
             IOutputCallback(recipient).outputFilled(tokenIdentifier, outputAmount, callbackData);
         }
-        emit OutputFilled(orderId, proposedSolver, fillTimestamp, output, outputAmount);
+        emit OutputFilled(orderId, solver, fillTimestamp, output, outputAmount);
 
-        return (fillRecordHash, proposedSolver);
+        return (fillRecordHash, solver);
     }
 
     /**
@@ -196,8 +196,8 @@ abstract contract OutputSettlerBase is IDestinationSettler, IPayloadCreator, Bas
         uint48 fillDeadline = outputs[0].fillDeadline();
         if (fillDeadline < block.timestamp) revert FillDeadline();
 
-        (bytes32 fillRecordHash, bytes32 proposedSolver) = _fill(orderId, outputs[0], fillerData);
-        bytes32 expectedFillRecordHash = _getFillRecordHash(proposedSolver, uint32(block.timestamp));
+        (bytes32 fillRecordHash, bytes32 solver) = _fill(orderId, outputs[0], fillerData);
+        bytes32 expectedFillRecordHash = _getFillRecordHash(solver, uint32(block.timestamp));
         if (fillRecordHash != expectedFillRecordHash) revert AlreadyFilled();
 
         uint256 numOutputs = outputs.length;
