@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
+
+import { EIP712 } from "openzeppelin/utils/cryptography/EIP712.sol";
 import { ISignatureTransfer } from "permit2/src/interfaces/ISignatureTransfer.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
 import { IERC3009 } from "../../interfaces/IERC3009.sol";
@@ -66,16 +70,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     // Address of the Permit2 contract.
     ISignatureTransfer constant PERMIT2 = ISignatureTransfer(0x000000000022D473030F116dDEE9F6B43aC78BA3);
 
-    function _domainNameAndVersion()
-        internal
-        pure
-        virtual
-        override
-        returns (string memory name, string memory version)
-    {
-        name = "OIFEscrow";
-        version = "1";
-    }
+    constructor() EIP712("OIFEscrow", "1") { }
 
     // --- Generic order identifier --- //
 
@@ -133,7 +128,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
             uint256[2] calldata input = inputs[i];
             address token = EfficiencyLib.asSanitizedAddress(input[0]);
             uint256 amount = input[1];
-            SafeTransferLib.safeTransferFrom(token, msg.sender, address(this), amount);
+            SafeERC20.safeTransferFrom(IERC20(token), msg.sender, address(this), amount);
         }
     }
 
@@ -431,10 +426,10 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         uint256 numInputs = inputs.length;
         for (uint256 i; i < numInputs; ++i) {
             uint256[2] calldata input = inputs[i];
-            address token = EfficiencyLib.asSanitizedAddress(input[0]);
+            IERC20 token = IERC20(EfficiencyLib.asSanitizedAddress(input[0]));
             uint256 amount = input[1];
 
-            SafeTransferLib.safeTransfer(token, destination, amount);
+            SafeERC20.safeTransfer(token, destination, amount);
         }
     }
 

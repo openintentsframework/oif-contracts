@@ -12,22 +12,10 @@ import { OrderPurchase, OrderPurchaseType } from "../../src/input/types/OrderPur
 import { StandardOrder } from "../../src/input/types/StandardOrderType.sol";
 import { LibAddress } from "../../src/libs/LibAddress.sol";
 import { MandateOutputEncodingLib } from "../../src/libs/MandateOutputEncodingLib.sol";
-
-interface EIP712 {
-    function DOMAIN_SEPARATOR() external view returns (bytes32);
-}
+import { EIP712 } from "openzeppelin/utils/cryptography/EIP712.sol";
 
 contract MockSettler is InputSettlerPurchase {
-    function _domainNameAndVersion()
-        internal
-        pure
-        virtual
-        override
-        returns (string memory name, string memory version)
-    {
-        name = "MockSettler";
-        version = "-1";
-    }
+    constructor() EIP712("MockSettler", "-1") { }
 
     function purchaseGetOrderOwner(
         bytes32 orderId,
@@ -89,7 +77,7 @@ contract BaseInputSettlerTest is Test {
 
     function setUp() public virtual {
         settler = new MockSettler();
-        DOMAIN_SEPARATOR = EIP712(address(settler)).DOMAIN_SEPARATOR();
+        DOMAIN_SEPARATOR = MockSettler(address(settler)).DOMAIN_SEPARATOR();
 
         token = new MockERC20("Mock ERC20", "MOCK", 18);
         anotherToken = new MockERC20("Mock2 ERC20", "MOCK2", 18);

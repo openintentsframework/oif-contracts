@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 
 import { IDestinationSettler } from "../interfaces/IERC7683.sol";
 import { IOutputCallback } from "../interfaces/IOutputCallback.sol";
@@ -128,7 +129,7 @@ abstract contract OutputSettlerBase is IDestinationSettler, IPayloadCreator, Bas
         // Storage has been set. Fill the output.
         bytes32 tokenIdentifier = output.token();
         address recipient = output.recipient().fromIdentifier();
-        SafeTransferLib.safeTransferFrom(tokenIdentifier.fromIdentifier(), msg.sender, recipient, outputAmount);
+        SafeERC20.safeTransferFrom(IERC20(tokenIdentifier.fromIdentifier()), msg.sender, recipient, outputAmount);
 
         bytes calldata callbackData = output.callbackData();
         if (callbackData.length > 0) {

@@ -4,12 +4,13 @@
 [submodule "lib/bitcoinprism-evm"]
 	path = lib/bitcoinprism-evm
 	url = https://github.com/catalystdao/bitcoinprism-evm
-[submodule "lib/solady"]
-	path = lib/solady
-	url = https://github.com/Vectorized/solady
 [submodule "lib/the-compact"]
 	path = lib/the-compact
 	url = https://github.com/Uniswap/the-compact
 [submodule "lib/permit2"]
 	path = lib/permit2
 	url = https://github.com/Uniswap/permit2
+[submodule "lib/openzeppelin-contracts"]
+	path = lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+	branch = master

@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { Ownable } from "solady/auth/Ownable.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-
 import { IPayloadCreator } from "../../interfaces/IPayloadCreator.sol";
 
 import { LibAddress } from "../../libs/LibAddress.sol";
@@ -26,6 +23,7 @@ contract WormholeOracle is ChainMap, BaseInputOracle, WormholeVerifier {
     using LibAddress for address;
 
     error NotAllPayloadsValid();
+    error RefundFailed();
 
     /// @dev Wormhole generally defines 15 to be equal to Finality
     uint8 constant WORMHOLE_CONSISTENCY = 15;
@@ -66,7 +64,8 @@ contract WormholeOracle is ChainMap, BaseInputOracle, WormholeVerifier {
         // Refund excess value if any.
         if (msg.value > packageCost) {
             refund = msg.value - packageCost;
-            SafeTransferLib.safeTransferETH(msg.sender, refund);
+            (bool success,) = msg.sender.call{ value: refund }("");
+            if (!success) revert RefundFailed();
         }
     }
 
