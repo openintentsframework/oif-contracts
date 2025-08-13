@@ -376,7 +376,14 @@ contract BitcoinOracleTest is Test {
         bitcoinOracle.claim(solver, orderId, output);
 
         vm.prank(disputer);
-        vm.expectRevert(abi.encodeWithSignature("TransferFromFailed()"));
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "ERC20InsufficientAllowance(address,uint256,uint256)",
+                address(bitcoinOracle),
+                0,
+                collateralAmount * bitcoinOracle.CHALLENGER_COLLATERAL_FACTOR()
+            )
+        );
         bitcoinOracle.dispute(orderId, output);
     }
 
