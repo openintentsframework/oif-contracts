@@ -3,5 +3,4 @@ forge-std/=lib/forge-std/src/
 bitcoinprism-evm/=lib/bitcoinprism-evm/
 the-compact/=lib/the-compact/
 permit2/=lib/permit2/
-solady/=lib/solady/src/
 openzeppelin/=lib/openzeppelin-contracts/contracts/
