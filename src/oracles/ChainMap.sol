@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { Ownable } from "solady/auth/Ownable.sol";
+import { Ownable } from "openzeppelin/access/Ownable.sol";
 
 /**
  * @notice Add chainmapping functionality to an oracle.
@@ -20,9 +20,7 @@ abstract contract ChainMap is Ownable {
 
     constructor(
         address _owner
-    ) {
-        _initializeOwner(_owner);
-    }
+    ) Ownable(_owner) { }
 
     // --- Chain ID Functions --- //
 

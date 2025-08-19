@@ -1,5 +1,11 @@
 # The Open Intents Framework (OIF): Permissionless Cross-chain Intents
 
+⚠️ **SECURITY WARNING** ⚠️
+
+This project is currently using an **unaudited version** of OpenZeppelin Contracts instead of the latest released audited version. **Before any production release, it is mandatory to update to the latest audited version** to ensure security and stability.
+
+---
+
 The OIF is a full-stack developer framework that allows cross-chain intents to permissionlessly be deployed, solved, and discovered. Its comprised of two main pieces:
 - Smart contracts (this repo)
 - [Open-source solver](https://github.com/openintentsframework/oif-solvers)
