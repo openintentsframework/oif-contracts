@@ -22,8 +22,8 @@ To achieve this, the system has been modularised:
 - **Oracle**: Proof layer. Generally a messaging protocol but can be anything: Optimistic proofs, light clients, storage proofs, off-chain agent, etc. Generates proof of filled outputs.
 
 ### System Diagram
-![System Diagram](./high-level-0.svg)
-Refer to the SVG diagram chart.
+![System Diagram](./high-level-0.png)
+Refer to the diagram chart.
 
 ### Dictionary 
 
