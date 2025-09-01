@@ -4,9 +4,9 @@ pragma solidity ^0.8.26;
 import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 
+import { IAttester } from "../interfaces/IAttester.sol";
 import { IDestinationSettler } from "../interfaces/IERC7683.sol";
 import { IOutputCallback } from "../interfaces/IOutputCallback.sol";
-import { IAttester } from "../interfaces/IAttester.sol";
 
 import { AssemblyLib } from "../libs/AssemblyLib.sol";
 import { LibAddress } from "../libs/LibAddress.sol";
