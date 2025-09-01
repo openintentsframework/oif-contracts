@@ -191,7 +191,7 @@ contract HyperlaneOracle is BaseInputOracle, MailboxClient, IMessageRecipient {
         address source,
         bytes[] calldata payloads
     ) internal {
-        if (!IAttester(source).arePayloadsValid(payloads)) revert NotAllPayloadsValid();
+        if (!IAttester(source).hasAttested(payloads)) revert NotAllPayloadsValid();
 
         bytes memory message = MessageEncodingLib.encodeMessage(source.toIdentifier(), payloads);
 

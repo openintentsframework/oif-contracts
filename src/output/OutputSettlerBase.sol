@@ -241,7 +241,7 @@ abstract contract OutputSettlerBase is IDestinationSettler, IAttester, BaseInput
     /**
      * @notice Returns whether a set of payloads have been approved by this contract.
      */
-    function arePayloadsValid(
+    function hasAttested(
         bytes[] calldata payloads
     ) external view returns (bool accumulator) {
         uint256 numPayloads = payloads.length;
