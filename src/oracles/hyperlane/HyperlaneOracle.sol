@@ -1,7 +1,7 @@
 /// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { IPayloadCreator } from "../../interfaces/IPayloadCreator.sol";
+import { IAttester } from "../../interfaces/IAttester.sol";
 import { LibAddress } from "../../libs/LibAddress.sol";
 import { MessageEncodingLib } from "../../libs/MessageEncodingLib.sol";
 import { BaseInputOracle } from "../BaseInputOracle.sol";
@@ -191,7 +191,7 @@ contract HyperlaneOracle is BaseInputOracle, MailboxClient, IMessageRecipient {
         address source,
         bytes[] calldata payloads
     ) internal {
-        if (!IPayloadCreator(source).arePayloadsValid(payloads)) revert NotAllPayloadsValid();
+        if (!IAttester(source).hasAttested(payloads)) revert NotAllPayloadsValid();
 
         bytes memory message = MessageEncodingLib.encodeMessage(source.toIdentifier(), payloads);
 

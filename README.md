@@ -89,7 +89,7 @@ ChainIds should typically follow the "canonical" chain id: `block.chainid`. Whil
 
 ## Output Settler
 
-The Output Settler contract sits on the output chain and allows filling outputs. It is expected that Output Settler implementations expose whether a payload is valid by implementing the `IPayloadValidator` interface and exposing the `.arePayloadsValid()` view function. Notice that the requirement that the Output Settler asserts payloads means that the Output Settler and Input Settler need to form the same payloads to properly validate that outputs have been filled.
+The Output Settler contract sits on the output chain and allows filling outputs. It is expected that Output Settler implementations expose whether a payload is valid by implementing the `IPayloadValidator` interface and exposing the `.hasAttested()` view function. Notice that the requirement that the Output Settler asserts payloads means that the Output Settler and Input Settler need to form the same payloads to properly validate that outputs have been filled.
 
 Otherwise, the fill interface is left undefined. It is generally expected that the filler takes outputs as `MandateOutput`.
 
@@ -97,7 +97,7 @@ Otherwise, the fill interface is left undefined. It is generally expected that t
 
 Oracles are located in `src/oracles`. `src/oracles/BaseInputOracle.sol` provides a standardized attestation storage structure along with attestation lookup structures. This allows anyone to easily create new oracles that remains compatible with Input Settlers.
 
-Message submission and/or relaying is not defined and has to be created specifically for each oracle. The most important compatibility layer between fillers and oracles exists through the `IPayloadCreator.arePayloadsValid`.
+Message submission and/or relaying is not defined and has to be created specifically for each oracle. The most important compatibility layer between fillers and oracles exists through the `IAttester.hasAttested`.
 
 ### Bitcoin SPV (Light) Client
 

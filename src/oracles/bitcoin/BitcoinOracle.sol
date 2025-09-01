@@ -301,7 +301,7 @@ contract BitcoinOracle is BaseInputOracle {
     /**
      * @dev Allows oracles to verify we have confirmed payloads.
      */
-    function arePayloadsValid(
+    function hasAttested(
         bytes[] calldata payloads
     ) external view returns (bool accumulator) {
         accumulator = true;

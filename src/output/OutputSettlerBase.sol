@@ -4,9 +4,9 @@ pragma solidity ^0.8.26;
 import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 
+import { IAttester } from "../interfaces/IAttester.sol";
 import { IDestinationSettler } from "../interfaces/IERC7683.sol";
 import { IOutputCallback } from "../interfaces/IOutputCallback.sol";
-import { IPayloadCreator } from "../interfaces/IPayloadCreator.sol";
 
 import { AssemblyLib } from "../libs/AssemblyLib.sol";
 import { LibAddress } from "../libs/LibAddress.sol";
@@ -36,7 +36,7 @@ import { BaseInputOracle } from "../oracles/BaseInputOracle.sol";
  *    - Ensures atomic all-or-nothing batch filling
  *    - Use when you need to atomically claim an entire multi-output order
  */
-abstract contract OutputSettlerBase is IDestinationSettler, IPayloadCreator, BaseInputOracle {
+abstract contract OutputSettlerBase is IDestinationSettler, IAttester, BaseInputOracle {
     using OutputFillLib for bytes;
     using LibAddress for bytes32;
 
@@ -207,7 +207,7 @@ abstract contract OutputSettlerBase is IDestinationSettler, IPayloadCreator, Bas
         }
     }
 
-    // --- IPayloadCreator --- //
+    // --- IAttester --- //
 
     /**
      * @notice Helper function to check whether a payload is valid.
@@ -241,7 +241,7 @@ abstract contract OutputSettlerBase is IDestinationSettler, IPayloadCreator, Bas
     /**
      * @notice Returns whether a set of payloads have been approved by this contract.
      */
-    function arePayloadsValid(
+    function hasAttested(
         bytes[] calldata payloads
     ) external view returns (bool accumulator) {
         uint256 numPayloads = payloads.length;
@@ -276,12 +276,12 @@ abstract contract OutputSettlerBase is IDestinationSettler, IPayloadCreator, Bas
         bytes32 dataHash = keccak256(MandateOutputEncodingLib.encodeFillDescription(solver, orderId, timestamp, output));
 
         // Check that we set the mapping correctly.
-        bytes32 application = output.settler;
-        OutputVerificationLib._isThisOutputSettler(application);
+        bytes32 attester = output.settler;
+        OutputVerificationLib._isThisOutputSettler(attester);
         bytes32 oracle = output.oracle;
         OutputVerificationLib._isThisOutputOracle(oracle);
         uint256 chainId = output.chainId;
         OutputVerificationLib._isThisChain(chainId);
-        _attestations[chainId][application][oracle][dataHash] = true;
+        _attestations[chainId][attester][oracle][dataHash] = true;
     }
 }

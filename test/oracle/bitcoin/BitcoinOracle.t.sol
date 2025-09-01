@@ -913,7 +913,7 @@ contract BitcoinOracleTest is Test {
             MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, uint32(BLOCK_TIME), output);
         bytes[] memory payloads = new bytes[](1);
         payloads[0] = payload;
-        bool fillerValid = bitcoinOracle.arePayloadsValid(payloads);
+        bool fillerValid = bitcoinOracle.hasAttested(payloads);
         assertEq(fillerValid, true);
 
         // Check for a refund of collateral.
@@ -1069,7 +1069,7 @@ contract BitcoinOracleTest is Test {
             MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, uint32(BLOCK_TIME), output);
         bytes[] memory payloads = new bytes[](1);
         payloads[0] = payload;
-        bool fillerValid = bitcoinOracle.arePayloadsValid(payloads);
+        bool fillerValid = bitcoinOracle.hasAttested(payloads);
         assertEq(fillerValid, true);
     }
 
@@ -1277,7 +1277,7 @@ contract BitcoinOracleTest is Test {
             MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, uint32(BLOCK_TIME), output);
         bytes[] memory payloads = new bytes[](1);
         payloads[0] = payload;
-        bool fillerValid = bitcoinOracle.arePayloadsValid(payloads);
+        bool fillerValid = bitcoinOracle.hasAttested(payloads);
         assertEq(fillerValid, true);
     }
 
@@ -1477,7 +1477,7 @@ contract BitcoinOracleTest is Test {
             MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, uint32(PREV_BLOCK_TIME), output);
         bytes[] memory payloads = new bytes[](1);
         payloads[0] = payload;
-        bool fillerValid = bitcoinOracle.arePayloadsValid(payloads);
+        bool fillerValid = bitcoinOracle.hasAttested(payloads);
         assertEq(fillerValid, true);
     }
 
@@ -1575,7 +1575,7 @@ contract BitcoinOracleTest is Test {
             MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, uint32(BLOCK_TIME), output);
         bytes[] memory payloads = new bytes[](1);
         payloads[0] = payload;
-        bool fillerValid = bitcoinOracle.arePayloadsValid(payloads);
+        bool fillerValid = bitcoinOracle.hasAttested(payloads);
         assertEq(fillerValid, true);
     }
 

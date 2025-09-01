@@ -141,7 +141,7 @@ contract WormholeOracleTestSubmit is Test {
         oracle.submit{ value: val }(address(this), payloads);
     }
 
-    function arePayloadsValid(
+    function hasAttested(
         bytes[] calldata
     ) external pure returns (bool) {
         return true;
