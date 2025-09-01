@@ -276,12 +276,12 @@ abstract contract OutputSettlerBase is IDestinationSettler, IAttester, BaseInput
         bytes32 dataHash = keccak256(MandateOutputEncodingLib.encodeFillDescription(solver, orderId, timestamp, output));
 
         // Check that we set the mapping correctly.
-        bytes32 application = output.settler;
-        OutputVerificationLib._isThisOutputSettler(application);
+        bytes32 attester = output.settler;
+        OutputVerificationLib._isThisOutputSettler(attester);
         bytes32 oracle = output.oracle;
         OutputVerificationLib._isThisOutputOracle(oracle);
         uint256 chainId = output.chainId;
         OutputVerificationLib._isThisChain(chainId);
-        _attestations[chainId][application][oracle][dataHash] = true;
+        _attestations[chainId][attester][oracle][dataHash] = true;
     }
 }
