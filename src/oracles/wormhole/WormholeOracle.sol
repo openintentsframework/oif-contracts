@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { IPayloadCreator } from "../../interfaces/IPayloadCreator.sol";
+import { IAttester } from "../../interfaces/IAttester.sol";
 
 import { LibAddress } from "../../libs/LibAddress.sol";
 import { MessageEncodingLib } from "../../libs/MessageEncodingLib.sol";
@@ -43,7 +43,7 @@ contract WormholeOracle is ChainMap, BaseInputOracle, WormholeVerifier {
      * @return refund If too much value has been sent, the excess will be returned to msg.sender.
      */
     function submit(address source, bytes[] calldata payloads) public payable returns (uint256 refund) {
-        if (!IPayloadCreator(source).arePayloadsValid(payloads)) revert NotAllPayloadsValid();
+        if (!IAttester(source).arePayloadsValid(payloads)) revert NotAllPayloadsValid();
         return _submit(source, payloads);
     }
 

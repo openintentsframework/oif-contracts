@@ -6,7 +6,7 @@ import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 
 import { IDestinationSettler } from "../interfaces/IERC7683.sol";
 import { IOutputCallback } from "../interfaces/IOutputCallback.sol";
-import { IPayloadCreator } from "../interfaces/IPayloadCreator.sol";
+import { IAttester } from "../interfaces/IAttester.sol";
 
 import { AssemblyLib } from "../libs/AssemblyLib.sol";
 import { LibAddress } from "../libs/LibAddress.sol";
@@ -36,7 +36,7 @@ import { BaseInputOracle } from "../oracles/BaseInputOracle.sol";
  *    - Ensures atomic all-or-nothing batch filling
  *    - Use when you need to atomically claim an entire multi-output order
  */
-abstract contract OutputSettlerBase is IDestinationSettler, IPayloadCreator, BaseInputOracle {
+abstract contract OutputSettlerBase is IDestinationSettler, IAttester, BaseInputOracle {
     using OutputFillLib for bytes;
     using LibAddress for bytes32;
 
@@ -207,7 +207,7 @@ abstract contract OutputSettlerBase is IDestinationSettler, IPayloadCreator, Bas
         }
     }
 
-    // --- IPayloadCreator --- //
+    // --- IAttester --- //
 
     /**
      * @notice Helper function to check whether a payload is valid.

@@ -97,7 +97,7 @@ Otherwise, the fill interface is left undefined. It is generally expected that t
 
 Oracles are located in `src/oracles`. `src/oracles/BaseInputOracle.sol` provides a standardized attestation storage structure along with attestation lookup structures. This allows anyone to easily create new oracles that remains compatible with Input Settlers.
 
-Message submission and/or relaying is not defined and has to be created specifically for each oracle. The most important compatibility layer between fillers and oracles exists through the `IPayloadCreator.arePayloadsValid`.
+Message submission and/or relaying is not defined and has to be created specifically for each oracle. The most important compatibility layer between fillers and oracles exists through the `IAttester.arePayloadsValid`.
 
 ### Bitcoin SPV (Light) Client
 

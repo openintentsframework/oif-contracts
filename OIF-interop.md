@@ -92,7 +92,7 @@ This approach allows each validation interface to be implemented optimally. For 
 ```solidity
 /// @notice Example validation interface for broadcasting a set of payloads.
 function submit(address proofSource, bytes[] calldata payloads) external payable returns (uint256 refund) {
-    if (!IPayloadCreator(proofSource).arePayloadsValid(payloads)) revert NotAllPayloadsValid();
+    if (!IAttester(proofSource).arePayloadsValid(payloads)) revert NotAllPayloadsValid();
 
     return _submit(proofSource, payloads);
 }
