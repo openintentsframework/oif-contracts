@@ -22,6 +22,7 @@ import { IOutputCallback } from "../interfaces/IOutputCallback.sol";
  */
 contract CatsMulticallHandler is IInputCallback, IOutputCallback, ReentrancyGuard {
     using LibAddress for address;
+    using LibAddress for uint256;
     using LibAddress for bytes32;
 
     struct Call {
@@ -129,9 +130,7 @@ contract CatsMulticallHandler is IInputCallback, IOutputCallback, ReentrancyGuar
         // If there are leftover tokens, send them to the fallback recipient regardless of execution success.
         uint256 numInputs = inputs.length;
         for (uint256 i; i < numInputs; ++i) {
-            _drainRemainingTokens(
-                EfficiencyLib.asSanitizedAddress(inputs[i][0]), payable(instructions.fallbackRecipient)
-            );
+            _drainRemainingTokens(inputs[i][0].fromIdentifier(), payable(instructions.fallbackRecipient));
         }
     }
 
@@ -170,7 +169,7 @@ contract CatsMulticallHandler is IInputCallback, IOutputCallback, ReentrancyGuar
             uint256[2] calldata input = inputs[i];
             uint256 token = input[0];
             uint256 amount = input[1];
-            SafeERC20.forceApprove(IERC20(EfficiencyLib.asSanitizedAddress(token)), to, amount);
+            SafeERC20.forceApprove(IERC20(token.fromIdentifier()), to, amount);
         }
     }
 

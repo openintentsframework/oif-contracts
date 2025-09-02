@@ -25,6 +25,7 @@ import { InputSettlerBase } from "./InputSettlerBase.sol";
 abstract contract InputSettlerPurchase is InputSettlerBase {
     using LibAddress for address;
     using LibAddress for bytes32;
+    using LibAddress for uint256;
 
     error AlreadyPurchased();
     error Expired();
@@ -54,7 +55,7 @@ abstract contract InputSettlerPurchase is InputSettlerBase {
     function _orderOwnerIsCaller(
         bytes32 orderOwner
     ) internal view {
-        if (EfficiencyLib.asSanitizedAddress(uint256(orderOwner)) != msg.sender) revert NotOrderOwner();
+        if (orderOwner.fromIdentifier() != msg.sender) revert NotOrderOwner();
     }
 
     /**
@@ -140,7 +141,7 @@ abstract contract InputSettlerPurchase is InputSettlerBase {
                 uint256 amountAfterDiscount = (allocatedAmount * (DISCOUNT_DENOM - discount)) / DISCOUNT_DENOM;
                 // Throws if discount > DISCOUNT_DENOM => DISCOUNT_DENOM - discount < 0;
                 SafeERC20.safeTransferFrom(
-                    IERC20(EfficiencyLib.asSanitizedAddress(tokenId)), msg.sender, newDestination, amountAfterDiscount
+                    IERC20(tokenId.fromIdentifier()), msg.sender, newDestination, amountAfterDiscount
                 );
             }
             // Emit the event now because of stack issues.

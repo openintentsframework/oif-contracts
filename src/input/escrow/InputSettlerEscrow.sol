@@ -43,6 +43,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     using StandardOrderType for bytes;
     using StandardOrderType for StandardOrder;
     using LibAddress for bytes32;
+    using LibAddress for uint256;
 
     error InvalidOrderStatus();
     error OrderIdMismatch(bytes32 provided, bytes32 computed);
@@ -126,7 +127,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         uint256 numInputs = inputs.length;
         for (uint256 i = 0; i < numInputs; ++i) {
             uint256[2] calldata input = inputs[i];
-            address token = EfficiencyLib.asSanitizedAddress(input[0]);
+            address token = input[0].fromIdentifier();
             uint256 amount = input[1];
             SafeERC20.safeTransferFrom(IERC20(token), msg.sender, address(this), amount);
         }
@@ -255,7 +256,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
                 (signer, address(this), input[1], 0, fillDeadline, orderId, _signature_)
             );
             // The above calldata encoding is equivalent to:
-            // IERC3009(EfficiencyLib.asSanitizedAddress(input[0])).receiveWithAuthorization({
+            // IERC3009(input[0].fromIdentifier().receiveWithAuthorization({
             //     from: signer,
             //     to: address(this),
             //     value: input[1],
@@ -264,7 +265,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
             //     nonce: orderId,
             //     signature: _signature_
             // })
-            address token = EfficiencyLib.asSanitizedAddress(input[0]);
+            address token = input[0].fromIdentifier();
             IsContractLib.validateContainsCode(token); // Ensure called contract has code.
             (bool success,) = token.call(callData);
             if (success) return;
@@ -277,7 +278,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         for (uint256 i; i < numInputs; ++i) {
             uint256[2] calldata input = inputs[i];
             bytes calldata signature = BytesLib.getBytesOfArray(_signature_, i);
-            IERC3009(EfficiencyLib.asSanitizedAddress(input[0])).receiveWithAuthorization({
+            IERC3009(input[0].fromIdentifier()).receiveWithAuthorization({
                 from: signer,
                 to: address(this),
                 value: input[1],
@@ -355,9 +356,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
         _finalise(order, orderId, solvers[0], destination);
 
-        if (call.length > 0) {
-            IInputCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
-        }
+        if (call.length > 0) IInputCallback(destination.fromIdentifier()).orderFinalised(order.inputs, call);
     }
 
     /**
@@ -389,18 +388,14 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
             // Validate the external claimant with signature
             _validateDestination(destination);
-            _allowExternalClaimant(
-                orderId, EfficiencyLib.asSanitizedAddress(uint256(orderOwner)), destination, call, orderOwnerSignature
-            );
+            _allowExternalClaimant(orderId, orderOwner.fromIdentifier(), destination, call, orderOwnerSignature);
         }
 
         _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, timestamps, solvers);
 
         _finalise(order, orderId, solvers[0], destination);
 
-        if (call.length > 0) {
-            IInputCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
-        }
+        if (call.length > 0) IInputCallback(destination.fromIdentifier()).orderFinalised(order.inputs, call);
     }
 
     //--- Asset Lock & Escrow ---//
@@ -426,7 +421,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         uint256 numInputs = inputs.length;
         for (uint256 i; i < numInputs; ++i) {
             uint256[2] calldata input = inputs[i];
-            IERC20 token = IERC20(EfficiencyLib.asSanitizedAddress(input[0]));
+            IERC20 token = IERC20(input[0].fromIdentifier());
             uint256 amount = input[1];
 
             SafeERC20.safeTransfer(token, destination, amount);

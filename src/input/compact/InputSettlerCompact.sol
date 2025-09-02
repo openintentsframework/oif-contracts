@@ -14,6 +14,8 @@ import { IInputOracle } from "../../interfaces/IInputOracle.sol";
 import { IInputSettlerCompact } from "../../interfaces/IInputSettlerCompact.sol";
 
 import { BytesLib } from "../../libs/BytesLib.sol";
+
+import { LibAddress } from "../../libs/LibAddress.sol";
 import { MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 
 import { MandateOutput } from "../types/MandateOutputType.sol";
@@ -36,6 +38,8 @@ import { InputSettlerPurchase } from "../InputSettlerPurchase.sol";
  * The contract is intended to be entirely ownerless, permissionlessly deployable, and unstoppable.
  */
 contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
+    using LibAddress for bytes32;
+
     error UserCannotBeSettler();
     error OrderIdMismatch(bytes32 provided, bytes32 computed);
 
@@ -115,9 +119,7 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
 
         _finalise(order, signatures, orderId, solvers[0], destination);
 
-        if (call.length > 0) {
-            IInputCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
-        }
+        if (call.length > 0) IInputCallback(destination.fromIdentifier()).orderFinalised(order.inputs, call);
     }
 
     /**
@@ -149,17 +151,13 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
         bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
 
         // Validate the external claimant with signature
-        _allowExternalClaimant(
-            orderId, EfficiencyLib.asSanitizedAddress(uint256(orderOwner)), destination, call, orderOwnerSignature
-        );
+        _allowExternalClaimant(orderId, orderOwner.fromIdentifier(), destination, call, orderOwnerSignature);
 
         _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, timestamps, solvers);
 
         _finalise(order, signatures, orderId, solvers[0], destination);
 
-        if (call.length > 0) {
-            IInputCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
-        }
+        if (call.length > 0) IInputCallback(destination.fromIdentifier()).orderFinalised(order.inputs, call);
     }
 
     //--- The Compact & Resource Locks ---//
