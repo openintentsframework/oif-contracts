@@ -10,7 +10,7 @@ import { MessageEncodingLib } from "../../../src/libs/MessageEncodingLib.sol";
 import { WormholeOracle } from "../../../src/oracles/wormhole/WormholeOracle.sol";
 import "../../../src/oracles/wormhole/external/wormhole/Messages.sol";
 import "../../../src/oracles/wormhole/external/wormhole/Setters.sol";
-import { OutputSettlerCoin } from "../../../src/output/coin/OutputSettlerCoin.sol";
+import { OutputSettlerSimple } from "../../../src/output/simple/OutputSettlerSimple.sol";
 
 import { MockERC20 } from "../../mocks/MockERC20.sol";
 
@@ -34,7 +34,7 @@ contract ExportedMessages is Messages, Setters {
 contract WormholeOracleTestSubmit is Test {
     WormholeOracle oracle;
     ExportedMessages messages;
-    OutputSettlerCoin outputSettler;
+    OutputSettlerSimple outputSettler;
     MockERC20 token;
 
     uint256 expectedValueOnCall;
@@ -43,7 +43,7 @@ contract WormholeOracleTestSubmit is Test {
     function setUp() external {
         messages = new ExportedMessages();
         oracle = new WormholeOracle(address(this), address(messages));
-        outputSettler = new OutputSettlerCoin();
+        outputSettler = new OutputSettlerSimple();
 
         token = new MockERC20("TEST", "TEST", 18);
     }
@@ -72,24 +72,37 @@ contract WormholeOracleTestSubmit is Test {
         bytes32 orderId,
         bytes32 solverIdentifier
     ) public {
-        vm.assume(solverIdentifier != bytes32(0));
+        vm.assume(solverIdentifier != bytes32(0) && sender != address(0) && recipient != address(0));
 
         token.mint(sender, amount);
         vm.prank(sender);
         token.approve(address(outputSettler), amount);
 
-        MandateOutput memory output = MandateOutput({
-            oracle: bytes32(uint256(uint160(address(oracle)))),
-            settler: bytes32(uint256(uint160(address(outputSettler)))),
-            token: bytes32(abi.encode(address(token))),
-            amount: amount,
-            recipient: bytes32(abi.encode(recipient)),
-            chainId: uint32(block.chainid),
-            call: hex"",
-            context: hex""
-        });
+        bytes memory output = abi.encodePacked(
+            type(uint48).max, // fill deadline
+            bytes32(uint256(uint160(address(oracle)))), // oracle
+            bytes32(uint256(uint160(address(outputSettler)))), // settler
+            uint256(block.chainid), // chainId
+            bytes32(abi.encode(address(token))), // token
+            amount, // amount
+            bytes32(abi.encode(recipient)), // recipient
+            uint16(0), // call length
+            bytes(""), // call
+            uint16(0), // context length
+            bytes("") // context
+        );
+
+        bytes memory fillerData = abi.encodePacked(solverIdentifier);
+
         bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionMemory(
-            solverIdentifier, orderId, uint32(block.timestamp), output
+            solverIdentifier,
+            orderId,
+            uint32(block.timestamp),
+            bytes32(abi.encode(address(token))),
+            amount,
+            bytes32(abi.encode(recipient)),
+            bytes(""),
+            bytes("")
         );
         bytes[] memory payloads = new bytes[](1);
         payloads[0] = payload;
@@ -104,9 +117,10 @@ contract WormholeOracleTestSubmit is Test {
         );
 
         vm.prank(sender);
-        outputSettler.fill(type(uint32).max, orderId, output, solverIdentifier);
+        outputSettler.fill(orderId, output, fillerData);
 
-        bytes memory expectedPayload = this.encodeMessageCalldata(output.settler, payloads);
+        bytes memory expectedPayload =
+            this.encodeMessageCalldata(bytes32(uint256(uint160(address(outputSettler)))), payloads);
 
         vm.expectEmit();
         emit PackagePublished(0, expectedPayload, 15);
@@ -127,7 +141,7 @@ contract WormholeOracleTestSubmit is Test {
         oracle.submit{ value: val }(address(this), payloads);
     }
 
-    function arePayloadsValid(
+    function hasAttested(
         bytes[] calldata
     ) external pure returns (bool) {
         return true;

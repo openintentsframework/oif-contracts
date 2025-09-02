@@ -4,18 +4,10 @@ pragma solidity ^0.8.22;
 import { Test } from "forge-std/Test.sol";
 
 import { InputSettlerBase } from "../../src/input/InputSettlerBase.sol";
+import { EIP712 } from "openzeppelin/utils/cryptography/EIP712.sol";
 
 contract MockSettler is InputSettlerBase {
-    function _domainNameAndVersion()
-        internal
-        pure
-        virtual
-        override
-        returns (string memory name, string memory version)
-    {
-        name = "MockSettler";
-        version = "-1";
-    }
+    constructor() EIP712("MockSettler", "-1") { }
 
     function maxTimestamp(
         uint32[] calldata timestamps
