@@ -201,4 +201,10 @@ contract ERC7683EscrowAdapter is IOriginSettler {
 
         return _resolve(standardOrder);
     }
+
+    function refund(
+        StandardOrder calldata order
+    ) external {
+        _inputSettlerEscrow.refund(order);
+    }
 }

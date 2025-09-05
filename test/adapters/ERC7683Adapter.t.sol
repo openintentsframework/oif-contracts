@@ -321,7 +321,7 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
         emit InputSettlerEscrow.Refunded(orderId);
 
         // Do the refund
-        InputSettlerEscrow(inputSettlerEscrow).refund(order);
+        adapter.refund(order);
 
         // State
         assertEq(token.balanceOf(address(order.user)), amountBeforeRefund + amount);
