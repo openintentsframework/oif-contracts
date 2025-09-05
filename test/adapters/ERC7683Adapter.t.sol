@@ -58,7 +58,7 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
 
         OnchainCrossChainOrder memory onchainOrder = OnchainCrossChainOrder({
             fillDeadline: expires,
-            orderDataType: adapter.ORDER_DATA_TYPE(),
+            orderDataType: adapter.ONCHAIN_ORDER_DATA_TYPEHASH(),
             orderData: abi.encode(order)
         });
 
@@ -102,6 +102,13 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
 
         assertEq(token.balanceOf(address(swapper)), amount);
 
+        ERC7683EscrowAdapter.GaslessOrderData memory gaslessOrderData = ERC7683EscrowAdapter.GaslessOrderData({
+            expires: type(uint32).max,
+            inputOracle: address(0),
+            inputs: inputs,
+            outputs: outputs
+        });
+
         GaslessCrossChainOrder memory gaslessOrder = GaslessCrossChainOrder({
             originSettler: address(adapter),
             user: swapper,
@@ -109,8 +116,8 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
             originChainId: block.chainid,
             openDeadline: type(uint32).max,
             fillDeadline: type(uint32).max,
-            orderDataType: adapter.ORDER_DATA_TYPE(),
-            orderData: abi.encode(order)
+            orderDataType: adapter.GASLESS_ORDER_DATA_TYPEHASH(),
+            orderData: abi.encode(gaslessOrderData)
         });
 
         vm.prank(swapper);
@@ -145,6 +152,13 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
             outputs: outputs
         });
 
+        ERC7683EscrowAdapter.GaslessOrderData memory gaslessOrderData = ERC7683EscrowAdapter.GaslessOrderData({
+            expires: type(uint32).max,
+            inputOracle: address(0),
+            inputs: inputs,
+            outputs: outputs
+        });
+
         GaslessCrossChainOrder memory gaslessOrder = GaslessCrossChainOrder({
             originSettler: address(adapter),
             user: swapper,
@@ -152,8 +166,8 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
             originChainId: block.chainid,
             openDeadline: type(uint32).max,
             fillDeadline: type(uint32).max,
-            orderDataType: adapter.ORDER_DATA_TYPE(),
-            orderData: abi.encode(order)
+            orderDataType: adapter.GASLESS_ORDER_DATA_TYPEHASH(),
+            orderData: abi.encode(gaslessOrderData)
         });
 
         bytes memory signature = get3009Signature(swapperPrivateKey, inputSettlerEscrow, 0, order);
@@ -193,6 +207,13 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
             outputs: outputs
         });
 
+        ERC7683EscrowAdapter.GaslessOrderData memory gaslessOrderData = ERC7683EscrowAdapter.GaslessOrderData({
+            expires: type(uint32).max,
+            inputOracle: address(0),
+            inputs: inputs,
+            outputs: outputs
+        });
+
         GaslessCrossChainOrder memory gaslessOrder = GaslessCrossChainOrder({
             originSettler: address(adapter),
             user: swapper,
@@ -200,8 +221,8 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
             originChainId: block.chainid,
             openDeadline: type(uint32).max,
             fillDeadline: type(uint32).max,
-            orderDataType: adapter.ORDER_DATA_TYPE(),
-            orderData: abi.encode(order)
+            orderDataType: adapter.GASLESS_ORDER_DATA_TYPEHASH(),
+            orderData: abi.encode(gaslessOrderData)
         });
 
         bytes memory signature = get3009Signature(swapperPrivateKey, inputSettlerEscrow, 0, order);
@@ -254,6 +275,13 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
         assertEq(token.balanceOf(address(swapper)), amount1);
         assertEq(anotherToken.balanceOf(address(swapper)), amount2);
 
+        ERC7683EscrowAdapter.GaslessOrderData memory gaslessOrderData = ERC7683EscrowAdapter.GaslessOrderData({
+            expires: type(uint32).max,
+            inputOracle: address(0),
+            inputs: inputs,
+            outputs: outputs
+        });
+
         GaslessCrossChainOrder memory gaslessOrder = GaslessCrossChainOrder({
             originSettler: address(adapter),
             user: swapper,
@@ -261,8 +289,8 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
             originChainId: block.chainid,
             openDeadline: type(uint32).max,
             fillDeadline: type(uint32).max,
-            orderDataType: adapter.ORDER_DATA_TYPE(),
-            orderData: abi.encode(order)
+            orderDataType: adapter.GASLESS_ORDER_DATA_TYPEHASH(),
+            orderData: abi.encode(gaslessOrderData)
         });
 
         vm.prank(swapper);
@@ -341,7 +369,7 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
         });
         OnchainCrossChainOrder memory onchainOrder = OnchainCrossChainOrder({
             fillDeadline: type(uint32).max,
-            orderDataType: adapter.ORDER_DATA_TYPE(),
+            orderDataType: adapter.ONCHAIN_ORDER_DATA_TYPEHASH(),
             orderData: abi.encode(order)
         });
 
@@ -421,7 +449,7 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
 
         OnchainCrossChainOrder memory onchainOrder = OnchainCrossChainOrder({
             fillDeadline: fillDeadline,
-            orderDataType: adapter.ORDER_DATA_TYPE(),
+            orderDataType: adapter.ONCHAIN_ORDER_DATA_TYPEHASH(),
             orderData: abi.encode(order)
         });
 
@@ -482,7 +510,7 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
 
         OnchainCrossChainOrder memory onchainOrder = OnchainCrossChainOrder({
             fillDeadline: type(uint32).max,
-            orderDataType: adapter.ORDER_DATA_TYPE(),
+            orderDataType: adapter.ONCHAIN_ORDER_DATA_TYPEHASH(),
             orderData: abi.encode(order)
         });
 

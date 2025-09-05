@@ -4,6 +4,7 @@ pragma solidity ^0.8.26;
 import { InputSettlerEscrow } from "../input/escrow/InputSettlerEscrow.sol";
 import { StandardOrder, StandardOrderType } from "../input/types/StandardOrderType.sol";
 
+import { MandateOutput } from "../input/types/MandateOutputType.sol";
 import {
     FillInstruction,
     GaslessCrossChainOrder,
@@ -33,10 +34,21 @@ contract ERC7683EscrowAdapter is IOriginSettler {
     error InvalidOrderDataType();
     error InvalidOrderDeadline();
     error InvalidOriginFillerData();
+    error InvalidOriginSettler();
 
-    bytes32 public constant ORDER_DATA_TYPE = keccak256(
+    struct GaslessOrderData {
+        uint32 expires;
+        address inputOracle;
+        uint256[2][] inputs;
+        MandateOutput[] outputs;
+    }
+
+    bytes32 public constant ONCHAIN_ORDER_DATA_TYPEHASH = keccak256(
         "StandardOrder(address user,uint256 nonce,uint256 originChainId,uint32 expires,uint32 fillDeadline,address inputOracle,uint256[2][] inputs,MandateOutput[] outputs)"
     );
+
+    bytes32 public constant GASLESS_ORDER_DATA_TYPEHASH =
+        keccak256("GaslessOrderData(uint32 expires,address inputOracle,uint256[2][] inputs,MandateOutput[] outputs)");
 
     event Open(bytes32 indexed orderId, ResolvedCrossChainOrder resolvedOrder);
 
@@ -66,11 +78,21 @@ contract ERC7683EscrowAdapter is IOriginSettler {
         bytes calldata originFillerData
     ) external {
         if (originFillerData.length > 0) revert InvalidOriginFillerData();
-        if (order.orderDataType != ORDER_DATA_TYPE) revert InvalidOrderDataType();
+        if (order.orderDataType != GASLESS_ORDER_DATA_TYPEHASH) revert InvalidOrderDataType();
+        if (order.originSettler != address(this)) revert InvalidOriginSettler();
 
-        StandardOrder memory standardOrder = abi.decode(order.orderData, (StandardOrder));
+        GaslessOrderData memory gaslessOrderData = abi.decode(order.orderData, (GaslessOrderData));
 
-        if (standardOrder.fillDeadline != order.fillDeadline) revert InvalidOrderDeadline();
+        StandardOrder memory standardOrder = StandardOrder({
+            user: order.user,
+            nonce: order.nonce,
+            originChainId: order.originChainId,
+            expires: gaslessOrderData.expires,
+            fillDeadline: order.fillDeadline,
+            inputOracle: gaslessOrderData.inputOracle,
+            inputs: gaslessOrderData.inputs,
+            outputs: gaslessOrderData.outputs
+        });
 
         _inputSettlerEscrow.openFor(abi.encode(standardOrder), order.user, signature);
 
@@ -82,7 +104,7 @@ contract ERC7683EscrowAdapter is IOriginSettler {
     function open(
         OnchainCrossChainOrder calldata order
     ) external {
-        if (order.orderDataType != ORDER_DATA_TYPE) revert InvalidOrderDataType();
+        if (order.orderDataType != ONCHAIN_ORDER_DATA_TYPEHASH) revert InvalidOrderDataType();
         StandardOrder memory standardOrder = abi.decode(order.orderData, (StandardOrder));
 
         if (standardOrder.fillDeadline != order.fillDeadline) revert InvalidOrderDeadline();
@@ -151,7 +173,7 @@ contract ERC7683EscrowAdapter is IOriginSettler {
     function resolve(
         OnchainCrossChainOrder calldata order
     ) external view returns (ResolvedCrossChainOrder memory) {
-        if (order.orderDataType != ORDER_DATA_TYPE) revert InvalidOrderDataType();
+        if (order.orderDataType != ONCHAIN_ORDER_DATA_TYPEHASH) revert InvalidOrderDataType();
         StandardOrder memory standardOrder = abi.decode(order.orderData, (StandardOrder));
 
         return _resolve(standardOrder);
@@ -162,7 +184,7 @@ contract ERC7683EscrowAdapter is IOriginSettler {
         bytes calldata originFillerData
     ) external view returns (ResolvedCrossChainOrder memory) {
         if (originFillerData.length > 0) revert InvalidOriginFillerData();
-        if (order.orderDataType != ORDER_DATA_TYPE) revert InvalidOrderDataType();
+        if (order.orderDataType != ONCHAIN_ORDER_DATA_TYPEHASH) revert InvalidOrderDataType();
         StandardOrder memory standardOrder = abi.decode(order.orderData, (StandardOrder));
 
         if (standardOrder.fillDeadline != order.fillDeadline) revert InvalidOrderDeadline();
