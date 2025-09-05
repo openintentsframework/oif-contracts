@@ -63,6 +63,9 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
         });
 
         assertEq(token.balanceOf(address(user)), amount);
+        vm.expectCall(
+            address(inputSettlerEscrow), abi.encodeWithSelector(IInputSettlerEscrow.open.selector, abi.encode(order))
+        );
         vm.prank(user);
         adapter.open(onchainOrder);
 
@@ -120,6 +123,15 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
             orderData: abi.encode(gaslessOrderData)
         });
 
+        vm.expectCall(
+            address(inputSettlerEscrow),
+            abi.encodeWithSelector(
+                IInputSettlerEscrow.openFor.selector,
+                abi.encode(order),
+                swapper,
+                abi.encodePacked(bytes1(0x00), signature)
+            )
+        );
         vm.prank(swapper);
         adapter.openFor(gaslessOrder, abi.encodePacked(bytes1(0x00), signature), bytes(""));
 
@@ -174,6 +186,15 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
 
         assertEq(token.balanceOf(address(swapper)), amount);
 
+        vm.expectCall(
+            address(inputSettlerEscrow),
+            abi.encodeWithSelector(
+                IInputSettlerEscrow.openFor.selector,
+                abi.encode(order),
+                swapper,
+                abi.encodePacked(bytes1(0x01), signature)
+            )
+        );
         vm.prank(swapper);
         adapter.openFor(gaslessOrder, abi.encodePacked(bytes1(0x01), signature), bytes(""));
 
@@ -230,6 +251,15 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
         signatures[0] = signature;
 
         assertEq(token.balanceOf(address(swapper)), amount);
+        vm.expectCall(
+            address(inputSettlerEscrow),
+            abi.encodeWithSelector(
+                IInputSettlerEscrow.openFor.selector,
+                abi.encode(order),
+                swapper,
+                abi.encodePacked(bytes1(0x01), abi.encode(signatures))
+            )
+        );
         vm.prank(swapper);
         adapter.openFor(gaslessOrder, abi.encodePacked(bytes1(0x01), abi.encode(signatures)), bytes(""));
 
@@ -293,6 +323,15 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
             orderData: abi.encode(gaslessOrderData)
         });
 
+        vm.expectCall(
+            address(inputSettlerEscrow),
+            abi.encodeWithSelector(
+                IInputSettlerEscrow.openFor.selector,
+                abi.encode(order),
+                swapper,
+                abi.encodePacked(bytes1(0x01), abi.encode(signatures))
+            )
+        );
         vm.prank(swapper);
         adapter.openFor(gaslessOrder, abi.encodePacked(bytes1(0x01), abi.encode(signatures)), bytes(""));
 
@@ -329,6 +368,30 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
 
         status = adapter.orderStatus(orderId);
         assertEq(uint8(status), uint8(InputSettlerEscrow.OrderStatus.Refunded));
+    }
+
+    function test_open_for_fillerData_reverts() public {
+        GaslessCrossChainOrder memory gaslessOrder;
+
+        bytes memory notEmptyFillerData = bytes("not empty");
+
+        vm.expectRevert(abi.encodeWithSelector(ERC7683EscrowAdapter.InvalidOriginFillerData.selector));
+        adapter.openFor(gaslessOrder, abi.encodePacked(bytes1(0x01), bytes("")), notEmptyFillerData);
+    }
+
+    function test_open_for_orderDataType_reverts() public {
+        GaslessCrossChainOrder memory gaslessOrder;
+
+        vm.expectRevert(abi.encodeWithSelector(ERC7683EscrowAdapter.InvalidOrderDataType.selector));
+        adapter.openFor(gaslessOrder, abi.encodePacked(bytes1(0x01), bytes("")), bytes(""));
+    }
+
+    function test_open_for_originSettler_reverts() public {
+        GaslessCrossChainOrder memory gaslessOrder;
+        gaslessOrder.orderDataType = adapter.GASLESS_ORDER_DATA_TYPEHASH();
+
+        vm.expectRevert(abi.encodeWithSelector(ERC7683EscrowAdapter.InvalidOriginSettler.selector));
+        adapter.openFor(gaslessOrder, abi.encodePacked(bytes1(0x01), bytes("")), bytes(""));
     }
 
     /// forge-config: default.isolate = true
@@ -376,6 +439,9 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
         // Deposit into the escrow
         vm.prank(swapper);
         token.approve(address(adapter), amount);
+        vm.expectCall(
+            address(inputSettlerEscrow), abi.encodeWithSelector(IInputSettlerEscrow.open.selector, abi.encode(order))
+        );
         vm.prank(swapper);
         adapter.open(onchainOrder);
 
@@ -456,6 +522,9 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
         // Deposit into the escrow
         vm.prank(swapper);
         token.approve(address(adapter), amount);
+        vm.expectCall(
+            address(inputSettlerEscrow), abi.encodeWithSelector(IInputSettlerEscrow.open.selector, abi.encode(order))
+        );
         vm.prank(swapper);
         adapter.open(onchainOrder);
 
@@ -517,6 +586,9 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
         // Deposit into the escrow
         vm.prank(swapper);
         token.approve(address(adapter), amount);
+        vm.expectCall(
+            address(inputSettlerEscrow), abi.encodeWithSelector(IInputSettlerEscrow.open.selector, abi.encode(order))
+        );
         vm.prank(swapper);
         adapter.open(onchainOrder);
 
