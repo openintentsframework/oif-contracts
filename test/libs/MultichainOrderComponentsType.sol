@@ -21,16 +21,19 @@ contract MultichainOrderComponentTypeTest is Test {
         uint256[2][] inputs;
     }
 
-    function discardIndex(uint256 index, bytes32[] memory arr) pure internal returns (bytes32[] memory newArr) {
+    function discardIndex(uint256 index, bytes32[] memory arr) internal pure returns (bytes32[] memory newArr) {
         newArr = new bytes32[](arr.length - 1);
         for (uint256 i; i < arr.length; ++i) {
             if (i == index) continue;
             newArr[index < i ? i - 1 : i] = arr[i];
         }
     }
-    
+
     /// @dev Test a documentation assertion that hashInputs is keccak256(abi.encodePacked(chainId, idsAndAmounts))
-    function test_hashInputs_eq_keccak256_abi_encode(uint256 chainId, uint256[2][] calldata idsAndAmounts) external pure {
+    function test_hashInputs_eq_keccak256_abi_encode(
+        uint256 chainId,
+        uint256[2][] calldata idsAndAmounts
+    ) external pure {
         bytes32 functionHash = MultichainOrderComponentType.hashInputs(chainId, idsAndAmounts);
         bytes32 assumedEqualTo = keccak256(abi.encodePacked(chainId, idsAndAmounts));
         assertEq(functionHash, assumedEqualTo);
