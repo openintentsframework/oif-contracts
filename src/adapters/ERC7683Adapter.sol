@@ -184,8 +184,18 @@ contract ERC7683EscrowAdapter is IOriginSettler {
         bytes calldata originFillerData
     ) external view returns (ResolvedCrossChainOrder memory) {
         if (originFillerData.length > 0) revert InvalidOriginFillerData();
-        if (order.orderDataType != ONCHAIN_ORDER_DATA_TYPEHASH) revert InvalidOrderDataType();
-        StandardOrder memory standardOrder = abi.decode(order.orderData, (StandardOrder));
+        if (order.orderDataType != GASLESS_ORDER_DATA_TYPEHASH) revert InvalidOrderDataType();
+        GaslessOrderData memory gaslessOrderData = abi.decode(order.orderData, (GaslessOrderData));
+        StandardOrder memory standardOrder = StandardOrder({
+            user: order.user,
+            nonce: order.nonce,
+            originChainId: order.originChainId,
+            expires: gaslessOrderData.expires,
+            fillDeadline: order.fillDeadline,
+            inputOracle: gaslessOrderData.inputOracle,
+            inputs: gaslessOrderData.inputs,
+            outputs: gaslessOrderData.outputs
+        });
 
         if (standardOrder.fillDeadline != order.fillDeadline) revert InvalidOrderDeadline();
 
