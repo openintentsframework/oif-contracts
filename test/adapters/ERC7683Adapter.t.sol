@@ -65,7 +65,6 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
         assertEq(token.balanceOf(address(user)), amount);
         vm.prank(user);
         adapter.open(onchainOrder);
-        vm.snapshotGasLastCall("adapter7683", "escrowOpen");
 
         assertEq(token.balanceOf(address(user)), 0);
         assertEq(token.balanceOf(inputSettlerEscrow), amount);
@@ -116,7 +115,6 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
 
         vm.prank(swapper);
         adapter.openFor(gaslessOrder, abi.encodePacked(bytes1(0x00), signature), bytes(""));
-        vm.snapshotGasLastCall("adapter7683", "escrowOpenForPermit2");
 
         assertEq(token.balanceOf(address(swapper)), 0);
         assertEq(token.balanceOf(inputSettlerEscrow), amount);
@@ -164,7 +162,6 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
 
         vm.prank(swapper);
         adapter.openFor(gaslessOrder, abi.encodePacked(bytes1(0x01), signature), bytes(""));
-        vm.snapshotGasLastCall("adapter7683", "escrowOpenFor3009Single");
 
         assertEq(token.balanceOf(address(swapper)), 0);
         assertEq(token.balanceOf(inputSettlerEscrow), amount);
@@ -214,7 +211,6 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
         assertEq(token.balanceOf(address(swapper)), amount);
         vm.prank(swapper);
         adapter.openFor(gaslessOrder, abi.encodePacked(bytes1(0x01), abi.encode(signatures)), bytes(""));
-        vm.snapshotGasLastCall("adapter7683", "escrowOpenFor3009SingleAsArray");
 
         assertEq(token.balanceOf(address(swapper)), 0);
         assertEq(token.balanceOf(inputSettlerEscrow), amount);
@@ -271,7 +267,6 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
 
         vm.prank(swapper);
         adapter.openFor(gaslessOrder, abi.encodePacked(bytes1(0x01), abi.encode(signatures)), bytes(""));
-        vm.snapshotGasLastCall("adapter7683", "escrowOpenFor3009TwoAsArray");
 
         assertEq(token.balanceOf(address(swapper)), 0);
         assertEq(token.balanceOf(inputSettlerEscrow), amount1);
@@ -299,7 +294,6 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
 
         // Do the refund
         InputSettlerEscrow(inputSettlerEscrow).refund(order);
-        vm.snapshotGasLastCall("adapter7683", "escrowRefund");
 
         // State
         assertEq(token.balanceOf(address(order.user)), amountBeforeRefund + amount);
@@ -389,7 +383,6 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
 
         vm.prank(solver);
         IInputSettlerEscrow(inputSettlerEscrow).finalise(order, timestamps, solvers, solver.toIdentifier(), hex"");
-        vm.snapshotGasLastCall("adapter7683", "EscrowFinalise");
 
         assertEq(token.balanceOf(solver), amount);
     }
@@ -529,7 +522,6 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
         IInputSettlerEscrow(inputSettlerEscrow).finaliseWithSignature(
             order, timestamps, solvers, destination.toIdentifier(), hex"", orderOwnerSignature
         );
-        vm.snapshotGasLastCall("adapter7683", "escrowFinaliseWithSignature");
 
         assertEq(token.balanceOf(destination), amount);
     }

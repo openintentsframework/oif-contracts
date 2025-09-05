@@ -19,7 +19,10 @@ import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 
 /**
- * @title Adapter for the InputSettlerEscrow contract using the ERC7683 interface.
+ * @title ERC7683EscrowAdapter
+ * @notice Adapter contract that implements the ERC7683 interface for the InputSettlerEscrow contract.
+ * @dev This adapter bridges the Open Intents Framework (OIF) with the ERC7683 standard for cross-chain order
+ * settlement.
  */
 contract ERC7683EscrowAdapter is IOriginSettler {
     using StandardOrderType for bytes;
