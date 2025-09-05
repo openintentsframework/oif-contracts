@@ -21,7 +21,7 @@ import { WormholeOracle } from "../../../src/oracles/wormhole/WormholeOracle.sol
 import { Messages } from "../../../src/oracles/wormhole/external/wormhole/Messages.sol";
 import { Setters } from "../../../src/oracles/wormhole/external/wormhole/Setters.sol";
 import { Structs } from "../../../src/oracles/wormhole/external/wormhole/Structs.sol";
-import { OutputSettlerCoin } from "../../../src/output/coin/OutputSettlerCoin.sol";
+import { OutputSettlerSimple } from "../../../src/output/simple/OutputSettlerSimple.sol";
 
 import { AlwaysYesOracle } from "../../mocks/AlwaysYesOracle.sol";
 import { MockERC20 } from "../../mocks/MockERC20.sol";
@@ -49,7 +49,7 @@ contract ExportedMessages is Messages, Setters {
 
 contract InputSettlerCompactTestBase is Test {
     address inputSettlerCompact;
-    OutputSettlerCoin outputSettlerCoin;
+    OutputSettlerSimple outputSettlerCoin;
 
     // Oracles
     address alwaysYesOracle;
@@ -90,7 +90,7 @@ contract InputSettlerCompactTestBase is Test {
         DOMAIN_SEPARATOR = EIP712(address(theCompact)).DOMAIN_SEPARATOR();
 
         inputSettlerCompact = address(new InputSettlerCompact(address(theCompact)));
-        outputSettlerCoin = new OutputSettlerCoin();
+        outputSettlerCoin = new OutputSettlerSimple();
         alwaysYesOracle = address(new AlwaysYesOracle());
 
         token = new MockERC20("Mock ERC20", "MOCK", 18);
@@ -162,7 +162,7 @@ contract InputSettlerCompactTestBase is Test {
                     abi.encode(
                         keccak256(
                             bytes(
-                                "BatchCompact(address arbiter,address sponsor,uint256 nonce,uint256 expires,Lock[] commitments,Mandate mandate)Lock(bytes12 lockTag,address token,uint256 amount)Mandate(uint32 fillDeadline,address localOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
+                                "BatchCompact(address arbiter,address sponsor,uint256 nonce,uint256 expires,Lock[] commitments,Mandate mandate)Lock(bytes12 lockTag,address token,uint256 amount)Mandate(uint32 fillDeadline,address inputOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
                             )
                         ),
                         arbiter,
@@ -187,11 +187,11 @@ contract InputSettlerCompactTestBase is Test {
             abi.encode(
                 keccak256(
                     bytes(
-                        "Mandate(uint32 fillDeadline,address localOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
+                        "Mandate(uint32 fillDeadline,address inputOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
                     )
                 ),
                 order.fillDeadline,
-                order.localOracle,
+                order.inputOracle,
                 outputsHash(order.outputs)
             )
         );

@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { Ownable } from "solady/auth/Ownable.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-
-import { IPayloadCreator } from "../../interfaces/IPayloadCreator.sol";
+import { IAttester } from "../../interfaces/IAttester.sol";
 
 import { LibAddress } from "../../libs/LibAddress.sol";
 import { MessageEncodingLib } from "../../libs/MessageEncodingLib.sol";
 
-import { BaseOracle } from "../BaseOracle.sol";
+import { BaseInputOracle } from "../BaseInputOracle.sol";
 import { ChainMap } from "../ChainMap.sol";
 
 import { WormholeVerifier } from "./external/callworm/WormholeVerifier.sol";
@@ -22,10 +19,11 @@ import { IWormhole } from "./interfaces/IWormhole.sol";
  * @dev The contract is mostly trustless but requires someone to translate Wormhole chainIds into
  * proper chainIds. These maps once set are immutable and trustless.
  */
-contract WormholeOracle is ChainMap, BaseOracle, WormholeVerifier {
+contract WormholeOracle is ChainMap, BaseInputOracle, WormholeVerifier {
     using LibAddress for address;
 
     error NotAllPayloadsValid();
+    error RefundFailed();
 
     /// @dev Wormhole generally defines 15 to be equal to Finality
     uint8 constant WORMHOLE_CONSISTENCY = 15;
@@ -45,7 +43,7 @@ contract WormholeOracle is ChainMap, BaseOracle, WormholeVerifier {
      * @return refund If too much value has been sent, the excess will be returned to msg.sender.
      */
     function submit(address source, bytes[] calldata payloads) public payable returns (uint256 refund) {
-        if (!IPayloadCreator(source).arePayloadsValid(payloads)) revert NotAllPayloadsValid();
+        if (!IAttester(source).hasAttested(payloads)) revert NotAllPayloadsValid();
         return _submit(source, payloads);
     }
 
@@ -66,7 +64,8 @@ contract WormholeOracle is ChainMap, BaseOracle, WormholeVerifier {
         // Refund excess value if any.
         if (msg.value > packageCost) {
             refund = msg.value - packageCost;
-            SafeTransferLib.safeTransferETH(msg.sender, refund);
+            (bool success,) = msg.sender.call{ value: refund }("");
+            if (!success) revert RefundFailed();
         }
     }
 

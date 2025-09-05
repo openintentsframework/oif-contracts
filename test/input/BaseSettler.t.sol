@@ -12,22 +12,10 @@ import { OrderPurchase, OrderPurchaseType } from "../../src/input/types/OrderPur
 import { StandardOrder } from "../../src/input/types/StandardOrderType.sol";
 import { LibAddress } from "../../src/libs/LibAddress.sol";
 import { MandateOutputEncodingLib } from "../../src/libs/MandateOutputEncodingLib.sol";
-
-interface EIP712 {
-    function DOMAIN_SEPARATOR() external view returns (bytes32);
-}
+import { EIP712 } from "openzeppelin/utils/cryptography/EIP712.sol";
 
 contract MockSettler is InputSettlerPurchase {
-    function _domainNameAndVersion()
-        internal
-        pure
-        virtual
-        override
-        returns (string memory name, string memory version)
-    {
-        name = "MockSettler";
-        version = "-1";
-    }
+    constructor() EIP712("MockSettler", "-1") { }
 
     function purchaseGetOrderOwner(
         bytes32 orderId,
@@ -50,13 +38,13 @@ contract MockSettler is InputSettlerPurchase {
 
     function validateFills(
         uint32 fillDeadline,
-        address localOracle,
+        address inputOracle,
         MandateOutput[] calldata outputs,
         bytes32 orderId,
         uint32[] calldata timestamps,
         bytes32[] calldata solvers
     ) external view {
-        _validateFills(fillDeadline, localOracle, outputs, orderId, timestamps, solvers);
+        _validateFills(fillDeadline, inputOracle, outputs, orderId, timestamps, solvers);
     }
 }
 
@@ -89,7 +77,7 @@ contract BaseInputSettlerTest is Test {
 
     function setUp() public virtual {
         settler = new MockSettler();
-        DOMAIN_SEPARATOR = EIP712(address(settler)).DOMAIN_SEPARATOR();
+        DOMAIN_SEPARATOR = MockSettler(address(settler)).DOMAIN_SEPARATOR();
 
         token = new MockERC20("Mock ERC20", "MOCK", 18);
         anotherToken = new MockERC20("Mock2 ERC20", "MOCK2", 18);
@@ -184,12 +172,12 @@ contract BaseInputSettlerTest is Test {
             originChainId: 0, // not used.
             expires: 0, // not used
             fillDeadline: type(uint32).max,
-            localOracle: address(this),
+            inputOracle: address(this),
             inputs: new uint256[2][](0), // not used
             outputs: MandateOutputs
         });
 
-        settler.validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, timestamps, solvers);
+        settler.validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, timestamps, solvers);
         vm.snapshotGasLastCall("inputSettler", "validate2Fills");
     }
 
@@ -269,12 +257,12 @@ contract BaseInputSettlerTest is Test {
             originChainId: 0, // not used.
             expires: 0, // not used
             fillDeadline: type(uint32).max,
-            localOracle: address(this),
+            inputOracle: address(this),
             inputs: new uint256[2][](0), // not used
             outputs: MandateOutputs
         });
 
-        settler.validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, timestamps, solvers);
+        settler.validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, timestamps, solvers);
         vm.snapshotGasLastCall("inputSettler", "validate2FillsMultipleSolvers");
     }
 

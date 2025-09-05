@@ -1,20 +1,24 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 
-import { IOIFCallback } from "../interfaces/IOIFCallback.sol";
-import { IPayloadCreator } from "../interfaces/IPayloadCreator.sol";
+import { IAttester } from "../interfaces/IAttester.sol";
+import { IDestinationSettler } from "../interfaces/IERC7683.sol";
+import { IOutputCallback } from "../interfaces/IOutputCallback.sol";
 
+import { AssemblyLib } from "../libs/AssemblyLib.sol";
 import { LibAddress } from "../libs/LibAddress.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../libs/MandateOutputEncodingLib.sol";
+import { OutputFillLib } from "../libs/OutputFillLib.sol";
 import { OutputVerificationLib } from "../libs/OutputVerificationLib.sol";
 
-import { BaseOracle } from "../oracles/BaseOracle.sol";
+import { BaseInputOracle } from "../oracles/BaseInputOracle.sol";
 
 /**
  * @notice Base Output Settler implementing logic for settling outputs.
- * Does not support native coins.
+ * Does not support native tokens
  * This base output settler implements logic to work as both a PayloadCreator (for oracles) and as an oracle itself.
  *
  * @dev **Fill Function Patterns:**
@@ -31,28 +35,19 @@ import { BaseOracle } from "../oracles/BaseOracle.sol";
  *    - Reverts if first output already filled by different solver
  *    - Ensures atomic all-or-nothing batch filling
  *    - Use when you need to atomically claim an entire multi-output order
- *
- * Choose the appropriate pattern based on your use case requirements.
  */
-abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
-    using LibAddress for address;
+abstract contract OutputSettlerBase is IDestinationSettler, IAttester, BaseInputOracle {
+    using OutputFillLib for bytes;
+    using LibAddress for bytes32;
 
+    /// @dev Fill deadline has passed
     error FillDeadline();
+    /// @dev Attempting to fill an output that has already been filled by a different solver
     error AlreadyFilled();
+    /// @dev Oracle attestation doesn't match stored fill record
     error InvalidAttestation(bytes32 storedFillRecordHash, bytes32 givenFillRecordHash);
-    error ZeroValue();
+    /// @dev Payload is too small to be a valid fill description
     error PayloadTooSmall();
-
-    /**
-     * @dev Validates that the fill deadline has not passed.
-     * @param fillDeadline The deadline timestamp to check against.
-     */
-    modifier checkFillDeadline(
-        uint32 fillDeadline
-    ) {
-        if (fillDeadline < block.timestamp) revert FillDeadline();
-        _;
-    }
 
     /**
      * @notice Sets outputs as filled by their solver identifier, such that outputs won't be filled twice.
@@ -60,105 +55,124 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
     mapping(bytes32 orderId => mapping(bytes32 outputHash => bytes32 payloadHash)) internal _fillRecords;
 
     /**
-     * @notice Output has been filled.
+     * @notice Emitted when an output is successfully filled.
      */
-    event OutputFilled(
-        bytes32 indexed orderId, bytes32 solver, uint32 timestamp, MandateOutput output, uint256 finalAmount
-    );
+    event OutputFilled(bytes32 indexed orderId, bytes32 solver, uint32 timestamp, bytes output, uint256 finalAmount);
 
+    /**
+     * @dev Computes the fill record hash for a given solver and timestamp.
+     * @param solver The address of the solver.
+     * @param timestamp The timestamp when the fill occurred.
+     * @return fillRecordHash The computed hash used to track fills.
+     */
     function _getFillRecordHash(bytes32 solver, uint32 timestamp) internal pure returns (bytes32 fillRecordHash) {
         fillRecordHash = keccak256(abi.encodePacked(solver, timestamp));
     }
 
+    /**
+     * @dev Retrieves the fill record for a specific order output by hash.
+     * @param orderId The unique identifier of the order.
+     * @param outputHash The hash of the output to check.
+     * @return payloadHash The fill record hash if the output has been filled, zero otherwise.
+     */
     function getFillRecord(bytes32 orderId, bytes32 outputHash) public view returns (bytes32 payloadHash) {
         payloadHash = _fillRecords[orderId][outputHash];
     }
 
+    /**
+     * @dev Retrieves the fill record for a specific order output by MandateOutput struct.
+     * @param orderId The unique identifier of the order.
+     * @param output The MandateOutput struct to check.
+     * @return payloadHash The fill record hash if the output has been filled, zero otherwise.
+     */
     function getFillRecord(bytes32 orderId, MandateOutput calldata output) public view returns (bytes32 payloadHash) {
         payloadHash = _fillRecords[orderId][MandateOutputEncodingLib.getMandateOutputHash(output)];
     }
-
     /**
-     * @dev Virtual function for extensions to implement output resolution logic.
-     * @param output The given output to resolve.
-     * @param proposedSolver The proposed solver to check exclusivity against.
-     * @return amount The computed amount for the output.
-     */
-    function _resolveOutput(
-        MandateOutput calldata output,
-        bytes32 proposedSolver
-    ) internal view virtual returns (uint256 amount) {
-        // Default implementation returns the output amount
-        return output.amount;
-    }
-
-    /**
-     * @notice Performs basic validation and fills output if unfilled.
+     * @dev Performs basic validation and fills output if unfilled.
      * If an order has already been filled given the output & fillDeadline, then this function does not "re"fill the
      * order but returns early.
-     * @dev This fill function links the fill to the outcome of the external call. If the external call cannot execute,
+     * @dev This function links the fill to the outcome of the external call. If the external call cannot execute,
      * the output is not fillable.
      * Does not automatically submit the order (send the proof).
      *                          !Do not make orders with repeated outputs!.
      * The implementation strategy (verify then fill) means that an order with repeat outputs
      * (say 1 Ether to Alice & 1 Ether to Alice) can be filled by sending 1 Ether to Alice ONCE.
-     * @param orderId Input chain order identifier. Is used as is, not checked for validity.
-     * @param output The given output to fill. Is expected to belong to a greater order identified by orderId
-     * @param proposedSolver Solver identifier to be sent to input chain.
-     * @return fillRecordHash Hash of the fill record. Returns existing hash if already filled, new hash if successfully
-     * filled.
+     * @param orderId The unique identifier of the order.
+     * @param output The serialized output data to fill.
+     * @param fillerData The solver data.
+     * @return fillRecordHash The hash of the fill record.
      */
+
     function _fill(
         bytes32 orderId,
-        MandateOutput calldata output,
-        bytes32 proposedSolver
-    ) internal returns (bytes32 fillRecordHash) {
-        if (proposedSolver == bytes32(0)) revert ZeroValue();
-        OutputVerificationLib._isThisChain(output.chainId);
-        OutputVerificationLib._isThisOutputSettler(output.settler);
+        bytes calldata output,
+        bytes calldata fillerData
+    ) internal virtual returns (bytes32 fillRecordHash, bytes32 solver) {
+        OutputVerificationLib._isThisChain(output.chainId());
+        OutputVerificationLib._isThisOutputSettler(output.settler());
 
-        bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHash(output);
-        bytes32 existingFillRecordHash = _fillRecords[orderId][outputHash];
-        // Return existing record hash if already solved.
-        if (existingFillRecordHash != bytes32(0)) return existingFillRecordHash;
-        // The above and below lines act as a local re-entry check.
         uint32 fillTimestamp = uint32(block.timestamp);
-        fillRecordHash = _getFillRecordHash(proposedSolver, fillTimestamp);
-        _fillRecords[orderId][outputHash] = fillRecordHash;
+        uint256 outputAmount;
+        (solver, outputAmount) = _resolveOutput(output, fillerData);
+        {
+            bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHashFromBytes(output.removeFillDeadline());
+            bytes32 existingFillRecordHash = _fillRecords[orderId][outputHash];
 
+            // Early return if already filled.
+            if (existingFillRecordHash != bytes32(0)) return (existingFillRecordHash, solver);
+
+            // The above and below lines act as a local re-entry check.
+            fillRecordHash = _getFillRecordHash(solver, fillTimestamp);
+            _fillRecords[orderId][outputHash] = fillRecordHash;
+        }
         // Storage has been set. Fill the output.
-        uint256 outputAmount = _resolveOutput(output, proposedSolver);
-        address recipient = address(uint160(uint256(output.recipient)));
-        SafeTransferLib.safeTransferFrom(address(uint160(uint256(output.token))), msg.sender, recipient, outputAmount);
-        if (output.call.length > 0) IOIFCallback(recipient).outputFilled(output.token, outputAmount, output.call);
+        bytes32 tokenIdentifier = output.token();
+        address recipient = output.recipient().fromIdentifier();
+        SafeERC20.safeTransferFrom(IERC20(tokenIdentifier.fromIdentifier()), msg.sender, recipient, outputAmount);
 
-        emit OutputFilled(orderId, proposedSolver, fillTimestamp, output, outputAmount);
-        return fillRecordHash;
+        bytes calldata callbackData = output.callbackData();
+        if (callbackData.length > 0) {
+            IOutputCallback(recipient).outputFilled(tokenIdentifier, outputAmount, callbackData);
+        }
+        emit OutputFilled(orderId, solver, fillTimestamp, output, outputAmount);
+
+        return (fillRecordHash, solver);
     }
+
+    /**
+     * @dev Executes order specific logic and returns the amount.
+     * @param output The serialized output data to resolve.
+     * @param fillerData The solver data.
+     * @return solver The address of the solver filling the output.
+     * @return amount The final amount to be transferred (may differ from base amount for Dutch auctions).
+     */
+    function _resolveOutput(
+        bytes calldata output,
+        bytes calldata fillerData
+    ) internal view virtual returns (bytes32 solver, uint256 amount);
 
     // --- External Solver Interface --- //
 
     /**
-     * @notice External fill interface for filling a single output (idempotent operation).
+     * @dev External fill interface for filling a single output (idempotent operation).
      * @dev This function is idempotent - it can be called multiple times safely. If the output is already filled,
      * it returns the existing fill record hash without reverting. This makes it suitable for retry mechanisms
      * and scenarios where multiple parties might attempt to fill the same output.
-     *
-     * @param fillDeadline If the transaction is executed after this timestamp, the call will fail.
-     * @param orderId Input chain order identifier. Is used as is, not checked for validity.
-     * @param output Given output to fill. Is expected to belong to a greater order identified by orderId.
-     * @param proposedSolver Solver identifier to be sent to input chain.
-     * @return bytes32 Fill record hash. Returns existing hash if already filled, new hash if successfully filled.
+     * @param orderId The unique identifier of the order.
+     * @param originData The serialized output data to fill.
+     * @param fillerData The solver data containing the proposed solver.
+     * @return fillRecordHash The hash of the fill record.
      */
     function fill(
-        uint32 fillDeadline,
         bytes32 orderId,
-        MandateOutput calldata output,
-        bytes32 proposedSolver
-    ) external virtual checkFillDeadline(fillDeadline) returns (bytes32) {
-        return _fill(orderId, output, proposedSolver);
+        bytes calldata originData,
+        bytes calldata fillerData
+    ) external virtual returns (bytes32 fillRecordHash) {
+        uint48 fillDeadline = originData.fillDeadline();
+        if (fillDeadline < block.timestamp) revert FillDeadline();
+        (fillRecordHash,) = _fill(orderId, originData, fillerData);
     }
-
     // -- Batch Solving -- //
 
     /**
@@ -175,47 +189,25 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
      * **Solver Selection Logic:**
      * The first output determines which solver "wins" the entire order. This prevents solver conflicts
      * and ensures consistent solver attribution across all outputs in a multi-output order.
-     *
-     * @param fillDeadline If the transaction is executed after this timestamp, the call will fail.
-     * @param orderId Input chain order identifier. Is used as is, not checked for validity.
-     * @param outputs Given outputs to fill. Ensure that the **first** order output is the first output for this call.
-     * @param proposedSolver Solver to be sent to origin chain. If the first output has a different solver, reverts.
+     * @param orderId The unique identifier of the order.
+     * @param outputs Array of serialized output data to fill.
+     * @param fillerData The solver data containing the proposed solver.
      */
-    function fillOrderOutputs(
-        uint32 fillDeadline,
-        bytes32 orderId,
-        MandateOutput[] calldata outputs,
-        bytes32 proposedSolver
-    ) external checkFillDeadline(fillDeadline) {
-        // Atomic check: first output must not be already filled (solver competition)
-        bytes32 fillRecordHash = _fill(orderId, outputs[0], proposedSolver);
-        bytes32 expectedFillRecordHash = _getFillRecordHash(proposedSolver, uint32(block.timestamp));
+    function fillOrderOutputs(bytes32 orderId, bytes[] calldata outputs, bytes calldata fillerData) external virtual {
+        uint48 fillDeadline = outputs[0].fillDeadline();
+        if (fillDeadline < block.timestamp) revert FillDeadline();
+
+        (bytes32 fillRecordHash, bytes32 solver) = _fill(orderId, outputs[0], fillerData);
+        bytes32 expectedFillRecordHash = _getFillRecordHash(solver, uint32(block.timestamp));
         if (fillRecordHash != expectedFillRecordHash) revert AlreadyFilled();
 
-        // Fill remaining outputs (can skip if already filled)
         uint256 numOutputs = outputs.length;
         for (uint256 i = 1; i < numOutputs; ++i) {
-            _fill(orderId, outputs[i], proposedSolver);
+            _fill(orderId, outputs[i], fillerData);
         }
     }
 
-    // --- External Calls --- //
-
-    /**
-     * @notice Allows estimating the gas used for an external call.
-     * @dev To call, set msg.sender to address(0). This call can never be executed on-chain. It should also be noted
-     * that application can cheat and implement special logic for tx.origin == 0.
-     * @param trueAmount Amount computed for the order.
-     * @param output Order output to simulate the call for.
-     */
-    function call(uint256 trueAmount, MandateOutput calldata output) external {
-        // Disallow calling on-chain.
-        require(msg.sender == address(0));
-
-        IOIFCallback(address(uint160(uint256(output.recipient)))).outputFilled(output.token, trueAmount, output.call);
-    }
-
-    // --- IPayloadCreator --- //
+    // --- IAttester --- //
 
     /**
      * @notice Helper function to check whether a payload is valid.
@@ -249,21 +241,25 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
     /**
      * @notice Returns whether a set of payloads have been approved by this contract.
      */
-    function arePayloadsValid(
+    function hasAttested(
         bytes[] calldata payloads
     ) external view returns (bool accumulator) {
         uint256 numPayloads = payloads.length;
         accumulator = true;
         for (uint256 i; i < numPayloads; ++i) {
-            bool payloadValid = _isPayloadValid(payloads[i]);
-            assembly ("memory-safe") {
-                accumulator := and(accumulator, payloadValid)
-            }
+            accumulator = AssemblyLib.and(accumulator, _isPayloadValid(payloads[i]));
         }
     }
 
     // --- Oracle Interfaces --- //
 
+    /**
+     * @notice Sets an attestation for a fill description to enable cross-chain validation.
+     * @param orderId The unique identifier of the order.
+     * @param solver The address of the solver who filled the output.
+     * @param timestamp The timestamp when the fill occurred.
+     * @param output The MandateOutput struct that was filled.
+     */
     function setAttestation(
         bytes32 orderId,
         bytes32 solver,
@@ -280,12 +276,12 @@ abstract contract BaseOutputSettler is IPayloadCreator, BaseOracle {
         bytes32 dataHash = keccak256(MandateOutputEncodingLib.encodeFillDescription(solver, orderId, timestamp, output));
 
         // Check that we set the mapping correctly.
-        bytes32 application = output.settler;
-        OutputVerificationLib._isThisOutputSettler(application);
+        bytes32 attester = output.settler;
+        OutputVerificationLib._isThisOutputSettler(attester);
         bytes32 oracle = output.oracle;
         OutputVerificationLib._isThisOutputOracle(oracle);
         uint256 chainId = output.chainId;
         OutputVerificationLib._isThisChain(chainId);
-        _attestations[chainId][application][oracle][dataHash] = true;
+        _attestations[chainId][attester][oracle][dataHash] = true;
     }
 }

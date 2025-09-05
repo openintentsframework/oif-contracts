@@ -2,13 +2,13 @@
 pragma solidity ^0.8.26;
 
 import { LibAddress } from "../libs/LibAddress.sol";
-import { EIP712 } from "solady/utils/EIP712.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-import { SignatureCheckerLib } from "solady/utils/SignatureCheckerLib.sol";
+
+import { EIP712 } from "openzeppelin/utils/cryptography/EIP712.sol";
+import { SignatureChecker } from "openzeppelin/utils/cryptography/SignatureChecker.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
-import { IOIFCallback } from "../interfaces/IOIFCallback.sol";
-import { IOracle } from "../interfaces/IOracle.sol";
+import { IInputCallback } from "../interfaces/IInputCallback.sol";
+import { IInputOracle } from "../interfaces/IInputOracle.sol";
 
 import { AllowOpenType } from "./types/AllowOpenType.sol";
 import { MandateOutput } from "./types/MandateOutputType.sol";
@@ -37,14 +37,14 @@ abstract contract InputSettlerBase is EIP712 {
     event Finalised(bytes32 indexed orderId, bytes32 solver, bytes32 destination);
 
     function DOMAIN_SEPARATOR() external view returns (bytes32) {
-        return _domainSeparator();
+        return _domainSeparatorV4();
     }
 
     // --- Validation --- //
 
     /**
      * @notice Checks that a timestamp has not expired.
-     * @param timestamp The timestamp to validate that it is not less than block.timestamp
+     * @param timestamp The timestamp to validate that it is at least equal to block.timestamp
      */
     function _validateTimestampHasNotPassed(
         uint32 timestamp
@@ -74,13 +74,13 @@ abstract contract InputSettlerBase is EIP712 {
 
     /**
      * @notice Validates that the rightmost 20 bytes are not 0.
-     * @param destination The timestamp to validate that it is not less than block.timestamp
+     * @param destination Destination of the funds
      */
     function _validateDestination(
         bytes32 destination
     ) internal pure {
         bool isZero;
-        // Check if the rigthmost 20 bytes are not all 0. That is a stronger check than the entire 32 bytes.
+        // Check if the rightmost 20 bytes are not all 0. That is a stronger check than the entire 32 bytes.
         assembly ("memory-safe") {
             isZero := iszero(shl(96, destination))
         }
@@ -152,8 +152,8 @@ abstract contract InputSettlerBase is EIP712 {
         bytes calldata call,
         bytes calldata orderOwnerSignature
     ) internal view {
-        bytes32 digest = _hashTypedData(AllowOpenType.hashAllowOpen(orderId, nextDestination, call));
-        bool isValid = SignatureCheckerLib.isValidSignatureNowCalldata(orderOwner, digest, orderOwnerSignature);
+        bytes32 digest = _hashTypedDataV4(AllowOpenType.hashAllowOpen(orderId, nextDestination, call));
+        bool isValid = SignatureChecker.isValidSignatureNowCalldata(orderOwner, digest, orderOwnerSignature);
         if (!isValid) revert InvalidSigner();
     }
 
@@ -173,7 +173,7 @@ abstract contract InputSettlerBase is EIP712 {
      */
     function _validateFills(
         uint32 fillDeadline,
-        address localOracle,
+        address inputOracle,
         MandateOutput[] calldata outputs,
         bytes32 orderId,
         uint32[] calldata timestamps,
@@ -201,6 +201,6 @@ abstract contract InputSettlerBase is EIP712 {
                 mstore(add(offset, 0x60), payloadHash)
             }
         }
-        IOracle(localOracle).efficientRequireProven(proofSeries);
+        IInputOracle(inputOracle).efficientRequireProven(proofSeries);
     }
 }

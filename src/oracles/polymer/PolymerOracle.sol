@@ -2,19 +2,19 @@
 pragma solidity ^0.8.26;
 
 import { LibAddress } from "../../libs/LibAddress.sol";
-import { LibBytes } from "solady/utils/LibBytes.sol";
+import { Bytes } from "openzeppelin/utils/Bytes.sol";
 
 import { MandateOutput, MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 
-import { BaseOutputSettler } from "../../output/BaseOutputSettler.sol";
-import { BaseOracle } from "../BaseOracle.sol";
+import { OutputSettlerBase } from "../../output/OutputSettlerBase.sol";
+import { BaseInputOracle } from "../BaseInputOracle.sol";
 import { ICrossL2Prover } from "./ICrossL2Prover.sol";
 
 /**
  * @notice Polymer Oracle.
  * Polymer uses the fill event to reconstruct the payload for verification instead of sending messages cross-chain.
  */
-contract PolymerOracle is BaseOracle {
+contract PolymerOracle is BaseInputOracle {
     using LibAddress for address;
 
     error WrongEventSignature();
@@ -51,11 +51,11 @@ contract PolymerOracle is BaseOracle {
 
         // While it is unlikely that an event will be emitted matching the data pattern we have, validate the event
         // signature.
-        bytes32 eventSignature = bytes32(LibBytes.slice(topics, 0, 32));
-        if (eventSignature != BaseOutputSettler.OutputFilled.selector) revert WrongEventSignature();
+        bytes32 eventSignature = bytes32(Bytes.slice(topics, 0, 32));
+        if (eventSignature != OutputSettlerBase.OutputFilled.selector) revert WrongEventSignature();
 
         // OrderId is topic[1] which is 32 to 64 bytes.
-        bytes32 orderId = bytes32(LibBytes.slice(topics, 32, 64));
+        bytes32 orderId = bytes32(Bytes.slice(topics, 32, 64));
 
         (bytes32 solver, uint32 timestamp, MandateOutput memory output,) =
             abi.decode(unindexedData, (bytes32, uint32, MandateOutput, uint256));

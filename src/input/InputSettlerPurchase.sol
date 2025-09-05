@@ -2,13 +2,14 @@
 pragma solidity ^0.8.26;
 
 import { LibAddress } from "../libs/LibAddress.sol";
-import { EIP712 } from "solady/utils/EIP712.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-import { SignatureCheckerLib } from "solady/utils/SignatureCheckerLib.sol";
+
+import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
+
+import { SignatureChecker } from "openzeppelin/utils/cryptography/SignatureChecker.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
-import { IOIFCallback } from "../interfaces/IOIFCallback.sol";
-import { IOracle } from "../interfaces/IOracle.sol";
+import { IInputCallback } from "../interfaces/IInputCallback.sol";
 
 import { AllowOpenType } from "./types/AllowOpenType.sol";
 import { MandateOutput } from "./types/MandateOutputType.sol";
@@ -24,6 +25,7 @@ import { InputSettlerBase } from "./InputSettlerBase.sol";
 abstract contract InputSettlerPurchase is InputSettlerBase {
     using LibAddress for address;
     using LibAddress for bytes32;
+    using LibAddress for uint256;
 
     error AlreadyPurchased();
     error Expired();
@@ -41,6 +43,19 @@ abstract contract InputSettlerPurchase is InputSettlerBase {
     mapping(bytes32 solver => mapping(bytes32 orderId => Purchased)) public purchasedOrders;
 
     // --- Order Purchase Helpers --- //
+
+    /**
+     * @notice Enforces that the caller is the order owner.
+     * @dev Only reads the rightmost 20 bytes to verify the owner/purchaser. This allows implementations to use the
+     * leftmost 12 bytes to encode further withdrawal logic.
+     * For TheCompact, 12 zero bytes indicates a withdrawals instead of a transfer.
+     * @param orderOwner The order owner. The leftmost 12 bytes are not read.
+     */
+    function _orderOwnerIsCaller(
+        bytes32 orderOwner
+    ) internal view {
+        if (orderOwner.fromIdentifier() != msg.sender) revert NotOrderOwner();
+    }
 
     /**
      * @notice Helper function to get the owner of order incase it may have been bought. In case an order has been
@@ -109,9 +124,8 @@ abstract contract InputSettlerPurchase is InputSettlerBase {
 
         {
             address orderSolvedByAddress = orderSolvedByIdentifier.fromIdentifier();
-            bytes32 digest = _hashTypedData(OrderPurchaseType.hashOrderPurchase(orderPurchase));
-            bool isValid =
-                SignatureCheckerLib.isValidSignatureNowCalldata(orderSolvedByAddress, digest, solverSignature);
+            bytes32 digest = _hashTypedDataV4(OrderPurchaseType.hashOrderPurchase(orderPurchase));
+            bool isValid = SignatureChecker.isValidSignatureNowCalldata(orderSolvedByAddress, digest, solverSignature);
             if (!isValid) revert InvalidSigner();
         }
 
@@ -125,8 +139,8 @@ abstract contract InputSettlerPurchase is InputSettlerBase {
                 uint256 allocatedAmount = input[1];
                 uint256 amountAfterDiscount = (allocatedAmount * (DISCOUNT_DENOM - discount)) / DISCOUNT_DENOM;
                 // Throws if discount > DISCOUNT_DENOM => DISCOUNT_DENOM - discount < 0;
-                SafeTransferLib.safeTransferFrom(
-                    EfficiencyLib.asSanitizedAddress(tokenId), msg.sender, newDestination, amountAfterDiscount
+                SafeERC20.safeTransferFrom(
+                    IERC20(tokenId.fromIdentifier()), msg.sender, newDestination, amountAfterDiscount
                 );
             }
             // Emit the event now because of stack issues.
@@ -134,7 +148,7 @@ abstract contract InputSettlerPurchase is InputSettlerBase {
         }
         {
             bytes calldata call = orderPurchase.call;
-            if (call.length > 0) IOIFCallback(newDestination).orderFinalised(inputs, call);
+            if (call.length > 0) IInputCallback(newDestination).orderFinalised(inputs, call);
         }
     }
 }

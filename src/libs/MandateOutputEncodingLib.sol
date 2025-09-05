@@ -101,6 +101,12 @@ library MandateOutputEncodingLib {
         return keccak256(encodeMandateOutput(output));
     }
 
+    function getMandateOutputHashFromBytes(
+        bytes calldata output
+    ) internal pure returns (bytes32) {
+        return keccak256(output);
+    }
+
     function getMandateOutputHashMemory(
         MandateOutput memory output
     ) internal pure returns (bytes32) {

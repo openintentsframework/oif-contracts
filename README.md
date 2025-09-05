@@ -1,5 +1,11 @@
 # The Open Intents Framework (OIF): Permissionless Cross-chain Intents
 
+⚠️ **SECURITY WARNING** ⚠️
+
+This project is currently using an **unaudited version** of OpenZeppelin Contracts instead of the latest released audited version. **Before any production release, it is mandatory to update to the latest audited version** to ensure security and stability.
+
+---
+
 The OIF is a full-stack developer framework that allows cross-chain intents to permissionlessly be deployed, solved, and discovered. Its comprised of two main pieces:
 - Smart contracts (this repo)
 - [Open-source solver](https://github.com/openintentsframework/oif-solvers)
@@ -40,7 +46,7 @@ Input Settlers are located in `src/input`. Currently, 2 Settlers are implemented
 
 To implement a new lock or a different order type, the following considerations are required to make it compatible with the rest of the system:
 - **OutputSettler**: To be compatible with the `MandateOutput` OutputSettlers, implement `MandateOutput` described in `src/input/types/MandateOutputType.sol` using the encoding scheme from `src/libs/MandateOutputEncodingLib.sol`.
-- **Oracle**: To be compatible with OIF oracles, implement a validation function that calls either of the `IOracle` functions from `src/interfaces/IOracle.sol`.
+- **Oracle**: To be compatible with OIF oracles, implement a validation function that calls either of the `IInputOracle` functions from `src/interfaces/IInputOracle.sol`.
 
 Assuming the Settler supports both these structures, it is now compatible with the existing solvers and fillers.
 
@@ -79,19 +85,19 @@ This scheme allows The OIF to scale to any chain where only one of the chains ha
 
 #### ChainIds
 
-ChainIds should typically follow the "canonical" chain id: `block.chainid`. While the output chainId is defined by the localOracle, it is good practice to implement it as the remote chain's `block.chainid` or equivalent.
+ChainIds should typically follow the "canonical" chain id: `block.chainid`. While the output chainId is defined by the inputOracle, it is good practice to implement it as the remote chain's `block.chainid` or equivalent.
 
 ## Output Settler
 
-The Output Settler contract sits on the output chain and allows filling outputs. It is expected that Output Settler implementations expose whether a payload is valid by implementing the `IPayloadValidator` interface and exposing the `.arePayloadsValid()` view function. Notice that the requirement that the Output Settler asserts payloads means that the Output Settler and Input Settler need to form the same payloads to properly validate that outputs have been filled.
+The Output Settler contract sits on the output chain and allows filling outputs. It is expected that Output Settler implementations expose whether a payload is valid by implementing the `IPayloadValidator` interface and exposing the `.hasAttested()` view function. Notice that the requirement that the Output Settler asserts payloads means that the Output Settler and Input Settler need to form the same payloads to properly validate that outputs have been filled.
 
 Otherwise, the fill interface is left undefined. It is generally expected that the filler takes outputs as `MandateOutput`.
 
 ## Oracle
 
-Oracles are located in `src/oracles`. `src/oracles/BaseOracle.sol` provides a standardized attestation storage structure along with attestation lookup structures. This allows anyone to easily create new oracles that remains compatible with Input Settlers.
+Oracles are located in `src/oracles`. `src/oracles/BaseInputOracle.sol` provides a standardized attestation storage structure along with attestation lookup structures. This allows anyone to easily create new oracles that remains compatible with Input Settlers.
 
-Message submission and/or relaying is not defined and has to be created specifically for each oracle. The most important compatibility layer between fillers and oracles exists through the `IPayloadCreator.arePayloadsValid`.
+Message submission and/or relaying is not defined and has to be created specifically for each oracle. The most important compatibility layer between fillers and oracles exists through the `IAttester.hasAttested`.
 
 ### Bitcoin SPV (Light) Client
 

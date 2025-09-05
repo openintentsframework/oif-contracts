@@ -9,8 +9,6 @@ import { StandardOrder, StandardOrderType } from "../../../src/input/types/Stand
 import { IInputSettlerCompact } from "../../../src/interfaces/IInputSettlerCompact.sol";
 import { LibAddress } from "../../../src/libs/LibAddress.sol";
 import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
-import { OutputSettlerCoin } from "../../../src/output/coin/OutputSettlerCoin.sol";
-
 import { AlwaysYesOracle } from "../../mocks/AlwaysYesOracle.sol";
 import { MockERC20 } from "../../mocks/MockERC20.sol";
 import { InputSettlerCompactTestBase } from "./InputSettlerCompact.base.t.sol";
@@ -68,7 +66,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
             originChainId: block.chainid,
             fillDeadline: type(uint32).max,
             expires: type(uint32).max,
-            localOracle: alwaysYesOracle,
+            inputOracle: alwaysYesOracle,
             inputs: inputs,
             outputs: outputs
         });
@@ -139,14 +137,14 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
         vm.prank(swapper);
         uint256 tokenId = theCompact.depositERC20(address(token), alwaysOkAllocatorLockTag, amount, swapper);
 
-        address localOracle = address(alwaysYesOracle);
+        address inputOracle = address(alwaysYesOracle);
 
         uint256[2][] memory inputs = new uint256[2][](1);
         inputs[0] = [tokenId, amount];
         MandateOutput[] memory outputs = new MandateOutput[](1);
         outputs[0] = MandateOutput({
             settler: address(outputSettlerCoin).toIdentifier(),
-            oracle: localOracle.toIdentifier(),
+            oracle: inputOracle.toIdentifier(),
             chainId: block.chainid,
             token: address(anotherToken).toIdentifier(),
             amount: amount,
@@ -160,7 +158,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
             originChainId: block.chainid,
             fillDeadline: fillDeadline,
             expires: type(uint32).max,
-            localOracle: alwaysYesOracle,
+            inputOracle: alwaysYesOracle,
             inputs: inputs,
             outputs: outputs
         });
@@ -230,7 +228,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
             originChainId: block.chainid,
             fillDeadline: type(uint32).max,
             expires: type(uint32).max,
-            localOracle: alwaysYesOracle,
+            inputOracle: alwaysYesOracle,
             inputs: inputs,
             outputs: outputs
         });
@@ -314,7 +312,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
                 originChainId: block.chainid,
                 fillDeadline: type(uint32).max,
                 expires: type(uint32).max,
-                localOracle: alwaysYesOracle,
+                inputOracle: alwaysYesOracle,
                 inputs: inputs,
                 outputs: outputs
             });

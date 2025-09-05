@@ -7,13 +7,15 @@ import { NoBlock, TooFewConfirmations } from "bitcoinprism-evm/src/interfaces/IB
 import { BtcProof, BtcTxProof, ScriptMismatch } from "bitcoinprism-evm/src/library/BtcProof.sol";
 import { AddressType, BitcoinAddress, BtcScript } from "bitcoinprism-evm/src/library/BtcScript.sol";
 
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 
+import { AssemblyLib } from "../../libs/AssemblyLib.sol";
 import { LibAddress } from "../../libs/LibAddress.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 import { OutputVerificationLib } from "../../libs/OutputVerificationLib.sol";
 
-import { BaseOracle } from "../BaseOracle.sol";
+import { BaseInputOracle } from "../BaseInputOracle.sol";
 
 /**
  * @dev Bitcoin oracle can operate in 2 modes:
@@ -31,7 +33,7 @@ import { BaseOracle } from "../BaseOracle.sol";
  *
  * 0xB17C012
  */
-contract BitcoinOracle is BaseOracle {
+contract BitcoinOracle is BaseInputOracle {
     using LibAddress for address;
 
     error AlreadyClaimed(bytes32 claimer);
@@ -85,7 +87,7 @@ contract BitcoinOracle is BaseOracle {
 
     /// @notice Require that the challenger provides X times the collateral of the claimant.
     uint256 public constant CHALLENGER_COLLATERAL_FACTOR = 2;
-    address public immutable COLLATERAL_TOKEN;
+    IERC20 public immutable COLLATERAL_TOKEN;
     uint64 public immutable DEFAULT_COLLATERAL_MULTIPLIER;
     uint32 constant DISPUTE_PERIOD = FOUR_CONFIRMATIONS;
     uint32 constant MIN_TIME_FOR_INCLUSION = TWO_CONFIRMATIONS;
@@ -144,7 +146,7 @@ contract BitcoinOracle is BaseOracle {
     ) payable {
         LIGHT_CLIENT = _lightClient;
         DISPUTED_ORDER_FEE_DESTINATION = disputedOrderFeeDestination;
-        COLLATERAL_TOKEN = collateralToken;
+        COLLATERAL_TOKEN = IERC20(collateralToken);
         DEFAULT_COLLATERAL_MULTIPLIER = collateralMultiplier;
     }
 
@@ -299,16 +301,13 @@ contract BitcoinOracle is BaseOracle {
     /**
      * @dev Allows oracles to verify we have confirmed payloads.
      */
-    function arePayloadsValid(
+    function hasAttested(
         bytes[] calldata payloads
     ) external view returns (bool accumulator) {
         accumulator = true;
         uint256 numPayloads = payloads.length;
         for (uint256 i; i < numPayloads; ++i) {
-            bool payloadValid = _isPayloadValid(payloads[i]);
-            assembly ("memory-safe") {
-                accumulator := and(accumulator, payloadValid)
-            }
+            accumulator = AssemblyLib.and(accumulator, _isPayloadValid(payloads[i]));
         }
     }
 
@@ -544,9 +543,9 @@ contract BitcoinOracle is BaseOracle {
             collateralAmount =
                 disputed ? collateralAmount * (CHALLENGER_COLLATERAL_FACTOR + 1) - disputeCost : collateralAmount;
 
-            SafeTransferLib.safeTransfer(COLLATERAL_TOKEN, claimant, collateralAmount);
+            SafeERC20.safeTransfer(COLLATERAL_TOKEN, claimant, collateralAmount);
             if (disputed && 0 < disputeCost) {
-                SafeTransferLib.safeTransfer(COLLATERAL_TOKEN, DISPUTED_ORDER_FEE_DESTINATION, disputeCost);
+                SafeERC20.safeTransfer(COLLATERAL_TOKEN, DISPUTED_ORDER_FEE_DESTINATION, disputeCost);
             }
         }
     }
@@ -575,7 +574,7 @@ contract BitcoinOracle is BaseOracle {
         // The above lines acts as a local re-entry guard. External calls are now allowed.
 
         uint256 collateralAmount = output.amount * multiplier;
-        SafeTransferLib.safeTransferFrom(COLLATERAL_TOKEN, msg.sender, address(this), collateralAmount);
+        SafeERC20.safeTransferFrom(COLLATERAL_TOKEN, msg.sender, address(this), collateralAmount);
 
         emit OutputClaimed(orderId, outputId);
     }
@@ -602,7 +601,7 @@ contract BitcoinOracle is BaseOracle {
 
         uint256 collateralAmount = output.amount * claimedOrder.multiplier;
         collateralAmount = collateralAmount * CHALLENGER_COLLATERAL_FACTOR;
-        SafeTransferLib.safeTransferFrom(COLLATERAL_TOKEN, msg.sender, address(this), collateralAmount);
+        SafeERC20.safeTransferFrom(COLLATERAL_TOKEN, msg.sender, address(this), collateralAmount);
 
         emit OutputDisputed(orderId, outputId);
     }
@@ -637,7 +636,7 @@ contract BitcoinOracle is BaseOracle {
         // The above lines acts as a local re-entry guard. External calls are now allowed.
 
         uint256 collateralAmount = output.amount * multiplier;
-        SafeTransferLib.safeTransfer(COLLATERAL_TOKEN, claimant, collateralAmount);
+        SafeERC20.safeTransfer(COLLATERAL_TOKEN, claimant, collateralAmount);
 
         emit OutputOptimisticallyVerified(orderId, outputId);
     }
@@ -671,10 +670,8 @@ contract BitcoinOracle is BaseOracle {
         uint256 collateralAmount = output.amount * multiplier;
         uint256 disputeCost = collateralAmount - collateralAmount / DISPUTED_ORDER_FEE_FRACTION;
         collateralAmount = collateralAmount * (CHALLENGER_COLLATERAL_FACTOR + 1);
-        SafeTransferLib.safeTransfer(COLLATERAL_TOKEN, disputer, collateralAmount - disputeCost);
-        if (0 < disputeCost) {
-            SafeTransferLib.safeTransfer(COLLATERAL_TOKEN, DISPUTED_ORDER_FEE_DESTINATION, disputeCost);
-        }
+        SafeERC20.safeTransfer(COLLATERAL_TOKEN, disputer, collateralAmount - disputeCost);
+        if (0 < disputeCost) SafeERC20.safeTransfer(COLLATERAL_TOKEN, DISPUTED_ORDER_FEE_DESTINATION, disputeCost);
 
         emit OutputDisputeFinalised(orderId, outputId);
     }

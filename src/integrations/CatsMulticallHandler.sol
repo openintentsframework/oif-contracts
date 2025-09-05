@@ -2,12 +2,15 @@
 pragma solidity ^0.8.0;
 
 import { LibAddress } from "../libs/LibAddress.sol";
-import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+
+import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
+import { ReentrancyGuard } from "openzeppelin/utils/ReentrancyGuard.sol";
 
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
-import { IOIFCallback } from "../interfaces/IOIFCallback.sol";
+import { IInputCallback } from "../interfaces/IInputCallback.sol";
+import { IOutputCallback } from "../interfaces/IOutputCallback.sol";
 
 /**
  * @title Allows a user to specify a series of calls that should be made by the handler
@@ -17,8 +20,9 @@ import { IOIFCallback } from "../interfaces/IOIFCallback.sol";
  * The caller should ensure that the tokens received by the handler are completely consumed
  * otherwise they will be left in the contract free to take for next the next caller.
  */
-contract CatsMulticallHandler is IOIFCallback, ReentrancyGuard {
+contract CatsMulticallHandler is IInputCallback, IOutputCallback, ReentrancyGuard {
     using LibAddress for address;
+    using LibAddress for uint256;
     using LibAddress for bytes32;
 
     struct Call {
@@ -45,6 +49,7 @@ contract CatsMulticallHandler is IOIFCallback, ReentrancyGuard {
     event DrainedTokens(address indexed recipient, address indexed token, uint256 indexed amount);
 
     // Errors
+    error DrainNativeFailed();
     error CallReverted(uint256 index, Call[] calls); // 0xe462c440
     error NotSelf(); // 0x29c3b7ee
     error InvalidCall(uint256 index, Call[] calls); // 0xe237730c
@@ -125,9 +130,7 @@ contract CatsMulticallHandler is IOIFCallback, ReentrancyGuard {
         // If there are leftover tokens, send them to the fallback recipient regardless of execution success.
         uint256 numInputs = inputs.length;
         for (uint256 i; i < numInputs; ++i) {
-            _drainRemainingTokens(
-                EfficiencyLib.asSanitizedAddress(inputs[i][0]), payable(instructions.fallbackRecipient)
-            );
+            _drainRemainingTokens(inputs[i][0].fromIdentifier(), payable(instructions.fallbackRecipient));
         }
     }
 
@@ -154,7 +157,7 @@ contract CatsMulticallHandler is IOIFCallback, ReentrancyGuard {
      * @notice Sets approval for a token.
      */
     function _setApproval(address token, uint256 amount, address to) internal {
-        SafeTransferLib.safeApproveWithRetry(token, to, amount);
+        SafeERC20.forceApprove(IERC20(token), to, amount);
     }
 
     /**
@@ -166,7 +169,7 @@ contract CatsMulticallHandler is IOIFCallback, ReentrancyGuard {
             uint256[2] calldata input = inputs[i];
             uint256 token = input[0];
             uint256 amount = input[1];
-            SafeTransferLib.safeApproveWithRetry(EfficiencyLib.asSanitizedAddress(token), to, amount);
+            SafeERC20.forceApprove(IERC20(token.fromIdentifier()), to, amount);
         }
     }
 
@@ -178,15 +181,18 @@ contract CatsMulticallHandler is IOIFCallback, ReentrancyGuard {
     function _drainRemainingTokens(address token, address payable destination) internal {
         if (token != address(0)) {
             // ERC20 token.
-            uint256 amount = SafeTransferLib.balanceOf(token, address(this));
+            uint256 amount = IERC20(token).balanceOf(address(this));
             if (amount > 0) {
-                SafeTransferLib.safeTransfer(token, destination, amount);
+                SafeERC20.safeTransfer(IERC20(token), destination, amount);
                 emit DrainedTokens(destination, token, amount);
             }
         } else {
             // Send native token
             uint256 amount = address(this).balance;
-            if (amount > 0) SafeTransferLib.safeTransferETH(destination, amount);
+            if (amount > 0) {
+                (bool success,) = destination.call{ value: amount }("");
+                if (!success) revert DrainNativeFailed();
+            }
         }
     }
 
