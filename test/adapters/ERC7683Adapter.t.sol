@@ -75,6 +75,23 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
         return order;
     }
 
+    function test_open_orderDataType_reverts() public {
+        OnchainCrossChainOrder memory onchainOrder;
+        onchainOrder.orderDataType = adapter.GASLESS_ORDER_DATA_TYPEHASH();
+        vm.expectRevert(abi.encodeWithSelector(ERC7683EscrowAdapter.InvalidOrderDataType.selector));
+        adapter.open(onchainOrder);
+    }
+
+    function test_open_orderDeadline_reverts() public {
+        StandardOrder memory order;
+        OnchainCrossChainOrder memory onchainOrder;
+        onchainOrder.orderDataType = adapter.ONCHAIN_ORDER_DATA_TYPEHASH();
+        onchainOrder.orderData = abi.encode(order);
+        onchainOrder.fillDeadline = uint32(1);
+        vm.expectRevert(abi.encodeWithSelector(ERC7683EscrowAdapter.InvalidOrderDeadline.selector));
+        adapter.open(onchainOrder);
+    }
+
     /// forge-config: default.isolate = true
     function test_open_for_permit2_gas() external {
         test_open_for_permit2(10 ** 18, 251251);
