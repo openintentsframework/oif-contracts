@@ -2,8 +2,7 @@
 pragma solidity ^0.8.26;
 
 import { StandardOrder, StandardOrderType } from "../input/types/StandardOrderType.sol";
-import { IInputSettlerEscrow } from "../interfaces/IInputSettlerEscrow.sol";
-import { LibAddress } from "../libs/LibAddress.sol";
+
 import {
     FillInstruction,
     GaslessCrossChainOrder,
@@ -11,11 +10,16 @@ import {
     OnchainCrossChainOrder,
     Output,
     ResolvedCrossChainOrder
-} from "./interfaces/v0-IERC7683.sol";
+} from "../interfaces/IERC7683.sol";
+import { IInputSettlerEscrow } from "../interfaces/IInputSettlerEscrow.sol";
+import { LibAddress } from "../libs/LibAddress.sol";
 
 import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 
+/**
+ * @title Adapter for the InputSettlerEscrow contract using the ERC7683 interface.
+ */
 contract ERC7683EscrowAdapter is IOriginSettler {
     using StandardOrderType for bytes;
     using StandardOrderType for StandardOrder;

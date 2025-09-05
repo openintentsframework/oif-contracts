@@ -3,7 +3,7 @@ pragma solidity ^0.8.16;
 
 import { ERC7683EscrowAdapter } from "../../src/adapters/ERC7683Adapter.sol";
 
-import { GaslessCrossChainOrder, OnchainCrossChainOrder } from "../../src/adapters/interfaces/v0-IERC7683.sol";
+import { GaslessCrossChainOrder, OnchainCrossChainOrder } from "../../src/interfaces/IERC7683.sol";
 
 import { InputSettlerEscrow } from "../../src/input/escrow/InputSettlerEscrow.sol";
 import { MandateOutput } from "../../src/input/types/MandateOutputType.sol";
