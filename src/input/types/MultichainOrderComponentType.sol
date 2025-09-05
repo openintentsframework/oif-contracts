@@ -23,6 +23,8 @@ struct MultichainOrderComponent {
  * TYPE: Is complete including sub-types.
  */
 library MultichainOrderComponentType {
+    error ChainIndexOutOfRange(uint256 chainIndex, uint256 numSegments);
+
     /**
      * @dev If this function is used in a context where correctness of the identifier is important, the chainIdField
      * needs to be validated against block.chainid
@@ -32,8 +34,6 @@ library MultichainOrderComponentType {
     ) internal view returns (bytes32) {
         return keccak256(
             abi.encodePacked(
-                // TODO: How to encode address(this) field. If this field is present, how do we do cross-vm / zk-sync
-                // compatibility?
                 address(this),
                 order.user,
                 order.nonce,
@@ -54,7 +54,6 @@ library MultichainOrderComponentType {
      * - c: [c, [3, 1], [3,2]] => hc = keccak256(abi.encodePacked("c", c))
      * And wants to compute the hash: h = keccak256(abi.encodePacked(a, b, c)))
      * Given 1, b, and [ha, hc] the function will compute h.
-     * TODO: test that this works as expected against non-solidity version.
      */
     function constructInputHash(
         uint256 inputsChainId,
@@ -64,7 +63,7 @@ library MultichainOrderComponentType {
     ) internal pure returns (bytes32) {
         bytes32 inputHash = hashInputs(inputsChainId, inputs);
         uint256 numSegments = additionalChains.length + 1;
-        // TODO: check that chainIndex is in range [0, numSegments]
+        if (numSegments <= chainIndex) revert ChainIndexOutOfRange(chainIndex, numSegments);
         bytes memory claimStructure = new bytes(32 * numSegments);
         uint256 p;
         assembly ("memory-safe") {
@@ -87,7 +86,6 @@ library MultichainOrderComponentType {
 
     /**
      * @notice Internal pure function for deriving the hash of ids and amounts with a provided chainId salt.
-     * TODO: test that the below statement is true.
      * This function returns keccak256(abi.encodePacked(chainId, idsAndAmounts))
      * @param chainId Chain identifier used to salt the input hash.
      * @param idsAndAmounts An array of ids and amounts.
