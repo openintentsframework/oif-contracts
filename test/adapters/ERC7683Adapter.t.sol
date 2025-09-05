@@ -3,7 +3,13 @@ pragma solidity ^0.8.16;
 
 import { ERC7683EscrowAdapter } from "../../src/adapters/ERC7683Adapter.sol";
 
-import { GaslessCrossChainOrder, OnchainCrossChainOrder } from "../../src/interfaces/IERC7683.sol";
+import {
+    FillInstruction,
+    GaslessCrossChainOrder,
+    OnchainCrossChainOrder,
+    Output,
+    ResolvedCrossChainOrder
+} from "../../src/interfaces/IERC7683.sol";
 
 import { InputSettlerEscrow } from "../../src/input/escrow/InputSettlerEscrow.sol";
 import { MandateOutput } from "../../src/input/types/MandateOutputType.sol";
@@ -83,7 +89,6 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
     }
 
     function test_open_orderDeadline_reverts() public {
-        StandardOrder memory order;
         OnchainCrossChainOrder memory onchainOrder;
         onchainOrder.orderDataType = adapter.ONCHAIN_ORDER_DATA_TYPEHASH();
         onchainOrder.orderData = abi.encode(order);
@@ -409,6 +414,188 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
 
         vm.expectRevert(abi.encodeWithSelector(ERC7683EscrowAdapter.InvalidOriginSettler.selector));
         adapter.openFor(gaslessOrder, abi.encodePacked(bytes1(0x01), bytes("")), bytes(""));
+    }
+
+    function test_resolve() public {
+        OnchainCrossChainOrder memory onchainOrder;
+        uint256 amount = 10 ** 18;
+
+        MandateOutput[] memory outputs = new MandateOutput[](1);
+        outputs[0] = MandateOutput({
+            settler: address(outputSettlerCoin).toIdentifier(),
+            oracle: alwaysYesOracle.toIdentifier(),
+            chainId: block.chainid,
+            token: address(anotherToken).toIdentifier(),
+            amount: amount,
+            recipient: swapper.toIdentifier(),
+            call: hex"",
+            context: hex""
+        });
+
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        FillInstruction[] memory fillInstructions = new FillInstruction[](1);
+        fillInstructions[0] = FillInstruction({
+            destinationChainId: block.chainid,
+            destinationSettler: address(outputSettlerCoin).toIdentifier(),
+            originData: abi.encode(outputs[0])
+        });
+
+        order = StandardOrder({
+            user: swapper,
+            nonce: 0,
+            originChainId: block.chainid,
+            expires: type(uint32).max,
+            fillDeadline: type(uint32).max,
+            inputOracle: alwaysYesOracle,
+            inputs: inputs,
+            outputs: outputs
+        });
+        onchainOrder.fillDeadline = type(uint32).max;
+        onchainOrder.orderDataType = adapter.ONCHAIN_ORDER_DATA_TYPEHASH();
+        onchainOrder.orderData = abi.encode(order);
+
+        Output[] memory expectedMaxSpent = new Output[](1);
+        expectedMaxSpent[0] = Output({
+            token: address(anotherToken).toIdentifier(),
+            amount: type(uint256).max,
+            recipient: swapper.toIdentifier(),
+            chainId: block.chainid
+        });
+
+        Output[] memory expectedMinReceived = new Output[](1);
+        expectedMinReceived[0] = Output({
+            token: address(token).toIdentifier(),
+            amount: amount,
+            recipient: bytes32(0),
+            chainId: block.chainid
+        });
+
+        ResolvedCrossChainOrder memory expectedResolvedOrder = ResolvedCrossChainOrder({
+            user: swapper,
+            originChainId: block.chainid,
+            openDeadline: type(uint32).max,
+            fillDeadline: type(uint32).max,
+            orderId: adapter.orderIdentifier(order),
+            maxSpent: expectedMaxSpent,
+            minReceived: expectedMinReceived,
+            fillInstructions: fillInstructions
+        });
+
+        ResolvedCrossChainOrder memory resolvedOrder = adapter.resolve(onchainOrder);
+        assertEq(resolvedOrder.user, expectedResolvedOrder.user, "user mismatch");
+        assertEq(resolvedOrder.originChainId, expectedResolvedOrder.originChainId, "origin chain id mismatch");
+        assertEq(resolvedOrder.openDeadline, expectedResolvedOrder.openDeadline, "open deadline mismatch");
+        assertEq(resolvedOrder.fillDeadline, expectedResolvedOrder.fillDeadline, "fill deadline mismatch");
+        assertEq(resolvedOrder.orderId, expectedResolvedOrder.orderId, "order id mismatch");
+        assertEq(resolvedOrder.maxSpent.length, expectedResolvedOrder.maxSpent.length, "max spent token mismatch");
+        assertEq(resolvedOrder.maxSpent[0].token, expectedResolvedOrder.maxSpent[0].token, "max spent token mismatch");
+        assertEq(
+            resolvedOrder.maxSpent[0].amount, expectedResolvedOrder.maxSpent[0].amount, "max spent amount mismatch"
+        );
+        assertEq(
+            resolvedOrder.maxSpent[0].recipient,
+            expectedResolvedOrder.maxSpent[0].recipient,
+            "max spent recipient mismatch"
+        );
+        assertEq(
+            resolvedOrder.maxSpent[0].chainId, expectedResolvedOrder.maxSpent[0].chainId, "max spent chain id mismatch"
+        );
+        assertEq(resolvedOrder.minReceived.length, expectedResolvedOrder.minReceived.length, "min received mismatch");
+        assertEq(
+            resolvedOrder.minReceived[0].token,
+            expectedResolvedOrder.minReceived[0].token,
+            "min received token mismatch"
+        );
+    }
+
+    function test_resolve_for() public {
+        uint256 amount = 10 ** 18;
+
+        MandateOutput[] memory outputs = new MandateOutput[](1);
+        outputs[0] = MandateOutput({
+            settler: address(outputSettlerCoin).toIdentifier(),
+            oracle: alwaysYesOracle.toIdentifier(),
+            chainId: block.chainid,
+            token: address(anotherToken).toIdentifier(),
+            amount: amount,
+            recipient: swapper.toIdentifier(),
+            call: hex"",
+            context: hex""
+        });
+
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        FillInstruction[] memory fillInstructions = new FillInstruction[](1);
+        fillInstructions[0] = FillInstruction({
+            destinationChainId: block.chainid,
+            destinationSettler: address(outputSettlerCoin).toIdentifier(),
+            originData: abi.encode(outputs[0])
+        });
+
+        order = StandardOrder({
+            user: swapper,
+            nonce: 0,
+            originChainId: block.chainid,
+            expires: type(uint32).max,
+            fillDeadline: type(uint32).max,
+            inputOracle: alwaysYesOracle,
+            inputs: inputs,
+            outputs: outputs
+        });
+        GaslessCrossChainOrder memory gaslessOrder;
+        gaslessOrder.user = swapper;
+        gaslessOrder.nonce = 0;
+        gaslessOrder.originChainId = block.chainid;
+        gaslessOrder.openDeadline = type(uint32).max;
+        gaslessOrder.fillDeadline = type(uint32).max;
+        ERC7683EscrowAdapter.GaslessOrderData memory gaslessOrderData = ERC7683EscrowAdapter.GaslessOrderData({
+            expires: type(uint32).max,
+            inputOracle: alwaysYesOracle,
+            inputs: inputs,
+            outputs: outputs
+        });
+        gaslessOrder.orderDataType = adapter.GASLESS_ORDER_DATA_TYPEHASH();
+        gaslessOrder.orderData = abi.encode(gaslessOrderData);
+
+        Output[] memory expectedMaxSpent = new Output[](1);
+        expectedMaxSpent[0] = Output({
+            token: address(anotherToken).toIdentifier(),
+            amount: type(uint256).max,
+            recipient: swapper.toIdentifier(),
+            chainId: block.chainid
+        });
+
+        Output[] memory expectedMinReceived = new Output[](1);
+        expectedMinReceived[0] = Output({
+            token: address(token).toIdentifier(),
+            amount: amount,
+            recipient: bytes32(0),
+            chainId: block.chainid
+        });
+
+        ResolvedCrossChainOrder memory expectedResolvedOrder = ResolvedCrossChainOrder({
+            user: swapper,
+            originChainId: block.chainid,
+            openDeadline: type(uint32).max,
+            fillDeadline: type(uint32).max,
+            orderId: adapter.orderIdentifier(order),
+            maxSpent: expectedMaxSpent,
+            minReceived: expectedMinReceived,
+            fillInstructions: fillInstructions
+        });
+
+        // bytes memory signature = getPermit2Signature(swapperPrivateKey, order);
+
+        ResolvedCrossChainOrder memory resolvedOrder = adapter.resolveFor(gaslessOrder, bytes(""));
+        assertEq(resolvedOrder.user, expectedResolvedOrder.user, "user mismatch");
+        assertEq(resolvedOrder.originChainId, expectedResolvedOrder.originChainId, "origin chain id mismatch");
+        assertEq(resolvedOrder.openDeadline, expectedResolvedOrder.openDeadline, "open deadline mismatch");
+        assertEq(resolvedOrder.fillDeadline, expectedResolvedOrder.fillDeadline, "fill deadline mismatch");
+        assertEq(resolvedOrder.orderId, expectedResolvedOrder.orderId, "order id mismatch");
+        assertEq(resolvedOrder.maxSpent.length, expectedResolvedOrder.maxSpent.length, "max spent token mismatch");
     }
 
     /// forge-config: default.isolate = true
