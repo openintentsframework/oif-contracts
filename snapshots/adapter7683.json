@@ -1,9 +1,9 @@
 {
   "EscrowFinalise": "39920",
   "escrowFinaliseWithSignature": "47309",
-  "escrowOpen": "127381",
-  "escrowOpenFor3009Single": "106191",
-  "escrowOpenFor3009SingleAsArray": "113810",
-  "escrowOpenFor3009TwoAsArray": "164543",
-  "escrowOpenForPermit2": "117634"
+  "escrowOpen": "127501",
+  "escrowOpenFor3009Single": "106285",
+  "escrowOpenFor3009SingleAsArray": "113904",
+  "escrowOpenFor3009TwoAsArray": "164664",
+  "escrowOpenForPermit2": "117728"
 }

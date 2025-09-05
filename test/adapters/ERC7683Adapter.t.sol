@@ -24,7 +24,7 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
 
     function setUp() public override {
         super.setUp();
-        adapter = new ERC7683EscrowAdapter(IInputSettlerEscrow(inputSettlerEscrow));
+        adapter = new ERC7683EscrowAdapter(InputSettlerEscrow(inputSettlerEscrow));
     }
 
     function test_open_gas() public {
@@ -285,10 +285,10 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
         // Wrap into the future of the expiry.
         vm.warp(order.expires + 1);
 
-        bytes32 orderId = InputSettlerEscrow(inputSettlerEscrow).orderIdentifier(order);
+        bytes32 orderId = adapter.orderIdentifier(order);
 
         // Check order status:
-        InputSettlerEscrow.OrderStatus status = InputSettlerEscrow(inputSettlerEscrow).orderStatus(orderId);
+        InputSettlerEscrow.OrderStatus status = adapter.orderStatus(orderId);
         assertEq(uint8(status), uint8(InputSettlerEscrow.OrderStatus.Deposited));
 
         // State
@@ -305,7 +305,7 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
         assertEq(token.balanceOf(address(order.user)), amountBeforeRefund + amount);
         assertEq(token.balanceOf(inputSettlerEscrow), 0);
 
-        status = InputSettlerEscrow(inputSettlerEscrow).orderStatus(orderId);
+        status = adapter.orderStatus(orderId);
         assertEq(uint8(status), uint8(InputSettlerEscrow.OrderStatus.Refunded));
     }
 
@@ -371,7 +371,7 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
 
         assertEq(token.balanceOf(solver), 0);
 
-        bytes32 orderId = IInputSettlerEscrow(inputSettlerEscrow).orderIdentifier(order);
+        bytes32 orderId = adapter.orderIdentifier(order);
         bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionMemory(
             solver.toIdentifier(), orderId, uint32(block.timestamp), outputs[0]
         );
@@ -502,7 +502,7 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
         uint32[] memory timestamps = new uint32[](1);
         timestamps[0] = uint32(block.timestamp);
 
-        bytes32 orderId = IInputSettlerEscrow(inputSettlerEscrow).orderIdentifier(order);
+        bytes32 orderId = adapter.orderIdentifier(order);
         {
             bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionMemory(
                 solver.toIdentifier(), orderId, uint32(block.timestamp), outputs[0]

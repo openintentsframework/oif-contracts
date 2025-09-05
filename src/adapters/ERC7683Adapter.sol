@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import { InputSettlerEscrow } from "../input/escrow/InputSettlerEscrow.sol";
 import { StandardOrder, StandardOrderType } from "../input/types/StandardOrderType.sol";
 
 import {
@@ -36,12 +37,24 @@ contract ERC7683EscrowAdapter is IOriginSettler {
 
     event Open(bytes32 indexed orderId, ResolvedCrossChainOrder resolvedOrder);
 
-    IInputSettlerEscrow private immutable _inputSettlerEscrow;
+    InputSettlerEscrow private immutable _inputSettlerEscrow;
 
     constructor(
-        IInputSettlerEscrow inputSettlerEscrow_
+        InputSettlerEscrow inputSettlerEscrow_
     ) {
         _inputSettlerEscrow = inputSettlerEscrow_;
+    }
+
+    function orderIdentifier(
+        StandardOrder memory order
+    ) public view returns (bytes32) {
+        return _inputSettlerEscrow.orderIdentifier(order);
+    }
+
+    function orderStatus(
+        bytes32 orderId
+    ) public view returns (InputSettlerEscrow.OrderStatus) {
+        return _inputSettlerEscrow.orderStatus(orderId);
     }
 
     function openFor(
@@ -58,7 +71,7 @@ contract ERC7683EscrowAdapter is IOriginSettler {
 
         _inputSettlerEscrow.openFor(abi.encode(standardOrder), order.user, signature);
 
-        bytes32 orderId = _inputSettlerEscrow.orderIdentifier(standardOrder);
+        bytes32 orderId = orderIdentifier(standardOrder);
 
         emit Open(orderId, _resolve(standardOrder));
     }
@@ -82,7 +95,7 @@ contract ERC7683EscrowAdapter is IOriginSettler {
         }
 
         _inputSettlerEscrow.open(abi.encode(standardOrder));
-        bytes32 orderId = _inputSettlerEscrow.orderIdentifier(standardOrder);
+        bytes32 orderId = orderIdentifier(standardOrder);
 
         emit Open(orderId, _resolve(standardOrder));
     }
@@ -125,7 +138,7 @@ contract ERC7683EscrowAdapter is IOriginSettler {
             originChainId: order.originChainId,
             openDeadline: order.fillDeadline,
             fillDeadline: order.fillDeadline,
-            orderId: _inputSettlerEscrow.orderIdentifier(order),
+            orderId: orderIdentifier(order),
             maxSpent: maxSpent,
             minReceived: minReceived,
             fillInstructions: fillInstructions
