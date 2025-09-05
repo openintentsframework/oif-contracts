@@ -51,7 +51,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
         inputs[0] = [tokenId, amount];
         MandateOutput[] memory outputs = new MandateOutput[](1);
         outputs[0] = MandateOutput({
-            settler: address(outputSettlerCoin).toIdentifier(),
+            settler: address(outputSettlerSimple).toIdentifier(),
             oracle: address(alwaysYesOracle).toIdentifier(),
             chainId: block.chainid,
             token: address(anotherToken).toIdentifier(),
@@ -143,7 +143,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
         inputs[0] = [tokenId, amount];
         MandateOutput[] memory outputs = new MandateOutput[](1);
         outputs[0] = MandateOutput({
-            settler: address(outputSettlerCoin).toIdentifier(),
+            settler: address(outputSettlerSimple).toIdentifier(),
             oracle: inputOracle.toIdentifier(),
             chainId: block.chainid,
             token: address(anotherToken).toIdentifier(),
@@ -213,7 +213,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
         inputs[0] = [tokenId, amount];
         MandateOutput[] memory outputs = new MandateOutput[](1);
         outputs[0] = MandateOutput({
-            settler: address(outputSettlerCoin).toIdentifier(),
+            settler: address(outputSettlerSimple).toIdentifier(),
             oracle: address(alwaysYesOracle).toIdentifier(),
             chainId: block.chainid,
             token: address(anotherToken).toIdentifier(),
@@ -297,7 +297,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
             inputs[0] = [tokenId, amount];
             MandateOutput[] memory outputs = new MandateOutput[](1);
             outputs[0] = MandateOutput({
-                settler: address(outputSettlerCoin).toIdentifier(),
+                settler: address(outputSettlerSimple).toIdentifier(),
                 oracle: address(alwaysYesOracle).toIdentifier(),
                 chainId: block.chainid,
                 token: address(anotherToken).toIdentifier(),

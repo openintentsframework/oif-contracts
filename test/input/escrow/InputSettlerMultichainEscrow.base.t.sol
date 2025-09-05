@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 
 import { Test } from "forge-std/Test.sol";
 
-import { OutputSettlerCoin } from "../../../src/output/coin/OutputSettlerCoin.sol";
+import { OutputSettlerSimple } from "../../../src/output/simple/OutputSettlerSimple.sol";
 
 import { InputSettlerMultichainEscrow } from "../../../src/input/escrow/InputSettlerMultichainEscrow.sol";
 import { AllowOpenType } from "../../../src/input/types/AllowOpenType.sol";
@@ -47,7 +47,7 @@ contract ExportedMessages is Messages, Setters {
 
 contract InputSettlerMultichainEscrowTestBase is Test {
     address inputSettlerMultichainEscrow;
-    OutputSettlerCoin outputSettlerCoin;
+    OutputSettlerSimple outputSettlerSimple;
 
     // Oracles
     address alwaysYesOracle;
@@ -66,7 +66,7 @@ contract InputSettlerMultichainEscrowTestBase is Test {
 
     function setUp() public virtual {
         inputSettlerMultichainEscrow = address(new InputSettlerMultichainEscrow());
-        outputSettlerCoin = new OutputSettlerCoin();
+        outputSettlerSimple = new OutputSettlerSimple();
         alwaysYesOracle = address(new AlwaysYesOracle());
 
         token = new MockERC20("Mock ERC20", "MOCK", 18);
@@ -89,6 +89,25 @@ contract InputSettlerMultichainEscrowTestBase is Test {
         require(messages.quorum(guardianSet.keys.length) == 1, "Quorum should be 1");
 
         messages.storeGuardianSetPub(guardianSet, uint32(0));
+    }
+
+    function getOutputToFillFromMandateOutput(
+        uint48 fillDeadline,
+        MandateOutput memory output
+    ) internal pure returns (bytes memory) {
+        return abi.encodePacked(
+            fillDeadline, // fill deadline
+            output.oracle, // oracle
+            output.settler, // settler
+            uint256(output.chainId), // chainId
+            output.token, // token
+            output.amount, // amount
+            output.recipient, // recipient
+            uint16(output.call.length), // call length
+            output.call, // call
+            uint16(output.context.length), // context length
+            output.context // context
+        );
     }
 
     function encodeMessage(bytes32 remoteIdentifier, bytes[] calldata payloads) external pure returns (bytes memory) {

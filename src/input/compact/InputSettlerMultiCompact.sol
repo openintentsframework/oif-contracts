@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
+import { EIP712 } from "openzeppelin/utils/cryptography/EIP712.sol";
+
 import { TheCompact } from "the-compact/src/TheCompact.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 import { IdLib } from "the-compact/src/lib/IdLib.sol";
 import { BatchMultichainClaim, ExogenousBatchMultichainClaim } from "the-compact/src/types/BatchMultichainClaims.sol";
 import { BatchClaimComponent, Component } from "the-compact/src/types/Components.sol";
 
-import { IOIFCallback } from "../../interfaces/IOIFCallback.sol";
-import { IOracle } from "../../interfaces/IOracle.sol";
+import { IInputCallback } from "../../interfaces/IInputCallback.sol";
+import { IInputOracle } from "../../interfaces/IInputOracle.sol";
 
 import { BytesLib } from "../../libs/BytesLib.sol";
 import { MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
@@ -40,20 +43,8 @@ contract InputSettlerMultiCompact is InputSettlerBase {
 
     constructor(
         address compact
-    ) {
+    ) EIP712("OIFMultichainEscrow", "1") {
         COMPACT = TheCompact(compact);
-    }
-
-    /// @notice EIP712
-    function _domainNameAndVersion()
-        internal
-        pure
-        virtual
-        override
-        returns (string memory name, string memory version)
-    {
-        name = "CatalystSettler";
-        version = "Compact1";
     }
 
     // --- Generic order identifier --- //
@@ -122,7 +113,7 @@ contract InputSettlerMultiCompact is InputSettlerBase {
         _validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, timestamps, solvers);
 
         if (call.length > 0) {
-            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
+            IInputCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
         }
     }
 
@@ -160,7 +151,7 @@ contract InputSettlerMultiCompact is InputSettlerBase {
         _validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, timestamps, solvers);
 
         if (call.length > 0) {
-            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
+            IInputCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
         }
     }
 

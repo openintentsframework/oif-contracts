@@ -1,22 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { ISignatureTransfer } from "permit2/src/interfaces/ISignatureTransfer.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
-import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
+import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 
-import {
-    FillInstruction,
-    GaslessCrossChainOrder,
-    IOriginSettler,
-    OnchainCrossChainOrder,
-    Open,
-    Output,
-    ResolvedCrossChainOrder
-} from "../../interfaces/IERC7683.sol";
+import { EIP712 } from "openzeppelin/utils/cryptography/EIP712.sol";
+import { ISignatureTransfer } from "permit2/src/interfaces/ISignatureTransfer.sol";
+
+import { IInputCallback } from "../../interfaces/IInputCallback.sol";
+import { IInputOracle } from "../../interfaces/IInputOracle.sol";
 import { IInputSettlerEscrow } from "../../interfaces/IInputSettlerEscrow.sol";
-import { IOIFCallback } from "../../interfaces/IOIFCallback.sol";
-import { IOracle } from "../../interfaces/IOracle.sol";
 import { BytesLib } from "../../libs/BytesLib.sol";
 import { IsContractLib } from "../../libs/IsContractLib.sol";
 
@@ -35,6 +28,7 @@ import { InputSettlerBase } from "../InputSettlerBase.sol";
  */
 contract InputSettlerMultichainEscrow is InputSettlerBase {
     using LibAddress for bytes32;
+    using LibAddress for uint256;
 
     error InvalidOrderStatus();
 
@@ -52,16 +46,7 @@ contract InputSettlerMultichainEscrow is InputSettlerBase {
     // Address of the Permit2 contract.
     ISignatureTransfer constant PERMIT2 = ISignatureTransfer(0x000000000022D473030F116dDEE9F6B43aC78BA3);
 
-    function _domainNameAndVersion()
-        internal
-        pure
-        virtual
-        override
-        returns (string memory name, string memory version)
-    {
-        name = "MultichainEscrowOIF";
-        version = "1";
-    }
+    constructor() EIP712("OIFMultichainEscrow", "1") { }
 
     // --- Generic order identifier --- //
     function _orderIdentifier(
@@ -97,9 +82,9 @@ contract InputSettlerMultichainEscrow is InputSettlerBase {
         for (uint256 i = 0; i < numInputs; ++i) {
             uint256[2] calldata input = inputs[i];
 
-            address token = EfficiencyLib.asSanitizedAddress(input[0]);
+            address token = input[0].fromIdentifier();
             uint256 amount = input[1];
-            SafeTransferLib.safeTransferFrom(token, msg.sender, address(this), amount);
+            SafeERC20.safeTransferFrom(IERC20(token), msg.sender, address(this), amount);
         }
 
         //emit Open(orderId, _resolve(uint32(0), orderId, compactOrder));
@@ -169,9 +154,7 @@ contract InputSettlerMultichainEscrow is InputSettlerBase {
 
         _finalise(order, orderId, solvers[0], destination);
 
-        if (call.length > 0) {
-            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
-        }
+        if (call.length > 0) IInputCallback(destination.fromIdentifier()).orderFinalised(order.inputs, call);
     }
 
     /**
@@ -205,9 +188,7 @@ contract InputSettlerMultichainEscrow is InputSettlerBase {
 
         _finalise(order, orderId, solvers[0], destination);
 
-        if (call.length > 0) {
-            IOIFCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
-        }
+        if (call.length > 0) IInputCallback(destination.fromIdentifier()).orderFinalised(order.inputs, call);
     }
 
     //--- The Compact & Resource Locks ---//
@@ -233,10 +214,10 @@ contract InputSettlerMultichainEscrow is InputSettlerBase {
         uint256 numInputs = inputs.length;
         for (uint256 i; i < numInputs; ++i) {
             uint256[2] calldata input = inputs[i];
-            address token = EfficiencyLib.asSanitizedAddress(input[0]);
+            address token = input[0].fromIdentifier();
             uint256 amount = input[1];
 
-            SafeTransferLib.safeTransfer(token, destination, amount);
+            SafeERC20.safeTransfer(IERC20(token), destination, amount);
         }
     }
 }

@@ -19,7 +19,7 @@ contract IsContractLibHarness {
 }
 
 contract IsContractLibTest is Test {
-    address outputSettlerCoin;
+    address outputSettlerSimple;
     address outputToken;
     address inputSettlerCompact;
 
@@ -27,16 +27,16 @@ contract IsContractLibTest is Test {
 
     function setUp() public {
         isContractLib = new IsContractLibHarness();
-        outputSettlerCoin = address(new OutputSettlerSimple());
+        outputSettlerSimple = address(new OutputSettlerSimple());
         outputToken = address(new MockERC20("TEST", "TEST", 18));
         inputSettlerCompact = address(new InputSettlerCompact(address(0)));
     }
 
     function test_validateContainsCode_known_addresses() external {
-        isContractLib.validateContainsCode(outputSettlerCoin);
+        isContractLib.validateContainsCode(outputSettlerSimple);
 
         vm.expectRevert(abi.encodeWithSignature("CodeSize0()"));
-        isContractLib.validateContainsCode(makeAddr("outputSettlerCoin"));
+        isContractLib.validateContainsCode(makeAddr("outputSettlerSimple"));
 
         vm.expectRevert(abi.encodeWithSignature("CodeSize0()"));
         isContractLib.validateContainsCode(address(0));

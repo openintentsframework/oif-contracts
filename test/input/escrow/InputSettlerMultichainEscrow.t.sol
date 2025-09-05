@@ -8,7 +8,6 @@ import {
     MultichainOrderComponentType
 } from "../../../src/input/types/MultichainOrderComponentType.sol";
 import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
-import { OutputSettlerCoin } from "../../../src/output/coin/OutputSettlerCoin.sol";
 
 import { AlwaysYesOracle } from "../../mocks/AlwaysYesOracle.sol";
 import { MockERC20 } from "../../mocks/MockERC20.sol";
@@ -46,7 +45,7 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
 
         token.mint(solver, amount);
         vm.prank(solver);
-        token.approve(address(outputSettlerCoin), type(uint256).max);
+        token.approve(address(outputSettlerSimple), type(uint256).max);
 
         uint256[2][] memory inputs0 = new uint256[2][](1);
         uint256[2][] memory inputs1 = new uint256[2][](1);
@@ -61,7 +60,7 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
 
         MandateOutput[] memory outputs = new MandateOutput[](1);
         outputs[0] = MandateOutput({
-            settler: address(outputSettlerCoin).toIdentifier(),
+            settler: address(outputSettlerSimple).toIdentifier(),
             oracle: address(wormholeOracle).toIdentifier(),
             chainId: 3,
             token: address(token).toIdentifier(),
@@ -110,8 +109,10 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         order.chainIndex = 1;
         order.inputs = inputs1;
         order.additionalChains = additionalChains1;
+
+        bytes memory outputToFill = getOutputToFillFromMandateOutput(order.fillDeadline, order.outputs[0]);
         vm.prank(solver);
-        outputSettlerCoin.fill(order.fillDeadline, orderId, order.outputs[0], solver.toIdentifier());
+        outputSettlerSimple.fill(orderId, outputToFill, abi.encode(solver));
 
         assertEq(token.balanceOf(solver), 0);
 
@@ -123,7 +124,7 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         bytes memory expectedMessageEmitted = this.encodeMessage(outputs[0].settler, payloads);
 
         // Submit fill to wormhole
-        wormholeOracle.submit(address(outputSettlerCoin), payloads);
+        wormholeOracle.submit(address(outputSettlerSimple), payloads);
         bytes memory vaa = makeValidVAA(uint16(3), address(wormholeOracle).toIdentifier(), expectedMessageEmitted);
 
         wormholeOracle.receiveMessage(vaa);

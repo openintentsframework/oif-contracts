@@ -33,7 +33,7 @@ contract InputSettlerEscrowTestBase is Permit2Test {
     uint64 constant MAX_GOVERNANCE_FEE = 10 ** 18 * 0.05; // 10%
 
     address inputSettlerEscrow;
-    OutputSettlerSimple outputSettlerCoin;
+    OutputSettlerSimple outputSettlerSimple;
 
     address alwaysYesOracle;
 
@@ -69,7 +69,7 @@ contract InputSettlerEscrowTestBase is Permit2Test {
 
         DOMAIN_SEPARATOR = EIP712(inputSettlerEscrow).DOMAIN_SEPARATOR();
 
-        outputSettlerCoin = new OutputSettlerSimple();
+        outputSettlerSimple = new OutputSettlerSimple();
 
         token = new MockERC20("Mock ERC20", "MOCK", 18);
         anotherToken = new MockERC20("Mock2 ERC20", "MOCK2", 18);
@@ -86,7 +86,7 @@ contract InputSettlerEscrowTestBase is Permit2Test {
         vm.prank(swapper);
         token.approve(address(permit2), type(uint256).max);
         vm.prank(solver);
-        anotherToken.approve(address(outputSettlerCoin), type(uint256).max);
+        anotherToken.approve(address(outputSettlerSimple), type(uint256).max);
     }
 
     function witnessHash(
