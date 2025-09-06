@@ -51,13 +51,13 @@ contract InputSettlerMultiCompact is InputSettlerBase {
 
     function _orderIdentifier(
         MultichainOrderComponent calldata order
-    ) internal pure returns (bytes32) {
+    ) internal view returns (bytes32) {
         return MultichainCompactOrderType.orderIdentifier(order);
     }
 
     function orderIdentifier(
         MultichainOrderComponent calldata order
-    ) external pure returns (bytes32) {
+    ) external view returns (bytes32) {
         return _orderIdentifier(order);
     }
 
