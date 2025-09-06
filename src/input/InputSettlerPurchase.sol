@@ -30,7 +30,6 @@ abstract contract InputSettlerPurchase is InputSettlerBase {
     error AlreadyPurchased();
     error Expired();
     error InvalidPurchaser();
-    error NotOrderOwner();
 
     event OrderPurchased(bytes32 indexed orderId, bytes32 solver, bytes32 purchaser);
 
@@ -44,19 +43,6 @@ abstract contract InputSettlerPurchase is InputSettlerBase {
     mapping(bytes32 solver => mapping(bytes32 orderId => Purchased)) public purchasedOrders;
 
     // --- Order Purchase Helpers --- //
-
-    /**
-     * @notice Enforces that the caller is the order owner.
-     * @dev Only reads the rightmost 20 bytes to verify the owner/purchaser. This allows implementations to use the
-     * leftmost 12 bytes to encode further withdrawal logic.
-     * For TheCompact, 12 zero bytes indicates a withdrawals instead of a transfer.
-     * @param orderOwner The order owner. The leftmost 12 bytes are not read.
-     */
-    function _orderOwnerIsCaller(
-        bytes32 orderOwner
-    ) internal view {
-        if (orderOwner.fromIdentifier() != msg.sender) revert NotOrderOwner();
-    }
 
     /**
      * @notice Helper function to get the owner of order incase it may have been bought. In case an order has been

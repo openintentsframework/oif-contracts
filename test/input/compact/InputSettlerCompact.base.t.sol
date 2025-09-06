@@ -49,7 +49,7 @@ contract ExportedMessages is Messages, Setters {
 
 contract InputSettlerCompactTestBase is Test {
     address inputSettlerCompact;
-    OutputSettlerSimple outputSettlerCoin;
+    OutputSettlerSimple outputSettlerSimple;
 
     // Oracles
     address alwaysYesOracle;
@@ -90,7 +90,7 @@ contract InputSettlerCompactTestBase is Test {
         DOMAIN_SEPARATOR = EIP712(address(theCompact)).DOMAIN_SEPARATOR();
 
         inputSettlerCompact = address(new InputSettlerCompact(address(theCompact)));
-        outputSettlerCoin = new OutputSettlerSimple();
+        outputSettlerSimple = new OutputSettlerSimple();
         alwaysYesOracle = address(new AlwaysYesOracle());
 
         token = new MockERC20("Mock ERC20", "MOCK", 18);

@@ -61,7 +61,7 @@ contract InputSettlerCompactTestCrossChain is Test {
     using LibAddress for address;
 
     address inputSettlerCompact;
-    OutputSettlerSimple outputSettlerCoin;
+    OutputSettlerSimple outputSettlerSimple;
 
     // Oracles
     address alwaysYesOracle;
@@ -102,7 +102,7 @@ contract InputSettlerCompactTestCrossChain is Test {
         DOMAIN_SEPARATOR = EIP712(address(theCompact)).DOMAIN_SEPARATOR();
 
         inputSettlerCompact = address(new InputSettlerCompact(address(theCompact)));
-        outputSettlerCoin = new OutputSettlerSimple();
+        outputSettlerSimple = new OutputSettlerSimple();
         alwaysYesOracle = address(new AlwaysYesOracle());
 
         token = new MockERC20("Mock ERC20", "MOCK", 18);
@@ -119,9 +119,9 @@ contract InputSettlerCompactTestCrossChain is Test {
         vm.prank(swapper);
         token.approve(address(theCompact), type(uint256).max);
         vm.prank(solver);
-        anotherToken.approve(address(outputSettlerCoin), type(uint256).max);
+        anotherToken.approve(address(outputSettlerSimple), type(uint256).max);
         vm.prank(solver);
-        token.approve(address(outputSettlerCoin), type(uint256).max);
+        token.approve(address(outputSettlerSimple), type(uint256).max);
 
         // Oracles
 
@@ -251,25 +251,6 @@ contract InputSettlerCompactTestCrossChain is Test {
         return keccak256(abi.encodePacked(hashes));
     }
 
-    function encodeMessage(bytes32 remoteIdentifier, bytes[] calldata payloads) external pure returns (bytes memory) {
-        return MessageEncodingLib.encodeMessage(remoteIdentifier, payloads);
-    }
-
-    function getOrderOpenSignature(
-        uint256 privateKey,
-        bytes32 orderId,
-        bytes32 destination,
-        bytes calldata call
-    ) external view returns (bytes memory sig) {
-        bytes32 domainSeparator = EIP712(inputSettlerCompact).DOMAIN_SEPARATOR();
-        bytes32 msgHash = keccak256(
-            abi.encodePacked("\x19\x01", domainSeparator, AllowOpenType.hashAllowOpen(orderId, destination, call))
-        );
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
-        return bytes.concat(r, s, bytes1(v));
-    }
-
     function getOutputToFillFromMandateOutput(
         uint48 fillDeadline,
         MandateOutput memory output
@@ -287,6 +268,25 @@ contract InputSettlerCompactTestCrossChain is Test {
             uint16(output.context.length), // context length
             output.context // context
         );
+    }
+
+    function encodeMessage(bytes32 remoteIdentifier, bytes[] calldata payloads) external pure returns (bytes memory) {
+        return MessageEncodingLib.encodeMessage(remoteIdentifier, payloads);
+    }
+
+    function getOrderOpenSignature(
+        uint256 privateKey,
+        bytes32 orderId,
+        bytes32 destination,
+        bytes calldata call
+    ) external view returns (bytes memory sig) {
+        bytes32 domainSeparator = EIP712(inputSettlerCompact).DOMAIN_SEPARATOR();
+        bytes32 msgHash = keccak256(
+            abi.encodePacked("\x19\x01", domainSeparator, AllowOpenType.hashAllowOpen(orderId, destination, call))
+        );
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
+        return bytes.concat(r, s, bytes1(v));
     }
 
     function test_deposit_compact() external {
@@ -374,7 +374,7 @@ contract InputSettlerCompactTestCrossChain is Test {
         inputs[0] = [tokenId, amount];
         MandateOutput[] memory outputs = new MandateOutput[](1);
         outputs[0] = MandateOutput({
-            settler: address(outputSettlerCoin).toIdentifier(),
+            settler: address(outputSettlerSimple).toIdentifier(),
             oracle: inputOracle.toIdentifier(),
             chainId: block.chainid,
             token: address(anotherToken).toIdentifier(),
@@ -429,7 +429,7 @@ contract InputSettlerCompactTestCrossChain is Test {
             //bytes32 orderId = IInputSettlerCompact(inputSettlerCompact).orderIdentifier(order);
 
             vm.prank(solver);
-            outputSettlerCoin.fill(orderId, outputToFill, fillerData);
+            outputSettlerSimple.fill(orderId, outputToFill, fillerData);
 
             vm.snapshotGasLastCall("inputSettler", "IntegrationCoinFill");
         }
@@ -447,10 +447,10 @@ contract InputSettlerCompactTestCrossChain is Test {
             );
 
             bytes memory expectedMessageEmitted =
-                this.encodeMessage(address(outputSettlerCoin).toIdentifier(), payloads);
+                this.encodeMessage(address(outputSettlerSimple).toIdentifier(), payloads);
             vm.expectEmit();
             emit PackagePublished(0, expectedMessageEmitted, 15);
-            wormholeOracle.submit(address(outputSettlerCoin), payloads);
+            wormholeOracle.submit(address(outputSettlerSimple), payloads);
 
             vm.snapshotGasLastCall("inputSettler", "IntegrationWormholeSubmit");
             bytes memory vaa =
@@ -485,7 +485,7 @@ contract InputSettlerCompactTestCrossChain is Test {
         inputs[0] = [tokenId, amount];
         MandateOutput[] memory outputs = new MandateOutput[](2);
         outputs[0] = MandateOutput({
-            settler: address(outputSettlerCoin).toIdentifier(),
+            settler: address(outputSettlerSimple).toIdentifier(),
             oracle: address(wormholeOracle).toIdentifier(),
             chainId: block.chainid,
             token: address(anotherToken).toIdentifier(),
@@ -495,7 +495,7 @@ contract InputSettlerCompactTestCrossChain is Test {
             context: hex""
         });
         outputs[1] = MandateOutput({
-            settler: address(outputSettlerCoin).toIdentifier(),
+            settler: address(outputSettlerSimple).toIdentifier(),
             oracle: address(wormholeOracle).toIdentifier(),
             chainId: block.chainid,
             token: address(token).toIdentifier(),
@@ -566,10 +566,10 @@ contract InputSettlerCompactTestCrossChain is Test {
             bytes32 orderId = IInputSettlerCompact(inputSettlerCompact).orderIdentifier(order);
 
             vm.prank(solver);
-            outputSettlerCoin.fill(orderId, outputsToFill[0], fillerData1);
+            outputSettlerSimple.fill(orderId, outputsToFill[0], fillerData1);
 
             vm.prank(solver);
-            outputSettlerCoin.fill(orderId, outputsToFill[1], fillerData2);
+            outputSettlerSimple.fill(orderId, outputsToFill[1], fillerData2);
 
             bytes[] memory payloads = new bytes[](2);
             payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
@@ -597,7 +597,7 @@ contract InputSettlerCompactTestCrossChain is Test {
 
             vm.expectEmit();
             emit PackagePublished(0, expectedMessageEmitted, 15);
-            wormholeOracle.submit(address(outputSettlerCoin), payloads);
+            wormholeOracle.submit(address(outputSettlerSimple), payloads);
 
             bytes memory vaa =
                 makeValidVAA(uint16(block.chainid), address(wormholeOracle).toIdentifier(), expectedMessageEmitted);
