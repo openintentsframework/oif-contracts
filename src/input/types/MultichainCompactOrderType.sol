@@ -2,22 +2,10 @@
 pragma solidity ^0.8.26;
 
 import { MandateOutput, MandateOutputType } from "./MandateOutputType.sol";
+import { MultichainOrderComponent } from "./MultichainOrderComponentType.sol";
 
 import { LibAddress } from "../../libs/LibAddress.sol";
 import { StandardOrderType } from "./StandardOrderType.sol";
-
-struct MultichainOrderComponent {
-    address user;
-    uint256 nonce;
-    uint256 chainIdField;
-    uint256 chainIndex;
-    uint32 expires;
-    uint32 fillDeadline;
-    address localOracle;
-    uint256[2][] inputs;
-    MandateOutput[] outputs;
-    bytes32[] additionalChains;
-}
 
 struct Mandate {
     uint32 fillDeadline;
@@ -36,17 +24,19 @@ library MultichainCompactOrderType {
 
     bytes32 constant MULTICHAIN_COMPACT_TYPEHASH_WITH_WITNESS = keccak256(
         bytes(
-            "MultichainCompact(address sponsor,uint256 nonce,uint256 expires,Element[] elements)Element(address arbiter,uint256 chainId,Lock[] commitments)Lock(bytes12 lockTag,address token,uint256 amount)Mandate(uint32 fillDeadline,address inputOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
+            "MultichainCompact(address sponsor,uint256 nonce,uint256 expires,Element[] elements)Element(address arbiter,uint256 chainId,Lock[] commitments,Mandate mandate)Lock(bytes12 lockTag,address token,uint256 amount)Mandate(uint32 fillDeadline,address inputOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
         )
-    ); // TODO: validate
+    );
 
     bytes32 constant ELEMENTS_COMPACT_TYPEHASH_WITH_WITNESS = keccak256(
         bytes(
-            "Element(address arbiter,uint256 chainId,Lock[])Lock(bytes12 lockTag,address token,uint256 amount)Mandate(uint32 fillDeadline,address inputOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
+            "Element(address arbiter,uint256 chainId,Lock[] commitments,Mandate mandate)Lock(bytes12 lockTag,address token,uint256 amount)Mandate(uint32 fillDeadline,address inputOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
         )
-    ); // TODO: validate
+    );
 
     bytes32 constant LOCK_COMPACT_TYPEHASH = keccak256(bytes("Lock(bytes12 lockTag,address token,uint256 amount)"));
+
+    bytes constant BATCH_COMPACT_SUB_TYPES = StandardOrderType.BATCH_COMPACT_SUB_TYPES;
 
     function inputsToLocksHash(
         uint256[2][] calldata inputs
@@ -104,7 +94,7 @@ library MultichainCompactOrderType {
             abi.encode(
                 ELEMENTS_COMPACT_TYPEHASH_WITH_WITNESS,
                 address(this),
-                block.chainid, // todo: validate,
+                block.chainid,
                 inputsToLocksHash(order.inputs),
                 witnessHash(order)
             )
@@ -116,8 +106,6 @@ library MultichainCompactOrderType {
             abi.encode(MULTICHAIN_COMPACT_TYPEHASH_WITH_WITNESS, order.user, order.nonce, order.expires, hashOfElements)
         );
     }
-
-    bytes constant BATCH_COMPACT_SUB_TYPES = StandardOrderType.BATCH_COMPACT_SUB_TYPES;
 
     function witnessHash(
         MultichainOrderComponent calldata order

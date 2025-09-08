@@ -36,7 +36,7 @@ import { OrderPurchase } from "../types/OrderPurchaseType.sol";
  *
  * The contract is intended to be entirely ownerless, permissionlessly deployable, and unstoppable.
  */
-contract InputSettlerMultiCompact is InputSettlerBase {
+contract InputSettlerMultichainCompact is InputSettlerBase {
     error UserCannotBeSettler();
 
     TheCompact public immutable COMPACT;
@@ -195,7 +195,7 @@ contract InputSettlerMultiCompact is InputSettlerBase {
         address user = order.user;
         // The Compact skips signature checks for msg.sender. Ensure no accidental intents are issued.
         if (user == address(this)) revert UserCannotBeSettler();
-        if (true) {
+        if (order.chainIdField == block.chainid) {
             claimHash = COMPACT.batchMultichainClaim(
                 BatchMultichainClaim({
                     allocatorData: allocatorData,
@@ -221,7 +221,8 @@ contract InputSettlerMultiCompact is InputSettlerBase {
                     witnessTypestring: string(MultichainCompactOrderType.BATCH_COMPACT_SUB_TYPES),
                     claims: batchClaimComponents,
                     additionalChains: order.additionalChains,
-                    chainIndex: order.chainIndex,
+                    chainIndex: order.chainIndex - 1, // We use chainIndex as the offset to elements array where compact
+                        // uses it as offset to the notarized.
                     notarizedChainId: order.chainIdField
                 })
             );

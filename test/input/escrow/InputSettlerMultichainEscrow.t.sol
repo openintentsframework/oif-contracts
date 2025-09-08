@@ -97,11 +97,6 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         bytes32 orderId1 = InputSettlerMultichainEscrow(inputSettlerMultichainEscrow).orderIdentifier(order);
         assertEq(orderId, orderId1, "OrderId mismatch");
 
-        vm.chainId(0);
-        order.chainIdField = 0;
-        order.chainIndex = 0;
-        order.inputs = inputs0;
-        order.additionalChains = additionalChains0;
         // -- Begin Swap -- //
         // Fill swap
         vm.chainId(3);
