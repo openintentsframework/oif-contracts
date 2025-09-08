@@ -17,6 +17,7 @@ import { EIP712, InputSettlerMultichainCompactTestBase } from "./InputSettlerMul
 
 contract InputSettlerMultichainCompactTest is InputSettlerMultichainCompactTestBase {
     using LibAddress for address;
+    using LibAddress for bytes32;
 
     event Transfer(address from, address to, uint256 amount);
     event Transfer(address by, address from, address to, uint256 id, uint256 amount);
@@ -246,5 +247,32 @@ contract InputSettlerMultichainCompactTest is InputSettlerMultichainCompactTestB
         assertEq(token.balanceOf(solver), 0);
         assertEq(anotherToken.balanceOf(address(theCompact)), 0);
         assertEq(anotherToken.balanceOf(solver), order3.inputs[0][1]);
+
+        // Test opening with signature
+        vm.revertTo(snapshotId);
+        vm.chainId(3);
+
+        bytes32 destination = keccak256(bytes("destination")).fromIdentifier().toIdentifier();
+        {
+            bytes memory openSignature = this.getOrderOpenSignature(
+                solverPrivateKey,
+                InputSettlerMultichainCompact(inputSettlerMultichainCompact).orderIdentifier(order3),
+                destination,
+                hex""
+            );
+            uint32[] memory timestamps = new uint32[](1);
+            timestamps[0] = uint32(block.timestamp);
+            bytes32[] memory solvers = new bytes32[](1);
+            solvers[0] = solver.toIdentifier();
+            vm.prank(swapper);
+            InputSettlerMultichainCompact(inputSettlerMultichainCompact).finaliseWithSignature(
+                order3, signatures, timestamps, solvers, destination, hex"", openSignature
+            );
+        }
+
+        assertEq(token.balanceOf(solver), 0);
+        assertEq(token.balanceOf(address(theCompact)), order1.inputs[0][1]);
+        assertEq(anotherToken.balanceOf(destination.fromIdentifier()), order3.inputs[0][1]);
+        assertEq(anotherToken.balanceOf(inputSettlerMultichainCompact), 0);
     }
 }

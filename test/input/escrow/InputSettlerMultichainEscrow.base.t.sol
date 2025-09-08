@@ -134,18 +134,6 @@ contract InputSettlerMultichainEscrowTestBase is Test {
         validVM = abi.encodePacked(hex"01" hex"00000000" hex"01", uint8(0), r, s, v - 27, postvalidVM);
     }
 
-    function getOrderPurchaseSignature(
-        uint256 privateKey,
-        OrderPurchase calldata orderPurchase
-    ) external view returns (bytes memory sig) {
-        bytes32 domainSeparator = EIP712(inputSettlerMultichainEscrow).DOMAIN_SEPARATOR();
-        bytes32 msgHash =
-            keccak256(abi.encodePacked("\x19\x01", domainSeparator, OrderPurchaseType.hashOrderPurchase(orderPurchase)));
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
-        return bytes.concat(r, s, bytes1(v));
-    }
-
     function getOrderOpenSignature(
         uint256 privateKey,
         bytes32 orderId,

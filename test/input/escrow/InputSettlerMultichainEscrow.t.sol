@@ -17,6 +17,7 @@ import { InputSettlerMultichainEscrowTestBase } from "./InputSettlerMultichainEs
 
 contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBase {
     using LibAddress for address;
+    using LibAddress for bytes32;
 
     event Transfer(address from, address to, uint256 amount);
     event Transfer(address by, address from, address to, uint256 id, uint256 amount);
@@ -142,11 +143,11 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         assertEq(token.balanceOf(solver), 0);
         assertEq(token.balanceOf(inputSettlerMultichainEscrow), inputs0[0][1]);
 
-        vm.prank(solver);
-
         {
             uint32[] memory timestamps = new uint32[](1);
             timestamps[0] = uint32(block.timestamp);
+
+            vm.prank(solver);
             InputSettlerMultichainEscrow(inputSettlerMultichainEscrow).finalise(
                 order, timestamps, solvers, solver.toIdentifier(), hex""
             );
@@ -172,11 +173,11 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         assertEq(anotherToken.balanceOf(solver), 0);
         assertEq(anotherToken.balanceOf(inputSettlerMultichainEscrow), inputs1[0][1]);
 
-        vm.prank(solver);
-
         {
             uint32[] memory timestamps = new uint32[](1);
             timestamps[0] = uint32(block.timestamp);
+
+            vm.prank(solver);
             InputSettlerMultichainEscrow(inputSettlerMultichainEscrow).finalise(
                 order, timestamps, solvers, solver.toIdentifier(), hex""
             );
@@ -186,6 +187,38 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         assertEq(token.balanceOf(solver), 0);
         assertEq(token.balanceOf(inputSettlerMultichainEscrow), 0);
         assertEq(anotherToken.balanceOf(solver), inputs1[0][1]);
+        assertEq(anotherToken.balanceOf(inputSettlerMultichainEscrow), 0);
+
+        // Test opening with signature
+        vm.revertTo(snapshotId);
+        vm.chainId(3);
+        order.chainIdField = 3;
+        order.chainIndex = 1;
+        order.inputs = inputs1;
+        order.additionalChains = additionalChains1;
+
+        vm.prank(swapper);
+        InputSettlerMultichainEscrow(inputSettlerMultichainEscrow).open(order);
+
+        bytes32 destination = keccak256(bytes("destination")).fromIdentifier().toIdentifier();
+        {
+            bytes memory openSignature = this.getOrderOpenSignature(
+                solverPrivateKey,
+                InputSettlerMultichainEscrow(inputSettlerMultichainEscrow).orderIdentifier(order),
+                destination,
+                hex""
+            );
+            uint32[] memory timestamps = new uint32[](1);
+            timestamps[0] = uint32(block.timestamp);
+
+            vm.prank(swapper);
+            InputSettlerMultichainEscrow(inputSettlerMultichainEscrow).finaliseWithSignature(
+                order, timestamps, solvers, destination, hex"", openSignature
+            );
+        }
+        assertEq(token.balanceOf(solver), 0);
+        assertEq(token.balanceOf(inputSettlerMultichainEscrow), 0);
+        assertEq(anotherToken.balanceOf(destination.fromIdentifier()), inputs1[0][1]);
         assertEq(anotherToken.balanceOf(inputSettlerMultichainEscrow), 0);
     }
 }
