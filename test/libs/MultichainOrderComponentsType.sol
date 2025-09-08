@@ -40,11 +40,14 @@ contract MultichainOrderComponentTypeTest is Test {
     }
 
     /// @dev Test when we iterate over a fixed set of inputs we get the same order id for all inputs.
+    /// This is a heavy test.
+    /// forge-config: default.fuzz.runs = 100
     function test_constructInputHash(
         SetOfInputs[] calldata orderComponents
     ) external view {
+        uint256 numComponentHashes = inputComponentHashes.length;
         bytes32[] memory inputComponentHashes = new bytes32[](orderComponents.length);
-        for (uint256 i; i < inputComponentHashes.length; ++i) {
+        for (uint256 i; i < numComponentHashes; ++i) {
             inputComponentHashes[i] =
                 MultichainOrderComponentType.hashInputs(orderComponents[i].inputsChainId, orderComponents[i].inputs);
         }
@@ -53,7 +56,7 @@ contract MultichainOrderComponentTypeTest is Test {
         bytes32 firstIndexHash = this.constructInputHash(
             firstInputSet.inputsChainId, 0, firstInputSet.inputs, discardIndex(0, inputComponentHashes)
         );
-        for (uint256 i = 1; i < inputComponentHashes.length; ++i) {
+        for (uint256 i = 1; i < numComponentHashes; ++i) {
             SetOfInputs calldata inputSet = orderComponents[i];
             bytes32 computedComponentHash = this.constructInputHash(
                 inputSet.inputsChainId, i, inputSet.inputs, discardIndex(i, inputComponentHashes)
