@@ -9,7 +9,7 @@ import { StandardOrderType } from "./StandardOrderType.sol";
 
 struct Mandate {
     uint32 fillDeadline;
-    address localOracle;
+    address inputOracle;
     MandateOutput[] outputs;
 }
 
@@ -115,7 +115,7 @@ library MultichainCompactOrderType {
                 // Same witness as StandardOrder
                 StandardOrderType.CATALYST_WITNESS_TYPE_HASH,
                 order.fillDeadline,
-                order.localOracle,
+                order.inputOracle,
                 MandateOutputType.hashOutputs(order.outputs)
             )
         );

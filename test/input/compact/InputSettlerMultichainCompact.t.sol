@@ -95,7 +95,7 @@ contract InputSettlerMultichainCompactTest is InputSettlerMultichainCompactTestB
                 chainIndex: 0,
                 fillDeadline: type(uint32).max,
                 expires: type(uint32).max,
-                localOracle: address(wormholeOracle),
+                inputOracle: address(wormholeOracle),
                 inputs: inputs1,
                 outputs: outputs,
                 additionalChains: additionalChains1
@@ -108,7 +108,7 @@ contract InputSettlerMultichainCompactTest is InputSettlerMultichainCompactTestB
                 chainIndex: 1,
                 fillDeadline: type(uint32).max,
                 expires: type(uint32).max,
-                localOracle: address(wormholeOracle),
+                inputOracle: address(wormholeOracle),
                 inputs: inputs3,
                 outputs: outputs,
                 additionalChains: additionalChains3

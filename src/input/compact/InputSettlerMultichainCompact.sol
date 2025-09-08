@@ -110,7 +110,7 @@ contract InputSettlerMultichainCompact is InputSettlerBase {
 
         bytes32 orderId = _finalise(order, signatures, solvers[0], destination);
 
-        _validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, timestamps, solvers);
+        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, timestamps, solvers);
 
         if (call.length > 0) {
             IInputCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
@@ -148,7 +148,7 @@ contract InputSettlerMultichainCompact is InputSettlerBase {
             orderId, EfficiencyLib.asSanitizedAddress(uint256(solvers[0])), destination, call, orderOwnerSignature
         );
 
-        _validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, timestamps, solvers);
+        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, timestamps, solvers);
 
         if (call.length > 0) {
             IInputCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);

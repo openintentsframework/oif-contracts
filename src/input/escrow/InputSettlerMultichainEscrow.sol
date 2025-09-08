@@ -19,6 +19,10 @@ import { MandateOutput } from "../types/MandateOutputType.sol";
 import { MultichainOrderComponent, MultichainOrderComponentType } from "../types/MultichainOrderComponentType.sol";
 
 import { InputSettlerBase } from "../InputSettlerBase.sol";
+import {
+    InputTokenHasDirtyBits, InvalidOrderStatus, ReentrancyDetected, SignatureNotSupported
+} from "./EscrowErrors.sol";
+import { Permit2MultichainWitnessType } from "./Permit2MultichainWitnessType.sol";
 
 /**
  * @title OIF Input Settler using supporting multichain escrows.
@@ -30,9 +34,12 @@ contract InputSettlerMultichainEscrow is InputSettlerBase {
     using LibAddress for bytes32;
     using LibAddress for uint256;
 
-    error InvalidOrderStatus();
-
+    event Open(bytes32 indexed orderId, bytes order);
     event Refunded(bytes32 indexed orderId);
+
+    bytes1 internal constant SIGNATURE_TYPE_PERMIT2 = 0x00;
+    bytes1 internal constant SIGNATURE_TYPE_3009 = 0x01;
+    bytes1 internal constant SIGNATURE_TYPE_SELF = 0xff;
 
     enum OrderStatus {
         None,
@@ -76,6 +83,14 @@ contract InputSettlerMultichainEscrow is InputSettlerBase {
         // revert and it will unmark it. This acts as a local-reentry check.
         orderStatus[orderId] = OrderStatus.Deposited;
 
+        _open(order);
+
+        emit Open(orderId, abi.encode(order));
+    }
+
+    function _open(
+        MultichainOrderComponent calldata order
+    ) internal {
         // Collect input tokens.
         uint256[2][] calldata inputs = order.inputs;
         uint256 numInputs = inputs.length;
@@ -86,8 +101,93 @@ contract InputSettlerMultichainEscrow is InputSettlerBase {
             uint256 amount = input[1];
             SafeERC20.safeTransferFrom(IERC20(token), msg.sender, address(this), amount);
         }
+    }
 
-        //emit Open(orderId, _resolve(uint32(0), orderId, compactOrder));
+    function openFor(MultichainOrderComponent calldata order, address sponsor, bytes calldata signature) external {
+        // Validate the order structure.
+        _validateTimestampHasNotPassed(order.fillDeadline);
+        _validateTimestampHasNotPassed(order.expires);
+
+        bytes32 orderId = _orderIdentifier(order);
+
+        if (orderStatus[orderId] != OrderStatus.None) revert InvalidOrderStatus();
+        // Mark order as deposited. If we can't make the deposit, we will
+        // revert and it will unmark it. This acts as a reentry check.
+        orderStatus[orderId] = OrderStatus.Deposited;
+
+        // Check the first byte of the signature for signature type then collect inputs.
+        bytes1 signatureType = signature.length > 0 ? signature[0] : SIGNATURE_TYPE_SELF;
+        if (signatureType == SIGNATURE_TYPE_PERMIT2) {
+            _openForWithPermit2(order, orderId, sponsor, signature[1:], address(this));
+        } else if (msg.sender == sponsor && signatureType == SIGNATURE_TYPE_SELF) {
+            _open(order);
+        } else {
+            revert SignatureNotSupported(signatureType);
+        }
+
+        // Validate that there has been no reentrancy.
+        if (orderStatus[orderId] != OrderStatus.Deposited) revert ReentrancyDetected();
+
+        emit Open(orderId, abi.encode(order));
+    }
+
+    /**
+     * @notice Helper function for using permit2 to collect assets represented by a StandardOrder.
+     * @param order StandardOrder representing the intent.
+     * @param signer Provider of the permit2 funds and signer of the intent.
+     * @param signature permit2 signature with Permit2Witness representing `order` signed by `order.user`.
+     * @param to recipient of the inputs tokens. In most cases, should be address(this).
+     */
+    function _openForWithPermit2(
+        MultichainOrderComponent calldata order,
+        bytes32 orderId,
+        address signer,
+        bytes calldata signature,
+        address to
+    ) internal {
+        ISignatureTransfer.TokenPermissions[] memory permitted;
+        ISignatureTransfer.SignatureTransferDetails[] memory transferDetails;
+
+        {
+            uint256[2][] calldata orderInputs = order.inputs;
+            // Load the number of inputs. We need them to set the array size & convert each
+            // input struct into a transferDetails struct.
+            uint256 numInputs = orderInputs.length;
+            permitted = new ISignatureTransfer.TokenPermissions[](numInputs);
+            transferDetails = new ISignatureTransfer.SignatureTransferDetails[](numInputs);
+            // Iterate through each input.
+            for (uint256 i; i < numInputs; ++i) {
+                uint256[2] calldata orderInput = orderInputs[i];
+                uint256 inputToken = orderInput[0];
+                uint256 amount = orderInput[1];
+                // Validate that the input token's 12 leftmost bytes are 0.
+                if ((inputToken >> 160) != 0) revert InputTokenHasDirtyBits();
+                address token;
+                assembly ("memory-safe") {
+                    // No dirty bits exist.
+                    token := inputToken
+                }
+                // Check if input tokens are contracts.
+                IsContractLib.validateContainsCode(token);
+                // Set the allowance. This is the explicit max allowed amount approved by the user.
+                permitted[i] = ISignatureTransfer.TokenPermissions({ token: token, amount: amount });
+                // Set our requested transfer. This has to be less than or equal to the allowance
+                transferDetails[i] = ISignatureTransfer.SignatureTransferDetails({ to: to, requestedAmount: amount });
+            }
+        }
+        ISignatureTransfer.PermitBatchTransferFrom memory permitBatch = ISignatureTransfer.PermitBatchTransferFrom({
+            permitted: permitted,
+            nonce: order.nonce,
+            deadline: order.fillDeadline
+        });
+        PERMIT2.permitWitnessTransferFrom(
+            permitBatch,
+            transferDetails,
+            signer,
+            Permit2MultichainWitnessType.MultichainPermit2WitnessHash(orderId, order),
+            Permit2MultichainWitnessType.PERMIT2_MULTICHAIN_PERMIT2_TYPESTRING,
+            signature
+        );
     }
 
     // --- Refund --- //
@@ -150,7 +250,7 @@ contract InputSettlerMultichainEscrow is InputSettlerBase {
         bytes32 orderId = _orderIdentifier(order);
         _validateIsCaller(solvers[0]);
 
-        _validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, timestamps, solvers);
+        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, timestamps, solvers);
 
         _finalise(order, orderId, solvers[0], destination);
 
@@ -184,7 +284,7 @@ contract InputSettlerMultichainEscrow is InputSettlerBase {
         // Validate the external claimant with signature
         _allowExternalClaimant(orderId, solvers[0].fromIdentifier(), destination, call, orderOwnerSignature);
 
-        _validateFills(order.fillDeadline, order.localOracle, order.outputs, orderId, timestamps, solvers);
+        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, timestamps, solvers);
 
         _finalise(order, orderId, solvers[0], destination);
 

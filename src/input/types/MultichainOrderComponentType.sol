@@ -10,10 +10,10 @@ struct MultichainOrderComponent {
     uint256 chainIndex;
     uint32 expires;
     uint32 fillDeadline;
-    address localOracle;
+    address inputOracle;
     uint256[2][] inputs;
     MandateOutput[] outputs;
-    bytes32[] additionalChains; // <-- Fix this?
+    bytes32[] additionalChains;
 }
 
 /**
@@ -39,7 +39,7 @@ library MultichainOrderComponentType {
                 order.nonce,
                 order.expires,
                 order.fillDeadline,
-                order.localOracle,
+                order.inputOracle,
                 constructInputHash(order.chainIdField, order.chainIndex, order.inputs, order.additionalChains),
                 abi.encode(order.outputs)
             )

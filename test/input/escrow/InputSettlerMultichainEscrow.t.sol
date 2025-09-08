@@ -77,7 +77,7 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
             chainIndex: 0,
             fillDeadline: type(uint32).max,
             expires: type(uint32).max,
-            localOracle: address(wormholeOracle),
+            inputOracle: address(wormholeOracle),
             inputs: new uint256[2][](0), // Shall be replaced before execution
             outputs: outputs,
             additionalChains: new bytes32[](0) // Shall be replaced before execution
