@@ -14,6 +14,8 @@ import {
     MultichainOrderComponentType
 } from "../../../src/input/types/MultichainOrderComponentType.sol";
 import { OrderPurchase, OrderPurchaseType } from "../../../src/input/types/OrderPurchaseType.sol";
+
+import { LibAddress } from "../../../src/libs/LibAddress.sol";
 import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
 import { MessageEncodingLib } from "../../../src/libs/MessageEncodingLib.sol";
 import { WormholeOracle } from "../../../src/oracles/wormhole/WormholeOracle.sol";
@@ -23,6 +25,7 @@ import { Structs } from "../../../src/oracles/wormhole/external/wormhole/Structs
 
 import { AlwaysYesOracle } from "../../mocks/AlwaysYesOracle.sol";
 import { MockERC20 } from "../../mocks/MockERC20.sol";
+import { Permit2Test } from "./Permit2.t.sol";
 
 interface EIP712 {
     function DOMAIN_SEPARATOR() external view returns (bytes32);
@@ -45,7 +48,9 @@ contract ExportedMessages is Messages, Setters {
     }
 }
 
-contract InputSettlerMultichainEscrowTestBase is Test {
+contract InputSettlerMultichainEscrowTestBase is Permit2Test {
+    using LibAddress for uint256;
+
     address inputSettlerMultichainEscrow;
     OutputSettlerSimple outputSettlerSimple;
 
@@ -64,7 +69,8 @@ contract InputSettlerMultichainEscrowTestBase is Test {
     MockERC20 token;
     MockERC20 anotherToken;
 
-    function setUp() public virtual {
+    function setUp() public virtual override {
+        super.setUp();
         inputSettlerMultichainEscrow = address(new InputSettlerMultichainEscrow());
         outputSettlerSimple = new OutputSettlerSimple();
         alwaysYesOracle = address(new AlwaysYesOracle());
@@ -149,9 +155,86 @@ contract InputSettlerMultichainEscrowTestBase is Test {
         return bytes.concat(r, s, bytes1(v));
     }
 
-    function hashOrderPurchase(
-        OrderPurchase calldata orderPurchase
-    ) external pure returns (bytes32) {
-        return OrderPurchaseType.hashOrderPurchase(orderPurchase);
+    function witnessHash(
+        MultichainOrderComponent memory order
+    ) internal view returns (bytes32) {
+        bytes32 orderId = InputSettlerMultichainEscrow(inputSettlerMultichainEscrow).orderIdentifier(order);
+        return keccak256(
+            abi.encode(
+                keccak256(
+                    bytes(
+                        "MultichainPermit2Witness(bytes32 orderId,uint32 expires,address inputOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
+                    )
+                ),
+                orderId,
+                order.expires,
+                order.inputOracle,
+                outputsHash(order.outputs)
+            )
+        );
+    }
+
+    function outputsHash(
+        MandateOutput[] memory outputs
+    ) internal pure returns (bytes32) {
+        bytes32[] memory hashes = new bytes32[](outputs.length);
+        for (uint256 i = 0; i < outputs.length; ++i) {
+            MandateOutput memory output = outputs[i];
+            hashes[i] = keccak256(
+                abi.encode(
+                    keccak256(
+                        bytes(
+                            "MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
+                        )
+                    ),
+                    output.oracle,
+                    output.settler,
+                    output.chainId,
+                    output.token,
+                    output.amount,
+                    output.recipient,
+                    keccak256(output.call),
+                    keccak256(output.context)
+                )
+            );
+        }
+        return keccak256(abi.encodePacked(hashes));
+    }
+
+    function getPermit2Signature(
+        uint256 privateKey,
+        MultichainOrderComponent memory order
+    ) internal view returns (bytes memory sig) {
+        uint256[2][] memory inputs = order.inputs;
+        bytes32[] memory tokenPermissionsHashes = new bytes32[](inputs.length);
+        for (uint256 i; i < inputs.length; ++i) {
+            uint256[2] memory input = inputs[i];
+            address inputToken = input[0].fromIdentifier();
+            uint256 amount = input[1];
+            tokenPermissionsHashes[i] =
+                keccak256(abi.encode(keccak256("TokenPermissions(address token,uint256 amount)"), inputToken, amount));
+        }
+        bytes32 domainSeparator = EIP712(permit2).DOMAIN_SEPARATOR();
+        bytes32 msgHash = keccak256(
+            abi.encodePacked(
+                "\x19\x01",
+                domainSeparator,
+                keccak256(
+                    abi.encode(
+                        keccak256(
+                            "PermitBatchWitnessTransferFrom(TokenPermissions[] permitted,address spender,uint256 nonce,uint256 deadline,MultichainPermit2Witness witness)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)TokenPermissions(address token,uint256 amount)MultichainPermit2Witness(bytes32 orderId,uint32 expires,address inputOracle,MandateOutput[] outputs)"
+                        ),
+                        keccak256(abi.encodePacked(tokenPermissionsHashes)),
+                        inputSettlerMultichainEscrow,
+                        order.nonce,
+                        order.fillDeadline,
+                        witnessHash(order)
+                    )
+                )
+            )
+        );
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
+        return bytes.concat(r, s, bytes1(v));
     }
 }
