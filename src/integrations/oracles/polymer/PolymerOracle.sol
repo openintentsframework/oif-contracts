@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { LibAddress } from "../../libs/LibAddress.sol";
+import { LibAddress } from "../../../libs/LibAddress.sol";
 import { Bytes } from "openzeppelin/utils/Bytes.sol";
 
-import { MandateOutput, MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
+import { MandateOutput, MandateOutputEncodingLib } from "../../../libs/MandateOutputEncodingLib.sol";
 
-import { OutputSettlerBase } from "../../output/OutputSettlerBase.sol";
-import { BaseInputOracle } from "../BaseInputOracle.sol";
+import { BaseInputOracle } from "../../../oracles/BaseInputOracle.sol";
+import { OutputSettlerBase } from "../../../output/OutputSettlerBase.sol";
 import { ICrossL2Prover } from "./ICrossL2Prover.sol";
 
 /**
