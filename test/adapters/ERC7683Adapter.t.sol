@@ -26,9 +26,9 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
     using LibAddress for bytes32;
 
     ERC7683EscrowAdapter public adapter;
-    StandardOrder public order;
-    OnchainCrossChainOrder public onchainOrder;
-    GaslessCrossChainOrder public gaslessOrder;
+    // StandardOrder public order;
+    // OnchainCrossChainOrder public onchainOrder;
+    // GaslessCrossChainOrder public gaslessOrder;
 
     function setUp() public override {
         super.setUp();
@@ -49,11 +49,10 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
         vm.prank(user);
         token.approve(address(adapter), amount);
 
-        MandateOutput[] memory outputs = new MandateOutput[](0);
         uint256[2][] memory inputs = new uint256[2][](1);
         inputs[0] = [uint256(uint160(address(token))), amount];
 
-        order = StandardOrder({
+        StandardOrder memory order = StandardOrder({
             user: swapper,
             nonce: 0,
             originChainId: block.chainid,
@@ -61,10 +60,10 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
             fillDeadline: expires,
             inputOracle: address(0),
             inputs: inputs,
-            outputs: outputs
+            outputs: new MandateOutput[](0)
         });
 
-        onchainOrder = OnchainCrossChainOrder({
+        OnchainCrossChainOrder memory onchainOrder = OnchainCrossChainOrder({
             fillDeadline: expires,
             orderDataType: adapter.ONCHAIN_ORDER_DATA_TYPEHASH(),
             orderData: abi.encode(order)
@@ -84,12 +83,15 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
     }
 
     function test_open_orderDataType_reverts() public {
+        OnchainCrossChainOrder memory onchainOrder;
         onchainOrder.orderDataType = adapter.GASLESS_ORDER_DATA_TYPEHASH();
         vm.expectRevert(abi.encodeWithSelector(ERC7683EscrowAdapter.InvalidOrderDataType.selector));
         adapter.open(onchainOrder);
     }
 
     function test_open_orderDeadline_reverts() public {
+        StandardOrder memory order;
+        OnchainCrossChainOrder memory onchainOrder;
         onchainOrder.orderDataType = adapter.ONCHAIN_ORDER_DATA_TYPEHASH();
         onchainOrder.orderData = abi.encode(order);
         onchainOrder.fillDeadline = uint32(1);
@@ -104,15 +106,14 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
 
     function test_open_for_permit2(uint128 amountMint, uint256 nonce) public {
         token.mint(swapper, amountMint);
-
         uint256 amount = token.balanceOf(swapper);
 
-        MandateOutput[] memory outputs = new MandateOutput[](0);
+        ERC7683EscrowAdapter.GaslessOrderData memory gaslessOrderData;
 
         uint256[2][] memory inputs = new uint256[2][](1);
         inputs[0] = [uint256(uint160(address(token))), amount];
 
-        order = StandardOrder({
+        StandardOrder memory order = StandardOrder({
             user: swapper,
             nonce: nonce,
             originChainId: block.chainid,
@@ -120,21 +121,20 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
             fillDeadline: type(uint32).max,
             inputOracle: address(0),
             inputs: inputs,
-            outputs: outputs
+            outputs: new MandateOutput[](0)
         });
-
-        bytes memory signature = getPermit2Signature(swapperPrivateKey, order);
 
         assertEq(token.balanceOf(address(swapper)), amount);
 
-        ERC7683EscrowAdapter.GaslessOrderData memory gaslessOrderData = ERC7683EscrowAdapter.GaslessOrderData({
+        gaslessOrderData = ERC7683EscrowAdapter.GaslessOrderData({
             expires: type(uint32).max,
             inputOracle: address(0),
             inputs: inputs,
-            outputs: outputs
+            outputs: new MandateOutput[](0)
         });
+        bytes memory signature = getPermit2Signature(swapperPrivateKey, order);
 
-        gaslessOrder = GaslessCrossChainOrder({
+        GaslessCrossChainOrder memory gaslessOrder = GaslessCrossChainOrder({
             originSettler: address(adapter),
             user: swapper,
             nonce: nonce,
@@ -171,11 +171,10 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
 
         uint256 amount = token.balanceOf(swapper);
 
-        MandateOutput[] memory outputs = new MandateOutput[](0);
         uint256[2][] memory inputs = new uint256[2][](1);
         inputs[0] = [uint256(uint160(address(token))), amount];
 
-        order = StandardOrder({
+        StandardOrder memory order = StandardOrder({
             user: swapper,
             nonce: nonce,
             originChainId: block.chainid,
@@ -183,17 +182,17 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
             fillDeadline: type(uint32).max,
             inputOracle: address(0),
             inputs: inputs,
-            outputs: outputs
+            outputs: new MandateOutput[](0)
         });
 
         ERC7683EscrowAdapter.GaslessOrderData memory gaslessOrderData = ERC7683EscrowAdapter.GaslessOrderData({
             expires: type(uint32).max,
             inputOracle: address(0),
             inputs: inputs,
-            outputs: outputs
+            outputs: new MandateOutput[](0)
         });
 
-        gaslessOrder = GaslessCrossChainOrder({
+        GaslessCrossChainOrder memory gaslessOrder = GaslessCrossChainOrder({
             originSettler: address(adapter),
             user: swapper,
             nonce: nonce,
@@ -233,13 +232,12 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
         token.mint(swapper, amountMint);
 
         uint256 amount = token.balanceOf(swapper);
-
-        MandateOutput[] memory outputs = new MandateOutput[](0);
+        ERC7683EscrowAdapter.GaslessOrderData memory gaslessOrderData;
 
         uint256[2][] memory inputs = new uint256[2][](1);
         inputs[0] = [uint256(uint160(address(token))), amount];
 
-        order = StandardOrder({
+        StandardOrder memory order = StandardOrder({
             user: swapper,
             nonce: nonce,
             originChainId: block.chainid,
@@ -247,17 +245,17 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
             fillDeadline: type(uint32).max,
             inputOracle: address(0),
             inputs: inputs,
-            outputs: outputs
+            outputs: new MandateOutput[](0)
         });
 
-        ERC7683EscrowAdapter.GaslessOrderData memory gaslessOrderData = ERC7683EscrowAdapter.GaslessOrderData({
+        gaslessOrderData = ERC7683EscrowAdapter.GaslessOrderData({
             expires: type(uint32).max,
             inputOracle: address(0),
             inputs: inputs,
-            outputs: outputs
+            outputs: new MandateOutput[](0)
         });
 
-        gaslessOrder = GaslessCrossChainOrder({
+        GaslessCrossChainOrder memory gaslessOrder = GaslessCrossChainOrder({
             originSettler: address(adapter),
             user: swapper,
             nonce: nonce,
@@ -300,14 +298,14 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
 
         uint256 amount1 = token.balanceOf(swapper);
         uint256 amount2 = anotherToken.balanceOf(swapper);
-
-        MandateOutput[] memory outputs = new MandateOutput[](0);
+        ERC7683EscrowAdapter.GaslessOrderData memory gaslessOrderData;
+        bytes[] memory signatures = new bytes[](2);
 
         uint256[2][] memory inputs = new uint256[2][](2);
         inputs[0] = [uint256(uint160(address(token))), amount1];
         inputs[1] = [uint256(uint160(address(anotherToken))), amount2];
 
-        order = StandardOrder({
+        StandardOrder memory order = StandardOrder({
             user: swapper,
             nonce: nonce,
             originChainId: block.chainid,
@@ -315,26 +313,25 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
             fillDeadline: type(uint32).max,
             inputOracle: address(0),
             inputs: inputs,
-            outputs: outputs
+            outputs: new MandateOutput[](0)
         });
 
         bytes memory signature1 = get3009Signature(swapperPrivateKey, inputSettlerEscrow, 0, order);
         bytes memory signature2 = get3009Signature(swapperPrivateKey, inputSettlerEscrow, 1, order);
-        bytes[] memory signatures = new bytes[](2);
         signatures[0] = signature1;
         signatures[1] = signature2;
 
         assertEq(token.balanceOf(address(swapper)), amount1);
         assertEq(anotherToken.balanceOf(address(swapper)), amount2);
 
-        ERC7683EscrowAdapter.GaslessOrderData memory gaslessOrderData = ERC7683EscrowAdapter.GaslessOrderData({
+        gaslessOrderData = ERC7683EscrowAdapter.GaslessOrderData({
             expires: type(uint32).max,
             inputOracle: address(0),
             inputs: inputs,
-            outputs: outputs
+            outputs: new MandateOutput[](0)
         });
 
-        gaslessOrder = GaslessCrossChainOrder({
+        GaslessCrossChainOrder memory gaslessOrder = GaslessCrossChainOrder({
             originSettler: address(adapter),
             user: swapper,
             nonce: nonce,
@@ -365,7 +362,7 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
 
     function test_refund(uint32 expires, uint128 amount, address user) public {
         vm.assume(amount < type(uint128).max);
-        order = test_open(expires, amount, user);
+        StandardOrder memory order = test_open(expires, amount, user);
         // Wrap into the future of the expiry.
         vm.warp(order.expires + 1);
 
@@ -394,17 +391,20 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
 
     function test_open_for_fillerData_reverts() public {
         bytes memory notEmptyFillerData = bytes("not empty");
+        GaslessCrossChainOrder memory gaslessOrder;
 
         vm.expectRevert(abi.encodeWithSelector(ERC7683EscrowAdapter.InvalidOriginFillerData.selector));
         adapter.openFor(gaslessOrder, abi.encodePacked(bytes1(0x01), bytes("")), notEmptyFillerData);
     }
 
     function test_open_for_orderDataType_reverts() public {
+        GaslessCrossChainOrder memory gaslessOrder;
         vm.expectRevert(abi.encodeWithSelector(ERC7683EscrowAdapter.InvalidOrderDataType.selector));
         adapter.openFor(gaslessOrder, abi.encodePacked(bytes1(0x01), bytes("")), bytes(""));
     }
 
     function test_open_for_originSettler_reverts() public {
+        GaslessCrossChainOrder memory gaslessOrder;
         gaslessOrder.orderDataType = adapter.GASLESS_ORDER_DATA_TYPEHASH();
 
         vm.expectRevert(abi.encodeWithSelector(ERC7683EscrowAdapter.InvalidOriginSettler.selector));
@@ -414,8 +414,7 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
     function test_resolve() public {
         uint256 amount = 10 ** 18;
 
-        MandateOutput[] memory outputs = new MandateOutput[](1);
-        outputs[0] = MandateOutput({
+        MandateOutput memory output = MandateOutput({
             settler: address(outputSettlerCoin).toIdentifier(),
             oracle: alwaysYesOracle.toIdentifier(),
             chainId: block.chainid,
@@ -433,10 +432,10 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
         fillInstructions[0] = FillInstruction({
             destinationChainId: block.chainid,
             destinationSettler: address(outputSettlerCoin).toIdentifier(),
-            originData: abi.encode(outputs[0])
+            originData: abi.encode(output)
         });
 
-        order = StandardOrder({
+        StandardOrder memory order = StandardOrder({
             user: swapper,
             nonce: 0,
             originChainId: block.chainid,
@@ -444,8 +443,10 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
             fillDeadline: type(uint32).max,
             inputOracle: alwaysYesOracle,
             inputs: inputs,
-            outputs: outputs
+            outputs: new MandateOutput[](1)
         });
+        order.outputs[0] = output;
+        OnchainCrossChainOrder memory onchainOrder;
         onchainOrder.fillDeadline = type(uint32).max;
         onchainOrder.orderDataType = adapter.ONCHAIN_ORDER_DATA_TYPEHASH();
         onchainOrder.orderData = abi.encode(order);
@@ -507,52 +508,52 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
     function test_resolve_for() public {
         uint256 amount = 10 ** 18;
         FillInstruction[] memory fillInstructions = new FillInstruction[](1);
-        {
-            MandateOutput[] memory outputs = new MandateOutput[](1);
-            outputs[0] = MandateOutput({
-                settler: address(outputSettlerCoin).toIdentifier(),
-                oracle: alwaysYesOracle.toIdentifier(),
-                chainId: block.chainid,
-                token: address(anotherToken).toIdentifier(),
-                amount: amount,
-                recipient: swapper.toIdentifier(),
-                call: hex"",
-                context: hex""
-            });
+        MandateOutput memory output = MandateOutput({
+            settler: address(outputSettlerCoin).toIdentifier(),
+            oracle: alwaysYesOracle.toIdentifier(),
+            chainId: block.chainid,
+            token: address(anotherToken).toIdentifier(),
+            amount: amount,
+            recipient: swapper.toIdentifier(),
+            call: hex"",
+            context: hex""
+        });
 
-            uint256[2][] memory inputs = new uint256[2][](1);
-            inputs[0] = [uint256(uint160(address(token))), amount];
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
 
-            fillInstructions[0] = FillInstruction({
-                destinationChainId: block.chainid,
-                destinationSettler: address(outputSettlerCoin).toIdentifier(),
-                originData: abi.encode(outputs[0])
-            });
+        fillInstructions[0] = FillInstruction({
+            destinationChainId: block.chainid,
+            destinationSettler: address(outputSettlerCoin).toIdentifier(),
+            originData: abi.encode(output)
+        });
 
-            order = StandardOrder({
-                user: swapper,
-                nonce: 0,
-                originChainId: block.chainid,
-                expires: type(uint32).max,
-                fillDeadline: type(uint32).max,
-                inputOracle: alwaysYesOracle,
-                inputs: inputs,
-                outputs: outputs
-            });
-            gaslessOrder.user = swapper;
-            gaslessOrder.nonce = 0;
-            gaslessOrder.originChainId = block.chainid;
-            gaslessOrder.openDeadline = type(uint32).max;
-            gaslessOrder.fillDeadline = type(uint32).max;
-            ERC7683EscrowAdapter.GaslessOrderData memory gaslessOrderData = ERC7683EscrowAdapter.GaslessOrderData({
-                expires: type(uint32).max,
-                inputOracle: alwaysYesOracle,
-                inputs: inputs,
-                outputs: outputs
-            });
-            gaslessOrder.orderDataType = adapter.GASLESS_ORDER_DATA_TYPEHASH();
-            gaslessOrder.orderData = abi.encode(gaslessOrderData);
-        }
+        StandardOrder memory order = StandardOrder({
+            user: swapper,
+            nonce: 0,
+            originChainId: block.chainid,
+            expires: type(uint32).max,
+            fillDeadline: type(uint32).max,
+            inputOracle: alwaysYesOracle,
+            inputs: inputs,
+            outputs: new MandateOutput[](1)
+        });
+        order.outputs[0] = output;
+        GaslessCrossChainOrder memory gaslessOrder;
+        gaslessOrder.user = swapper;
+        gaslessOrder.nonce = 0;
+        gaslessOrder.originChainId = block.chainid;
+        gaslessOrder.openDeadline = type(uint32).max;
+        gaslessOrder.fillDeadline = type(uint32).max;
+        ERC7683EscrowAdapter.GaslessOrderData memory gaslessOrderData = ERC7683EscrowAdapter.GaslessOrderData({
+            expires: type(uint32).max,
+            inputOracle: alwaysYesOracle,
+            inputs: inputs,
+            outputs: new MandateOutput[](1)
+        });
+        gaslessOrderData.outputs[0] = output;
+        gaslessOrder.orderDataType = adapter.GASLESS_ORDER_DATA_TYPEHASH();
+        gaslessOrder.orderData = abi.encode(gaslessOrderData);
 
         Output[] memory expectedMaxSpent = new Output[](1);
         expectedMaxSpent[0] = Output({
@@ -604,8 +605,7 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
 
         uint256 amount = 1e18 / 10;
 
-        MandateOutput[] memory outputs = new MandateOutput[](1);
-        outputs[0] = MandateOutput({
+        MandateOutput memory output = MandateOutput({
             settler: address(outputSettlerCoin).toIdentifier(),
             oracle: alwaysYesOracle.toIdentifier(),
             chainId: block.chainid,
@@ -615,10 +615,11 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
             call: hex"",
             context: hex""
         });
+
         uint256[2][] memory inputs = new uint256[2][](1);
         inputs[0] = [uint256(uint160(address(token))), amount];
 
-        order = StandardOrder({
+        StandardOrder memory order = StandardOrder({
             user: swapper,
             nonce: 0,
             originChainId: block.chainid,
@@ -626,8 +627,10 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
             fillDeadline: type(uint32).max,
             inputOracle: alwaysYesOracle,
             inputs: inputs,
-            outputs: outputs
+            outputs: new MandateOutput[](1)
         });
+        order.outputs[0] = output;
+        OnchainCrossChainOrder memory onchainOrder;
         onchainOrder = OnchainCrossChainOrder({
             fillDeadline: type(uint32).max,
             orderDataType: adapter.ONCHAIN_ORDER_DATA_TYPEHASH(),
@@ -659,7 +662,7 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
 
         bytes32 orderId = adapter.orderIdentifier(order);
         bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionMemory(
-            solver.toIdentifier(), orderId, uint32(block.timestamp), outputs[0]
+            solver.toIdentifier(), orderId, uint32(block.timestamp), output
         );
         bytes32 payloadHash = keccak256(payload);
 
@@ -686,8 +689,7 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
 
         uint256 amount = 1e18 / 10;
 
-        MandateOutput[] memory outputs = new MandateOutput[](1);
-        outputs[0] = MandateOutput({
+        MandateOutput memory output = MandateOutput({
             settler: address(outputSettlerCoin).toIdentifier(),
             oracle: alwaysYesOracle.toIdentifier(),
             chainId: block.chainid,
@@ -700,7 +702,7 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
         uint256[2][] memory inputs = new uint256[2][](1);
         inputs[0] = [uint256(uint160(address(token))), amount];
 
-        order = StandardOrder({
+        StandardOrder memory order = StandardOrder({
             user: swapper,
             nonce: 0,
             originChainId: block.chainid,
@@ -708,10 +710,11 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
             fillDeadline: fillDeadline,
             inputOracle: alwaysYesOracle,
             inputs: inputs,
-            outputs: outputs
+            outputs: new MandateOutput[](1)
         });
+        order.outputs[0] = output;
 
-        onchainOrder = OnchainCrossChainOrder({
+        OnchainCrossChainOrder memory onchainOrder = OnchainCrossChainOrder({
             fillDeadline: fillDeadline,
             orderDataType: adapter.ONCHAIN_ORDER_DATA_TYPEHASH(),
             orderData: abi.encode(order)
@@ -750,8 +753,7 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
 
         uint256 amount = 1e18 / 10;
 
-        MandateOutput[] memory outputs = new MandateOutput[](1);
-        outputs[0] = MandateOutput({
+        MandateOutput memory output = MandateOutput({
             settler: address(outputSettlerCoin).toIdentifier(),
             oracle: alwaysYesOracle.toIdentifier(),
             chainId: block.chainid,
@@ -761,10 +763,11 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
             call: hex"",
             context: hex""
         });
+
         uint256[2][] memory inputs = new uint256[2][](1);
         inputs[0] = [uint256(uint160(address(token))), amount];
 
-        order = StandardOrder({
+        StandardOrder memory order = StandardOrder({
             user: swapper,
             nonce: 0,
             originChainId: block.chainid,
@@ -772,10 +775,11 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
             fillDeadline: type(uint32).max,
             inputOracle: alwaysYesOracle,
             inputs: inputs,
-            outputs: outputs
+            outputs: new MandateOutput[](1)
         });
+        order.outputs[0] = output;
 
-        onchainOrder = OnchainCrossChainOrder({
+        OnchainCrossChainOrder memory onchainOrder = OnchainCrossChainOrder({
             fillDeadline: type(uint32).max,
             orderDataType: adapter.ONCHAIN_ORDER_DATA_TYPEHASH(),
             orderData: abi.encode(order)
@@ -796,7 +800,7 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
         bytes32 orderId = adapter.orderIdentifier(order);
         {
             bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionMemory(
-                solver.toIdentifier(), orderId, uint32(block.timestamp), outputs[0]
+                solver.toIdentifier(), orderId, uint32(block.timestamp), output
             );
             bytes32 payloadHash = keccak256(payload);
 
