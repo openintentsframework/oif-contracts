@@ -10,7 +10,7 @@ import { BtcProof, BtcTxProof, ScriptMismatch } from "bitcoinprism-evm/src/libra
 import { BtcScript } from "bitcoinprism-evm/src/library/BtcScript.sol";
 
 import { MandateOutput, MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
-import { BitcoinOracle } from "../../../src/oracles/bitcoin/BitcoinOracle.sol";
+import { BitcoinOracle } from "../../../src/integrations/oracles/bitcoin/BitcoinOracle.sol";
 import { WormholeOracle } from "../../../src/oracles/wormhole/WormholeOracle.sol";
 
 import { MockERC20 } from "../../mocks/MockERC20.sol";
