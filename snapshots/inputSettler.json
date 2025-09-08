@@ -1,0 +1,22 @@
+{
+  "BasePurchaseOrder": "98355",
+  "CompactFinaliseFor": "97843",
+  "CompactFinaliseSelf": "90585",
+  "CompactFinaliseTo": "90585",
+  "EscrowFinalise": "39920",
+  "IntegrationCoinFill": "63166",
+  "IntegrationCompactFinaliseSelf": "83491",
+  "IntegrationWormholeReceiveMessage": "45665",
+  "IntegrationWormholeSubmit": "13910",
+  "escrowFinaliseWithSignature": "47309",
+  "escrowOpen": "55669",
+  "escrowOpenFor3009Single": "86996",
+  "escrowOpenFor3009SingleArray": "94600",
+  "escrowOpenFor3009Two": "142004",
+  "escrowOpenForMsgSender": "56120",
+  "escrowOpenForPermit2": "95939",
+  "maxTimestamp1": "502",
+  "minTimestamp1": "461",
+  "validate2Fills": "5694",
+  "validate2FillsMultipleSolvers": "5694"
+}

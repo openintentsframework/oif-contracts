@@ -508,7 +508,6 @@ contract ERC7683AdapterTest is InputSettlerEscrowTestBase {
         uint256 amount = 10 ** 18;
         FillInstruction[] memory fillInstructions = new FillInstruction[](1);
         {
-
             MandateOutput[] memory outputs = new MandateOutput[](1);
             outputs[0] = MandateOutput({
                 settler: address(outputSettlerCoin).toIdentifier(),

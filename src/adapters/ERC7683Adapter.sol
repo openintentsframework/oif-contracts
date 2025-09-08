@@ -119,7 +119,7 @@ contract ERC7683EscrowAdapter is IOriginSettler {
             token.approve(address(_inputSettlerEscrow), amount);
         }
 
-        _inputSettlerEscrow.open(abi.encode(standardOrder));
+        _inputSettlerEscrow.open(order.orderData);
         bytes32 orderId = orderIdentifier(standardOrder);
 
         emit Open(orderId, _resolve(standardOrder));
