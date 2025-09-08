@@ -1,10 +1,10 @@
 /// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { IAttester } from "../../interfaces/IAttester.sol";
-import { LibAddress } from "../../libs/LibAddress.sol";
-import { MessageEncodingLib } from "../../libs/MessageEncodingLib.sol";
-import { BaseInputOracle } from "../BaseInputOracle.sol";
+import { IAttester } from "../../../interfaces/IAttester.sol";
+import { LibAddress } from "../../../libs/LibAddress.sol";
+import { MessageEncodingLib } from "../../../libs/MessageEncodingLib.sol";
+import { BaseInputOracle } from "../../../oracles/BaseInputOracle.sol";
 
 import { MailboxClient } from "./external/hyperlane/MailboxClient.sol";
 
