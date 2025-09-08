@@ -1,5 +1,45 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.0;
+pragma solidity ^0.8.26;
+
+/// @title GaslessCrossChainOrder CrossChainOrder type
+/// @notice Standard order struct to be signed by users, disseminated to fillers, and submitted to origin settler
+/// contracts by fillers
+struct GaslessCrossChainOrder {
+    /// @dev The contract address that the order is meant to be settled by.
+    /// Fillers send this order to this contract address on the origin chain
+    address originSettler;
+    /// @dev The address of the user who is initiating the swap,
+    /// whose input tokens will be taken and escrowed
+    address user;
+    /// @dev Nonce to be used as replay protection for the order
+    uint256 nonce;
+    /// @dev The chainId of the origin chain
+    uint256 originChainId;
+    /// @dev The timestamp by which the order must be opened
+    uint32 openDeadline;
+    /// @dev The timestamp by which the order must be filled on the destination chain
+    uint32 fillDeadline;
+    /// @dev Type identifier for the order data. This is an EIP-712 typehash.
+    bytes32 orderDataType;
+    /// @dev Arbitrary implementation-specific data
+    /// Can be used to define tokens, amounts, destination chains, fees, settlement parameters,
+    /// or any other order-type specific information
+    bytes orderData;
+}
+
+/// @title OnchainCrossChainOrder CrossChainOrder type
+/// @notice Standard order struct for user-opened orders, where the user is the one submitting the order creation
+/// transaction
+struct OnchainCrossChainOrder {
+    /// @dev The timestamp by which the order must be filled on the destination chain
+    uint32 fillDeadline;
+    /// @dev Type identifier for the order data. This is an EIP-712 typehash.
+    bytes32 orderDataType;
+    /// @dev Arbitrary implementation-specific data
+    /// Can be used to define tokens, amounts, destination chains, fees, settlement parameters,
+    /// or any other order-type specific information
+    bytes orderData;
+}
 
 /// @title ResolvedCrossChainOrder type
 /// @notice An implementation-generic representation of an order intended for filler consumption
@@ -7,16 +47,14 @@ pragma solidity >=0.8.0;
 /// @dev Intended to improve integration generalization by allowing fillers to compute the exact input and output
 /// information of any order
 struct ResolvedCrossChainOrder {
-    /// @dev The address of the user account where funds are sourced from
+    /// @dev The address of the user who is initiating the transfer
     address user;
     /// @dev The chainId of the origin chain
     uint256 originChainId;
-    /// @dev The timestamp by which the order must be opened. If zero, the open step is not necessary.
+    /// @dev The timestamp by which the order must be opened
     uint32 openDeadline;
     /// @dev The timestamp by which the order must be filled on the destination chain(s)
     uint32 fillDeadline;
-    /// @dev The timestamp by which the order must be settled on the origin chain
-    uint32 settlementDeadline;
     /// @dev The unique identifier for this order within this settlement system
     bytes32 orderId;
     /// @dev The max outputs that the filler will send. It's possible the actual amount depends on the state of the
@@ -36,8 +74,6 @@ struct ResolvedCrossChainOrder {
     /// information
     ///      necessary to perform the fill on the destination(s).
     FillInstruction[] fillInstructions;
-    /// @dev Implementation-specific extensions with additional information or instructions about the order
-    Extension[] extensions;
 }
 
 /// @notice Tokens that must be received for a valid order fulfillment
@@ -63,53 +99,47 @@ struct FillInstruction {
     bytes32 destinationSettler;
     /// @dev The data generated on the origin chain needed by the destinationSettler to process the fill
     bytes originData;
-    /// @dev The format in which the filler must encode `fillerData`
-    ///      [TODO: elaborate specifics]
-    string fillerDataFormat;
 }
-
-/// @notice Additional information or instructions about the order
-struct Extension {
-    /// @dev A human-readable ABI description of a function, without the `function` keyword.
-    ///      E.g., "dutchAuction(uint256 startTime, uint256 endTime, uint256 startPrice, uint256 endPrice)"
-    string abiDescription;
-    /// @dev The extension parameters ABI-encoded according to `abiDescription`
-    bytes data;
-}
-
-/// @notice Signals that an order has been opened
-/// @param orderId a unique order identifier within this settlement system
-/// @param order raw order in implementation-specific encoding
-event Open(bytes32 indexed orderId, bytes order);
 
 /// @title IOriginSettler
 /// @notice Standard interface for settlement contracts on the origin chain
 interface IOriginSettler {
     /// @notice Opens a gasless cross-chain order on behalf of a user.
+    /// @dev To be called by the filler.
     /// @dev This method must emit the Open event
-    /// @param order The order in raw encoding
-    /// @param user The user's address
+    /// @param order The GaslessCrossChainOrder definition
     /// @param signature The user's signature over the order
-    function openFor(bytes calldata order, address user, bytes calldata signature) external;
+    /// @param originFillerData Any filler-defined data required by the settler
+    function openFor(
+        GaslessCrossChainOrder calldata order,
+        bytes calldata signature,
+        bytes calldata originFillerData
+    ) external;
 
     /// @notice Opens a cross-chain order
     /// @dev To be called by the user
     /// @dev This method must emit the Open event
-    /// @param order The order in raw encoding
+    /// @param order The OnchainCrossChainOrder definition
     function open(
-        bytes calldata order
+        OnchainCrossChainOrder calldata order
     ) external;
 
     /// @notice Resolves a specific GaslessCrossChainOrder into a generic ResolvedCrossChainOrder
     /// @dev Intended to improve standardized integration of various order types and settlement contracts
-    /// @param order The order in raw encoding
-    /// @param user The user's address
-    /// @param signature The user's signature over the order (optional)
+    /// @param order The GaslessCrossChainOrder definition
+    /// @param originFillerData Any filler-defined data required by the settler
     /// @return ResolvedCrossChainOrder hydrated order data including the inputs and outputs of the order
     function resolveFor(
-        bytes calldata order,
-        address user,
-        bytes calldata signature
+        GaslessCrossChainOrder calldata order,
+        bytes calldata originFillerData
+    ) external view returns (ResolvedCrossChainOrder memory);
+
+    /// @notice Resolves a specific OnchainCrossChainOrder into a generic ResolvedCrossChainOrder
+    /// @dev Intended to improve standardized integration of various order types and settlement contracts
+    /// @param order The OnchainCrossChainOrder definition
+    /// @return ResolvedCrossChainOrder hydrated order data including the inputs and outputs of the order
+    function resolve(
+        OnchainCrossChainOrder calldata order
     ) external view returns (ResolvedCrossChainOrder memory);
 }
 
