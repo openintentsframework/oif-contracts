@@ -47,7 +47,6 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
     error InvalidOrderStatus();
     error OrderIdMismatch(bytes32 provided, bytes32 computed);
-    error InputTokenHasDirtyBits();
     error SignatureAndInputsNotEqual();
     error ReentrancyDetected();
     error SignatureNotSupported(bytes1);
@@ -127,7 +126,9 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         uint256 numInputs = inputs.length;
         for (uint256 i = 0; i < numInputs; ++i) {
             uint256[2] calldata input = inputs[i];
-            address token = input[0].fromIdentifier();
+            // This contract does not use the upper 12 bits. We could clean them but follow the openFor structure for
+            // simplicity.
+            address token = input[0].validatedCleanAddress();
             uint256 amount = input[1];
             SafeERC20.safeTransferFrom(IERC20(token), msg.sender, address(this), amount);
         }
@@ -200,13 +201,14 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
                 uint256[2] calldata orderInput = orderInputs[i];
                 uint256 inputToken = orderInput[0];
                 uint256 amount = orderInput[1];
-                // Validate that the input token's 12 leftmost bytes are 0.
-                if ((inputToken >> 160) != 0) revert InputTokenHasDirtyBits();
-                address token;
-                assembly ("memory-safe") {
-                    // No dirty bits exist.
-                    token := inputToken
-                }
+
+                // Dirty bits will be pruned when compared against the permit2 signature, however, they are still
+                // considered in the orderId. By intentionally setting dirty bits, the caller of open will be able to
+                // open the order with unexpected orderIds. To ensure there is a 1:1 map of signed Permit2 message to
+                // order, dirty bits are explicitly checked for.
+                // => This ensures a signed order can only have exactly 1 orderId.
+                address token = inputToken.validatedCleanAddress();
+
                 // Check if input tokens are contracts.
                 IsContractLib.validateContainsCode(token);
                 // Set the allowance. This is the explicit max allowed amount approved by the user.
