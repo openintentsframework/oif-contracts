@@ -327,7 +327,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
 
         MandateOutput[] memory outputs = new MandateOutput[](1);
         outputs[0] = MandateOutput({
-            settler: address(outputSettlerCoin).toIdentifier(),
+            settler: address(outputSettlerSimple).toIdentifier(),
             oracle: alwaysYesOracle.toIdentifier(),
             chainId: block.chainid,
             token: address(anotherToken).toIdentifier(),
@@ -365,7 +365,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         // Other callers are disallowed:
         vm.prank(non_solver);
 
-        vm.expectRevert(abi.encodeWithSignature("NotOrderOwner()"));
+        vm.expectRevert(abi.encodeWithSignature("UnexpectedCaller(bytes32)", solvers[0]));
         IInputSettlerEscrow(inputSettlerEscrow).finalise(order, timestamps, solvers, solver.toIdentifier(), hex"");
 
         assertEq(token.balanceOf(solver), 0);
@@ -402,7 +402,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
 
         MandateOutput[] memory outputs = new MandateOutput[](1);
         outputs[0] = MandateOutput({
-            settler: address(outputSettlerCoin).toIdentifier(),
+            settler: address(outputSettlerSimple).toIdentifier(),
             oracle: alwaysYesOracle.toIdentifier(),
             chainId: block.chainid,
             token: address(anotherToken).toIdentifier(),
@@ -457,7 +457,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
 
         MandateOutput[] memory outputs = new MandateOutput[](1);
         outputs[0] = MandateOutput({
-            settler: address(outputSettlerCoin).toIdentifier(),
+            settler: address(outputSettlerSimple).toIdentifier(),
             oracle: alwaysYesOracle.toIdentifier(),
             chainId: block.chainid,
             token: address(anotherToken).toIdentifier(),

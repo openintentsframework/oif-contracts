@@ -24,6 +24,10 @@ import { OrderPurchase } from "../types/OrderPurchaseType.sol";
 import { StandardOrder, StandardOrderType } from "../types/StandardOrderType.sol";
 
 import { InputSettlerPurchase } from "../InputSettlerPurchase.sol";
+
+import {
+    InputTokenHasDirtyBits, InvalidOrderStatus, ReentrancyDetected, SignatureNotSupported
+} from "./EscrowErrors.sol";
 import { Permit2WitnessType } from "./Permit2WitnessType.sol";
 
 /**
@@ -45,12 +49,8 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     using LibAddress for bytes32;
     using LibAddress for uint256;
 
-    error InvalidOrderStatus();
     error OrderIdMismatch(bytes32 provided, bytes32 computed);
-    error InputTokenHasDirtyBits();
     error SignatureAndInputsNotEqual();
-    error ReentrancyDetected();
-    error SignatureNotSupported(bytes1);
 
     event Open(bytes32 indexed orderId, bytes order);
     event Refunded(bytes32 indexed orderId);
@@ -350,7 +350,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
         bytes32 orderId = order.orderIdentifier();
         bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
-        _orderOwnerIsCaller(orderOwner);
+        _validateIsCaller(orderOwner);
 
         _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, timestamps, solvers);
 
