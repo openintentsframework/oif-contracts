@@ -5,11 +5,12 @@ pragma solidity ^0.8.22;
 import { Test } from "forge-std/Test.sol";
 
 import { MandateOutput } from "../../../src/input/types/MandateOutputType.sol";
+
+import { WormholeOracle } from "../../../src/integrations/oracles/wormhole/WormholeOracle.sol";
+import "../../../src/integrations/oracles/wormhole/external/wormhole/Messages.sol";
+import "../../../src/integrations/oracles/wormhole/external/wormhole/Setters.sol";
 import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
 import { MessageEncodingLib } from "../../../src/libs/MessageEncodingLib.sol";
-import { WormholeOracle } from "../../../src/oracles/wormhole/WormholeOracle.sol";
-import "../../../src/oracles/wormhole/external/wormhole/Messages.sol";
-import "../../../src/oracles/wormhole/external/wormhole/Setters.sol";
 import { OutputSettlerSimple } from "../../../src/output/simple/OutputSettlerSimple.sol";
 
 import { MockERC20 } from "../../mocks/MockERC20.sol";

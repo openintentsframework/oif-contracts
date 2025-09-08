@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.22;
 
-import { WormholeOracle } from "../../../src/oracles/wormhole/WormholeOracle.sol";
+import { WormholeOracle } from "../../../src/integrations/oracles/wormhole/WormholeOracle.sol";
 import { Test } from "forge-std/Test.sol";
 
 contract WormholeOracleTest is Test {
