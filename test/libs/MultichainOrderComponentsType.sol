@@ -45,13 +45,13 @@ contract MultichainOrderComponentTypeTest is Test {
     function test_constructInputHash(
         SetOfInputs[] calldata orderComponents
     ) external view {
-        uint256 numComponentHashes = inputComponentHashes.length;
-        bytes32[] memory inputComponentHashes = new bytes32[](orderComponents.length);
+        uint256 numComponentHashes = orderComponents.length;
+        vm.assume(numComponentHashes != 0);
+        bytes32[] memory inputComponentHashes = new bytes32[](numComponentHashes);
         for (uint256 i; i < numComponentHashes; ++i) {
             inputComponentHashes[i] =
                 MultichainOrderComponentType.hashInputs(orderComponents[i].inputsChainId, orderComponents[i].inputs);
         }
-        vm.assume(orderComponents.length != 0);
         SetOfInputs calldata firstInputSet = orderComponents[0];
         bytes32 firstIndexHash = this.constructInputHash(
             firstInputSet.inputsChainId, 0, firstInputSet.inputs, discardIndex(0, inputComponentHashes)
