@@ -1,18 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
 import { TheCompact } from "the-compact/src/TheCompact.sol";
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 import { IdLib } from "the-compact/src/lib/IdLib.sol";
 import { BatchClaim } from "the-compact/src/types/BatchClaims.sol";
 import { BatchClaimComponent, Component } from "the-compact/src/types/Components.sol";
 
+import { EIP712 } from "openzeppelin/utils/cryptography/EIP712.sol";
+
 import { IInputCallback } from "../../interfaces/IInputCallback.sol";
 import { IInputOracle } from "../../interfaces/IInputOracle.sol";
 import { IInputSettlerCompact } from "../../interfaces/IInputSettlerCompact.sol";
 
 import { BytesLib } from "../../libs/BytesLib.sol";
+
+import { LibAddress } from "../../libs/LibAddress.sol";
 import { MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 
 import { MandateOutput } from "../types/MandateOutputType.sol";
@@ -35,6 +38,8 @@ import { InputSettlerPurchase } from "../InputSettlerPurchase.sol";
  * The contract is intended to be entirely ownerless, permissionlessly deployable, and unstoppable.
  */
 contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
+    using LibAddress for bytes32;
+
     error UserCannotBeSettler();
     error OrderIdMismatch(bytes32 provided, bytes32 computed);
 
@@ -42,20 +47,8 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
 
     constructor(
         address compact
-    ) {
+    ) EIP712("OIFCompact", "1") {
         COMPACT = TheCompact(compact);
-    }
-
-    /// @notice EIP712
-    function _domainNameAndVersion()
-        internal
-        pure
-        virtual
-        override
-        returns (string memory name, string memory version)
-    {
-        name = "OIFCompact";
-        version = "1";
     }
 
     // --- Generic order identifier --- //
@@ -126,9 +119,7 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
 
         _finalise(order, signatures, orderId, solvers[0], destination);
 
-        if (call.length > 0) {
-            IInputCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
-        }
+        if (call.length > 0) IInputCallback(destination.fromIdentifier()).orderFinalised(order.inputs, call);
     }
 
     /**
@@ -160,17 +151,13 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
         bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
 
         // Validate the external claimant with signature
-        _allowExternalClaimant(
-            orderId, EfficiencyLib.asSanitizedAddress(uint256(orderOwner)), destination, call, orderOwnerSignature
-        );
+        _allowExternalClaimant(orderId, orderOwner.fromIdentifier(), destination, call, orderOwnerSignature);
 
         _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, timestamps, solvers);
 
         _finalise(order, signatures, orderId, solvers[0], destination);
 
-        if (call.length > 0) {
-            IInputCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
-        }
+        if (call.length > 0) IInputCallback(destination.fromIdentifier()).orderFinalised(order.inputs, call);
     }
 
     //--- The Compact & Resource Locks ---//
@@ -249,6 +236,7 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
         uint256 expiryTimestamp,
         bytes calldata solverSignature
     ) external virtual {
+        _validateInputChain(order.originChainId);
         bytes32 computedOrderId = _orderIdentifier(order);
         // Sanity check to ensure the user thinks they are buying the right order.
         if (computedOrderId != orderPurchase.orderId) revert OrderIdMismatch(orderPurchase.orderId, computedOrderId);

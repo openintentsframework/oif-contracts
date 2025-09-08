@@ -10,7 +10,7 @@ import { AllowOpenType } from "../../../src/input/types/AllowOpenType.sol";
 import { MandateOutput } from "../../../src/input/types/MandateOutputType.sol";
 import { StandardOrder } from "../../../src/input/types/StandardOrderType.sol";
 import { IInputSettlerEscrow } from "../../../src/interfaces/IInputSettlerEscrow.sol";
-import { OutputSettlerCoin } from "../../../src/output/coin/OutputSettlerCoin.sol";
+import { OutputSettlerSimple } from "../../../src/output/simple/OutputSettlerSimple.sol";
 
 import { AlwaysYesOracle } from "../../mocks/AlwaysYesOracle.sol";
 import { MockERC20 } from "../../mocks/MockERC20.sol";
@@ -33,7 +33,7 @@ contract InputSettlerEscrowTestBase is Permit2Test {
     uint64 constant MAX_GOVERNANCE_FEE = 10 ** 18 * 0.05; // 10%
 
     address inputSettlerEscrow;
-    OutputSettlerCoin outputSettlerCoin;
+    OutputSettlerSimple outputSettlerCoin;
 
     address alwaysYesOracle;
 
@@ -69,7 +69,7 @@ contract InputSettlerEscrowTestBase is Permit2Test {
 
         DOMAIN_SEPARATOR = EIP712(inputSettlerEscrow).DOMAIN_SEPARATOR();
 
-        outputSettlerCoin = new OutputSettlerCoin();
+        outputSettlerCoin = new OutputSettlerSimple();
 
         token = new MockERC20("Mock ERC20", "MOCK", 18);
         anotherToken = new MockERC20("Mock2 ERC20", "MOCK2", 18);
@@ -156,7 +156,7 @@ contract InputSettlerEscrowTestBase is Permit2Test {
         bytes memory tokenPermissionsHashes = hex"";
         for (uint256 i; i < inputs.length; ++i) {
             uint256[2] memory input = inputs[i];
-            address inputToken = EfficiencyLib.asSanitizedAddress(input[0]);
+            address inputToken = input[0].fromIdentifier();
             uint256 amount = input[1];
             tokenPermissionsHashes = abi.encodePacked(
                 tokenPermissionsHashes,

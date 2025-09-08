@@ -24,7 +24,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         vm.assume(expires < type(uint32).max);
         vm.assume(expires > block.timestamp);
         vm.assume(token.balanceOf(user) == 0);
-        vm.assume(user != inputSettlerEscrow);
+        vm.assume(user != address(0) && user != inputSettlerEscrow);
 
         token.mint(user, amount);
         vm.prank(user);
@@ -69,7 +69,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         vm.assume(expires < type(uint32).max);
         vm.assume(expires > block.timestamp);
         vm.assume(token.balanceOf(user) == 0);
-        vm.assume(user != inputSettlerEscrow);
+        vm.assume(user != address(0) && user != inputSettlerEscrow);
 
         token.mint(user, amount);
         vm.prank(user);

@@ -44,6 +44,8 @@ contract BitcoinOracleTest is Test {
     BtcPrism btcPrism;
     BitcoinOracleHarness bitcoinOracle;
 
+    address disputedOrderFeeDestination = makeAddr("DISPUTED_ORDER_FEE_DESTINATION");
+
     uint256 multiplier = 1e10 * 100;
 
     function setUp() public {
@@ -54,7 +56,8 @@ contract BitcoinOracleTest is Test {
 
         btcPrism = new BtcPrism(BLOCK_HEIGHT, BLOCK_HASH, BLOCK_TIME, EXPECTED_TARGET, false);
 
-        bitcoinOracle = new BitcoinOracleHarness(address(btcPrism), address(0), address(token), uint64(multiplier));
+        bitcoinOracle =
+            new BitcoinOracleHarness(address(btcPrism), disputedOrderFeeDestination, address(token), uint64(multiplier));
     }
 
     // --- Time To Confirmation --- //
@@ -86,7 +89,7 @@ contract BitcoinOracleTest is Test {
     }
 
     function test_claim(bytes32 solver, bytes32 orderId, uint64 amount, address caller) public {
-        vm.assume(caller != address(bitcoinOracle));
+        vm.assume(caller != address(bitcoinOracle) && caller != address(0));
         vm.assume(caller != address(token));
 
         MandateOutput memory output = MandateOutput({
@@ -134,7 +137,7 @@ contract BitcoinOracleTest is Test {
     function test_revert_claim_solver_0(bytes32 orderId, address caller, uint64 amount) external {
         bytes32 solver = bytes32(0);
         vm.assume(orderId != bytes32(0));
-        vm.assume(caller != address(bitcoinOracle));
+        vm.assume(caller != address(bitcoinOracle) && caller != address(0));
         vm.assume(caller != address(token));
 
         MandateOutput memory output = MandateOutput({
@@ -161,7 +164,7 @@ contract BitcoinOracleTest is Test {
     function test_revert_claim_amount_0(bytes32 solver, uint64 amount, address caller) external {
         bytes32 orderId = bytes32(0);
         vm.assume(solver != bytes32(0));
-        vm.assume(caller != address(bitcoinOracle));
+        vm.assume(caller != address(bitcoinOracle) && caller != address(0));
         vm.assume(caller != address(token));
 
         MandateOutput memory output = MandateOutput({
@@ -188,7 +191,7 @@ contract BitcoinOracleTest is Test {
     function test_revert_claim_twice(bytes32 solver, bytes32 orderId, uint64 amount, address caller) external {
         vm.assume(solver != bytes32(0));
         vm.assume(orderId != bytes32(0));
-        vm.assume(caller != address(bitcoinOracle));
+        vm.assume(caller != address(bitcoinOracle) && caller != address(0));
         vm.assume(caller != address(token));
 
         MandateOutput memory output = MandateOutput({
@@ -373,7 +376,14 @@ contract BitcoinOracleTest is Test {
         bitcoinOracle.claim(solver, orderId, output);
 
         vm.prank(disputer);
-        vm.expectRevert(abi.encodeWithSignature("TransferFromFailed()"));
+        vm.expectRevert(
+            abi.encodeWithSignature(
+                "ERC20InsufficientAllowance(address,uint256,uint256)",
+                address(bitcoinOracle),
+                0,
+                collateralAmount * bitcoinOracle.CHALLENGER_COLLATERAL_FACTOR()
+            )
+        );
         bitcoinOracle.dispute(orderId, output);
     }
 
@@ -903,7 +913,7 @@ contract BitcoinOracleTest is Test {
             MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, uint32(BLOCK_TIME), output);
         bytes[] memory payloads = new bytes[](1);
         payloads[0] = payload;
-        bool fillerValid = bitcoinOracle.arePayloadsValid(payloads);
+        bool fillerValid = bitcoinOracle.hasAttested(payloads);
         assertEq(fillerValid, true);
 
         // Check for a refund of collateral.
@@ -1059,7 +1069,7 @@ contract BitcoinOracleTest is Test {
             MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, uint32(BLOCK_TIME), output);
         bytes[] memory payloads = new bytes[](1);
         payloads[0] = payload;
-        bool fillerValid = bitcoinOracle.arePayloadsValid(payloads);
+        bool fillerValid = bitcoinOracle.hasAttested(payloads);
         assertEq(fillerValid, true);
     }
 
@@ -1267,7 +1277,7 @@ contract BitcoinOracleTest is Test {
             MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, uint32(BLOCK_TIME), output);
         bytes[] memory payloads = new bytes[](1);
         payloads[0] = payload;
-        bool fillerValid = bitcoinOracle.arePayloadsValid(payloads);
+        bool fillerValid = bitcoinOracle.hasAttested(payloads);
         assertEq(fillerValid, true);
     }
 
@@ -1467,7 +1477,7 @@ contract BitcoinOracleTest is Test {
             MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, uint32(PREV_BLOCK_TIME), output);
         bytes[] memory payloads = new bytes[](1);
         payloads[0] = payload;
-        bool fillerValid = bitcoinOracle.arePayloadsValid(payloads);
+        bool fillerValid = bitcoinOracle.hasAttested(payloads);
         assertEq(fillerValid, true);
     }
 
@@ -1565,7 +1575,7 @@ contract BitcoinOracleTest is Test {
             MandateOutputEncodingLib.encodeFillDescriptionMemory(solver, orderId, uint32(BLOCK_TIME), output);
         bytes[] memory payloads = new bytes[](1);
         payloads[0] = payload;
-        bool fillerValid = bitcoinOracle.arePayloadsValid(payloads);
+        bool fillerValid = bitcoinOracle.hasAttested(payloads);
         assertEq(fillerValid, true);
     }
 

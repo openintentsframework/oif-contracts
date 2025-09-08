@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
+
+import { EIP712 } from "openzeppelin/utils/cryptography/EIP712.sol";
 import { ISignatureTransfer } from "permit2/src/interfaces/ISignatureTransfer.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+
 import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
 import { IERC3009 } from "../../interfaces/IERC3009.sol";
-import { Output, ResolvedCrossChainOrder } from "../../interfaces/IERC7683.sol";
-
-import { IOriginSettler } from "../../interfaces/IERC7683.sol";
 
 import { IInputCallback } from "../../interfaces/IInputCallback.sol";
 import { IInputOracle } from "../../interfaces/IInputOracle.sol";
@@ -69,16 +70,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     // Address of the Permit2 contract.
     ISignatureTransfer constant PERMIT2 = ISignatureTransfer(0x000000000022D473030F116dDEE9F6B43aC78BA3);
 
-    function _domainNameAndVersion()
-        internal
-        pure
-        virtual
-        override
-        returns (string memory name, string memory version)
-    {
-        name = "OIFEscrow";
-        version = "1";
-    }
+    constructor() EIP712("OIFEscrow", "1") { }
 
     // --- Generic order identifier --- //
 
@@ -96,12 +88,13 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
     /**
      * @notice Opens an intent for `order.user`. `order.input` tokens are collected from msg.sender.
-     * @param order  bytes representing an encoded StandadrdOrder.
+     * @param order bytes representing an encoded StandardOrder, encoded via abi.encode().
      */
     function open(
         bytes calldata order
     ) external {
         // Validate the order structure.
+        _validateInputChain(order.originChainId());
         _validateTimestampHasNotPassed(order.fillDeadline());
         _validateTimestampHasNotPassed(order.expires());
 
@@ -123,7 +116,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
     /**
      * @notice Collect input tokens directly from msg.sender.
-     * @param order bytes representing an encoded StandadrdOrder.
+     * @param order bytes representing an encoded StandardOrder, encoded via abi.encode().
      */
     function _open(
         bytes calldata order
@@ -137,20 +130,20 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
             // simplicity.
             address token = input[0].validatedCleanAddress();
             uint256 amount = input[1];
-            SafeTransferLib.safeTransferFrom(token, msg.sender, address(this), amount);
+            SafeERC20.safeTransferFrom(IERC20(token), msg.sender, address(this), amount);
         }
     }
 
     /**
-     * @notice Opens an intent for `order.user`. `order.input` tokens are collected from `sponsor` through either
-     * permit2 or ERC3009.
+     * @notice Opens an intent for `order.user`. `order.input` tokens are collected from `sponsor` through transferFrom,
+     * permit2 or ERC-3009.
      * @dev This function may make multiple sub-call calls either directly from this contract or from deeper inside the
      * call tree. To protect against reentry, the function uses the `orderStatus`. Local reentry (calling twice) is
      * protected through a checks-effect pattern while global reentry is enforced by not allowing existing the function
      * with `orderStatus` not set to `Deposited`
-     * @param order  bytes representing an encoded StandadrdOrder.
+     * @param order bytes representing an encoded StandardOrder, encoded via abi.encode().
      * @param sponsor Address to collect tokens from.
-     * @param signature Allowance signature from user with a signature type encoded as:
+     * @param signature Allowance signature from sponsor with a signature type encoded as:
      * - SIGNATURE_TYPE_PERMIT2:  b1:0x00 | bytes:signature
      * - SIGNATURE_TYPE_3009:     b1:0x01 | bytes:signature OR abi.encode(bytes[]:signatures)
      */
@@ -260,18 +253,12 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         if (numInputs == 1) {
             // If there is only 1 input, try using the provided signature as is.
             uint256[2] calldata input = inputs[0];
-            bytes memory callData = abi.encodeWithSelector(
-                IERC3009.receiveWithAuthorization.selector,
-                signer,
-                address(this),
-                input[1],
-                0,
-                fillDeadline,
-                orderId,
-                _signature_
+            bytes memory callData = abi.encodeCall(
+                IERC3009.receiveWithAuthorization,
+                (signer, address(this), input[1], 0, fillDeadline, orderId, _signature_)
             );
             // The above calldata encoding is equivalent to:
-            // IERC3009(EfficiencyLib.asSanitizedAddress(input[0])).receiveWithAuthorization({
+            // IERC3009(input[0].fromIdentifier().receiveWithAuthorization({
             //     from: signer,
             //     to: address(this),
             //     value: input[1],
@@ -280,20 +267,23 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
             //     nonce: orderId,
             //     signature: _signature_
             // })
-            address token = EfficiencyLib.asSanitizedAddress(input[0]);
+            address token = input[0].fromIdentifier();
             IsContractLib.validateContainsCode(token); // Ensure called contract has code.
             (bool success,) = token.call(callData);
             if (success) return;
             // Otherwise it could be because of a lot of reasons. One being the signature is abi.encoded as bytes[].
         }
-        uint256 numSignatures = BytesLib.getLengthOfBytesArray(_signature_);
-        if (numInputs != numSignatures) revert SignatureAndInputsNotEqual();
+        {
+            uint256 numSignatures = BytesLib.getLengthOfBytesArray(_signature_);
+            if (numInputs != numSignatures) revert SignatureAndInputsNotEqual();
+        }
         for (uint256 i; i < numInputs; ++i) {
+            uint256[2] calldata input = inputs[i];
             bytes calldata signature = BytesLib.getBytesOfArray(_signature_, i);
-            IERC3009(EfficiencyLib.asSanitizedAddress(inputs[i][0])).receiveWithAuthorization({
+            IERC3009(input[0].fromIdentifier()).receiveWithAuthorization({
                 from: signer,
                 to: address(this),
-                value: inputs[i][1],
+                value: input[1],
                 validAfter: 0,
                 validBefore: fillDeadline,
                 nonce: orderId,
@@ -368,9 +358,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
         _finalise(order, orderId, solvers[0], destination);
 
-        if (call.length > 0) {
-            IInputCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
-        }
+        if (call.length > 0) IInputCallback(destination.fromIdentifier()).orderFinalised(order.inputs, call);
     }
 
     /**
@@ -402,25 +390,21 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
             // Validate the external claimant with signature
             _validateDestination(destination);
-            _allowExternalClaimant(
-                orderId, EfficiencyLib.asSanitizedAddress(uint256(orderOwner)), destination, call, orderOwnerSignature
-            );
+            _allowExternalClaimant(orderId, orderOwner.fromIdentifier(), destination, call, orderOwnerSignature);
         }
 
         _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, timestamps, solvers);
 
         _finalise(order, orderId, solvers[0], destination);
 
-        if (call.length > 0) {
-            IInputCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
-        }
+        if (call.length > 0) IInputCallback(destination.fromIdentifier()).orderFinalised(order.inputs, call);
     }
 
     //--- Asset Lock & Escrow ---//
 
     /**
      * @dev This function employs a local reentry guard: we check the order status and then we update it afterwards.
-     * This is an important check as it is indeed to process external ERC20 transfers.
+     * This is an important check as it is intended to process external ERC20 transfers.
      * @param newStatus specifies the new status to set the order to. Should never be OrderStatus.Deposited.
      */
     function _resolveLock(
@@ -439,10 +423,10 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         uint256 numInputs = inputs.length;
         for (uint256 i; i < numInputs; ++i) {
             uint256[2] calldata input = inputs[i];
-            address token = EfficiencyLib.asSanitizedAddress(input[0]);
+            IERC20 token = IERC20(input[0].fromIdentifier());
             uint256 amount = input[1];
 
-            SafeTransferLib.safeTransfer(token, destination, amount);
+            SafeERC20.safeTransfer(token, destination, amount);
         }
     }
 
@@ -468,9 +452,14 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         uint256 expiryTimestamp,
         bytes calldata solverSignature
     ) external virtual {
+        _validateInputChain(order.originChainId);
         bytes32 computedOrderId = order.orderIdentifier();
         // Sanity check to ensure the user thinks they are buying the right order.
         if (computedOrderId != orderPurchase.orderId) revert OrderIdMismatch(orderPurchase.orderId, computedOrderId);
+
+        // Validate that the order has been opened.
+        OrderStatus status = orderStatus[computedOrderId];
+        if (status != OrderStatus.Deposited) revert InvalidOrderStatus();
 
         _purchaseOrder(
             orderPurchase, order.inputs, orderSolvedByIdentifier, purchaser, expiryTimestamp, solverSignature
