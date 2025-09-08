@@ -25,8 +25,17 @@ import {
 import { Permit2MultichainWitnessType } from "./Permit2MultichainWitnessType.sol";
 
 /**
- * @title OIF Input Settler using supporting multichain escrows.
- * @notice This OIF Input Settler implementation uses an explicit escrow as a deposit scheme.
+ * @title OIF Input Settler using an explicit multichain escrows.
+ * @notice This Input Settler implementation uses an explicit escrow as a deposit scheme.
+ * This contract manages collecting input assets (through `open` and `openFor`) and releasing assets to solvers.
+ * It can collect tokens using Permit2.
+ *
+ * A multichain intent is an intent that collects tokens on multiple chains in exchange for single set of outputs. Using
+ * Permit2, a user has to sign once for each chain they wanna add to their intent. Partially signed / funded intents
+ * should be treated as only having committed funds.
+ *
+ * If a multichain intent contains 3 chains but is only opened on 2, then the intent is still valid for those 2 chains.
+ * The reduction in solver payment is equal to the missing component.
  *
  * This contract does not support fee on transfer tokens.
  */
@@ -38,7 +47,6 @@ contract InputSettlerMultichainEscrow is InputSettlerBase {
     event Refunded(bytes32 indexed orderId);
 
     bytes1 internal constant SIGNATURE_TYPE_PERMIT2 = 0x00;
-    bytes1 internal constant SIGNATURE_TYPE_3009 = 0x01;
     bytes1 internal constant SIGNATURE_TYPE_SELF = 0xff;
 
     enum OrderStatus {

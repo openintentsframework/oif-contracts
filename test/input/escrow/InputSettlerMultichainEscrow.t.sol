@@ -325,10 +325,7 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         order.inputs = inputs0;
         order.additionalChains = additionalChains0;
         {
-            bytes memory signature = abi.encodePacked(
-                bytes1(0x00),
-                getPermit2Signature(swapperPrivateKey, order)
-            );
+            bytes memory signature = abi.encodePacked(bytes1(0x00), getPermit2Signature(swapperPrivateKey, order));
             InputSettlerMultichainEscrow(inputSettlerMultichainEscrow).openFor(order, swapper, signature);
         }
 
@@ -361,10 +358,7 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         order.additionalChains = additionalChains1;
 
         {
-            bytes memory signature = abi.encodePacked(
-                bytes1(0x00),
-                getPermit2Signature(swapperPrivateKey, order)
-            );
+            bytes memory signature = abi.encodePacked(bytes1(0x00), getPermit2Signature(swapperPrivateKey, order));
             InputSettlerMultichainEscrow(inputSettlerMultichainEscrow).openFor(order, swapper, signature);
         }
 

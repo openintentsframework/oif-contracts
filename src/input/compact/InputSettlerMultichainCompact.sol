@@ -24,8 +24,7 @@ import { MultichainCompactOrderType, MultichainOrderComponent } from "../types/M
 import { OrderPurchase } from "../types/OrderPurchaseType.sol";
 
 /**
- * @title Input Settler supporting `The Compact` and `MultichainOrderComponent` orders. For `ERC-7683` orders refer to
- * `InputSettler7683`
+ * @title Multichain Input Settler using `The Compact` as an escrow.
  * @notice This Input Settler implementation uses The Compact as the deposit scheme. It is a Output first scheme that
  * allows users with a deposit inside The Compact to execute transactions that will be paid **after** the outputs have
  * been proven. This has the advantage that failed orders can be quickly retried. These orders are also entirely gasless
@@ -33,6 +32,9 @@ import { OrderPurchase } from "../types/OrderPurchaseType.sol";
  *
  * Users are expected to have an existing deposit inside the Compact or purposefully deposit for the intent. Then either
  * register or sign a supported claim with the intent outputs as the witness.
+ *
+ * A multichain intent is an intent that collects tokens on multiple chains in exchange for single set of outputs. Using
+ * TheCompact allows users to issue a multichain input intent using a single Multichain Compact signature.
  *
  * The contract is intended to be entirely ownerless, permissionlessly deployable, and unstoppable.
  */
@@ -67,7 +69,6 @@ contract InputSettlerMultichainCompact is InputSettlerBase {
      * @notice Finalise an order, paying the inputs to the solver.
      * @param order that has been filled.
      * @param signatures For the signed intent. Is packed: abi.encode(sponsorSignature, allocatorData).
-     * @param orderId A unique identifier for the order.
      * @param solver Solver of the outputs.
      * @param destination Destination of the inputs funds signed for by the user.
      * @return orderId Returns a unique global order identifier.
