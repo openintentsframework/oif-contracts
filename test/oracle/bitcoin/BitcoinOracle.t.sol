@@ -9,9 +9,10 @@ import { IBtcPrism } from "bitcoinprism-evm/src/interfaces/IBtcPrism.sol";
 import { BtcProof, BtcTxProof, ScriptMismatch } from "bitcoinprism-evm/src/library/BtcProof.sol";
 import { BtcScript } from "bitcoinprism-evm/src/library/BtcScript.sol";
 
+import { BitcoinOracle } from "../../../src/integrations/oracles/bitcoin/BitcoinOracle.sol";
+
+import { WormholeOracle } from "../../../src/integrations/oracles/wormhole/WormholeOracle.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
-import { BitcoinOracle } from "../../../src/oracles/bitcoin/BitcoinOracle.sol";
-import { WormholeOracle } from "../../../src/oracles/wormhole/WormholeOracle.sol";
 
 import { MockERC20 } from "../../mocks/MockERC20.sol";
 import { ExportedMessages } from "../wormhole/WormholeOracle.submit.t.sol";

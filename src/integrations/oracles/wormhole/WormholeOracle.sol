@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { IAttester } from "../../interfaces/IAttester.sol";
+import { IAttester } from "../../../interfaces/IAttester.sol";
 
-import { LibAddress } from "../../libs/LibAddress.sol";
-import { MessageEncodingLib } from "../../libs/MessageEncodingLib.sol";
+import { LibAddress } from "../../../libs/LibAddress.sol";
+import { MessageEncodingLib } from "../../../libs/MessageEncodingLib.sol";
 
-import { BaseInputOracle } from "../BaseInputOracle.sol";
-import { ChainMap } from "../ChainMap.sol";
+import { BaseInputOracle } from "../../../oracles/BaseInputOracle.sol";
+import { ChainMap } from "../../../oracles/ChainMap.sol";
 
 import { WormholeVerifier } from "./external/callworm/WormholeVerifier.sol";
 import { IWormhole } from "./interfaces/IWormhole.sol";

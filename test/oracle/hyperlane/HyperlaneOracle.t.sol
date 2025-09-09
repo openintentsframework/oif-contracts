@@ -12,10 +12,11 @@ import { MessageEncodingLib } from "../../../src/libs/MessageEncodingLib.sol";
 import { OutputSettlerSimple } from "../../../src/output/simple/OutputSettlerSimple.sol";
 import { MockERC20 } from "../../mocks/MockERC20.sol";
 
-import { HyperlaneOracle } from "../../../src/oracles/hyperlane/HyperlaneOracle.sol";
+import { HyperlaneOracle } from "../../../src/integrations/oracles/hyperlane/HyperlaneOracle.sol";
 import { IPostDispatchHook } from
-    "../../../src/oracles/hyperlane/external/hyperlane/interfaces/hooks/IPostDispatchHook.sol";
-import { StandardHookMetadata } from "../../../src/oracles/hyperlane/external/hyperlane/libs/StandardHookMetadata.sol";
+    "../../../src/integrations/oracles/hyperlane/external/hyperlane/interfaces/hooks/IPostDispatchHook.sol";
+import { StandardHookMetadata } from
+    "../../../src/integrations/oracles/hyperlane/external/hyperlane/libs/StandardHookMetadata.sol";
 
 event OutputProven(uint256 chainid, bytes32 remoteIdentifier, bytes32 application, bytes32 payloadHash);
 

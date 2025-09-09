@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { ChainMap } from "../ChainMap.sol";
+import { ChainMap } from "../../../oracles/ChainMap.sol";
 import { PolymerOracle } from "./PolymerOracle.sol";
 
 /**

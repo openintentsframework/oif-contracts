@@ -10,12 +10,12 @@ import { AddressType, BitcoinAddress, BtcScript } from "bitcoinprism-evm/src/lib
 import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 
-import { AssemblyLib } from "../../libs/AssemblyLib.sol";
-import { LibAddress } from "../../libs/LibAddress.sol";
-import { MandateOutput, MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
-import { OutputVerificationLib } from "../../libs/OutputVerificationLib.sol";
+import { AssemblyLib } from "../../../libs/AssemblyLib.sol";
+import { LibAddress } from "../../../libs/LibAddress.sol";
+import { MandateOutput, MandateOutputEncodingLib } from "../../../libs/MandateOutputEncodingLib.sol";
+import { OutputVerificationLib } from "../../../libs/OutputVerificationLib.sol";
 
-import { BaseInputOracle } from "../BaseInputOracle.sol";
+import { BaseInputOracle } from "../../../oracles/BaseInputOracle.sol";
 
 /**
  * @dev Bitcoin oracle can operate in 2 modes:
