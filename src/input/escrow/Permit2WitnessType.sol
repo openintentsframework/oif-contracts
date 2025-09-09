@@ -53,4 +53,17 @@ library Permit2WitnessType {
             )
         );
     }
+
+    function Permit2WitnessHash(
+        StandardOrder calldata order
+    ) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                PERMIT2_WITNESS_TYPE_HASH,
+                order.expires,
+                order.inputOracle,
+                MandateOutputType.hashOutputs(order.outputs)
+            )
+        );
+    }
 }

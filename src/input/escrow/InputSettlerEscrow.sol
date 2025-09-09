@@ -51,7 +51,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     error ReentrancyDetected();
     error SignatureNotSupported(bytes1);
 
-    event Open(bytes32 indexed orderId, bytes order);
+    event Open(bytes32 indexed orderId, StandardOrder order);
     event Refunded(bytes32 indexed orderId);
 
     bytes1 internal constant SIGNATURE_TYPE_PERMIT2 = 0x00;
@@ -91,12 +91,12 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
      * @param order bytes representing an encoded StandardOrder, encoded via abi.encode().
      */
     function open(
-        bytes calldata order
+        StandardOrder calldata order
     ) external {
         // Validate the order structure.
-        _validateInputChain(order.originChainId());
-        _validateTimestampHasNotPassed(order.fillDeadline());
-        _validateTimestampHasNotPassed(order.expires());
+        _validateInputChain(order.originChainId);
+        _validateTimestampHasNotPassed(order.fillDeadline);
+        _validateTimestampHasNotPassed(order.expires);
 
         bytes32 orderId = order.orderIdentifier();
 
@@ -119,10 +119,10 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
      * @param order bytes representing an encoded StandardOrder, encoded via abi.encode().
      */
     function _open(
-        bytes calldata order
+        StandardOrder calldata order
     ) internal {
         // Collect input tokens.
-        uint256[2][] calldata inputs = order.inputs();
+        uint256[2][] calldata inputs = order.inputs;
         uint256 numInputs = inputs.length;
         for (uint256 i = 0; i < numInputs; ++i) {
             uint256[2] calldata input = inputs[i];
@@ -147,11 +147,11 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
      * - SIGNATURE_TYPE_PERMIT2:  b1:0x00 | bytes:signature
      * - SIGNATURE_TYPE_3009:     b1:0x01 | bytes:signature OR abi.encode(bytes[]:signatures)
      */
-    function openFor(bytes calldata order, address sponsor, bytes calldata signature) external {
+    function openFor(StandardOrder calldata order, address sponsor, bytes calldata signature) external {
         // Validate the order structure.
-        _validateInputChain(order.originChainId());
-        _validateTimestampHasNotPassed(order.fillDeadline());
-        _validateTimestampHasNotPassed(order.expires());
+        _validateInputChain(order.originChainId);
+        _validateTimestampHasNotPassed(order.fillDeadline);
+        _validateTimestampHasNotPassed(order.expires);
 
         bytes32 orderId = order.orderIdentifier();
 
@@ -165,7 +165,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         if (signatureType == SIGNATURE_TYPE_PERMIT2) {
             _openForWithPermit2(order, sponsor, signature[1:], address(this));
         } else if (signatureType == SIGNATURE_TYPE_3009) {
-            _openForWithAuthorization(order.inputs(), order.fillDeadline(), sponsor, signature[1:], orderId);
+            _openForWithAuthorization(order.inputs, order.fillDeadline, sponsor, signature[1:], orderId);
         } else if (msg.sender == sponsor && signatureType == SIGNATURE_TYPE_SELF) {
             _open(order);
         } else {
@@ -185,12 +185,17 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
      * @param signature permit2 signature with Permit2Witness representing `order` signed by `order.user`.
      * @param to recipient of the inputs tokens. In most cases, should be address(this).
      */
-    function _openForWithPermit2(bytes calldata order, address signer, bytes calldata signature, address to) internal {
+    function _openForWithPermit2(
+        StandardOrder calldata order,
+        address signer,
+        bytes calldata signature,
+        address to
+    ) internal {
         ISignatureTransfer.TokenPermissions[] memory permitted;
         ISignatureTransfer.SignatureTransferDetails[] memory transferDetails;
 
         {
-            uint256[2][] calldata orderInputs = order.inputs();
+            uint256[2][] calldata orderInputs = order.inputs;
             // Load the number of inputs. We need them to set the array size & convert each
             // input struct into a transferDetails struct.
             uint256 numInputs = orderInputs.length;
@@ -219,8 +224,8 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         }
         ISignatureTransfer.PermitBatchTransferFrom memory permitBatch = ISignatureTransfer.PermitBatchTransferFrom({
             permitted: permitted,
-            nonce: order.nonce(),
-            deadline: order.fillDeadline()
+            nonce: order.nonce,
+            deadline: order.fillDeadline
         });
         PERMIT2.permitWitnessTransferFrom(
             permitBatch,
