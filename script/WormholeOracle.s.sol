@@ -3,7 +3,7 @@ pragma solidity ^0.8.22;
 
 import { Script } from "forge-std/Script.sol";
 
-import { WormholeOracle } from "../src/oracles/wormhole/WormholeOracle.sol";
+import { WormholeOracle } from "../src/integrations/oracles/wormhole/WormholeOracle.sol";
 
 contract DeployWormholeOracle is Script {
     function deploy(address owner, address wormholeOracle) external {

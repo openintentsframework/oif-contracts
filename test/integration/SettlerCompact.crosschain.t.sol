@@ -17,13 +17,14 @@ import { InputSettlerCompact } from "../../src/input/compact/InputSettlerCompact
 import { AllowOpenType } from "../../src/input/types/AllowOpenType.sol";
 import { MandateOutput, MandateOutputType } from "../../src/input/types/MandateOutputType.sol";
 import { StandardOrder, StandardOrderType } from "../../src/input/types/StandardOrderType.sol";
+
+import { WormholeOracle } from "../../src/integrations/oracles/wormhole/WormholeOracle.sol";
+import { Messages } from "../../src/integrations/oracles/wormhole/external/wormhole/Messages.sol";
+import { Setters } from "../../src/integrations/oracles/wormhole/external/wormhole/Setters.sol";
+import { Structs } from "../../src/integrations/oracles/wormhole/external/wormhole/Structs.sol";
 import { IInputSettlerCompact } from "../../src/interfaces/IInputSettlerCompact.sol";
 import { MandateOutputEncodingLib } from "../../src/libs/MandateOutputEncodingLib.sol";
 import { MessageEncodingLib } from "../../src/libs/MessageEncodingLib.sol";
-import { WormholeOracle } from "../../src/oracles/wormhole/WormholeOracle.sol";
-import { Messages } from "../../src/oracles/wormhole/external/wormhole/Messages.sol";
-import { Setters } from "../../src/oracles/wormhole/external/wormhole/Setters.sol";
-import { Structs } from "../../src/oracles/wormhole/external/wormhole/Structs.sol";
 
 import { LibAddress } from "../../src/libs/LibAddress.sol";
 import { AlwaysYesOracle } from "../mocks/AlwaysYesOracle.sol";
