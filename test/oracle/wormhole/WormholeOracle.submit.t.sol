@@ -78,19 +78,16 @@ contract WormholeOracleTestSubmit is Test {
         vm.prank(sender);
         token.approve(address(outputSettler), amount);
 
-        bytes memory output = abi.encodePacked(
-            type(uint48).max, // fill deadline
-            bytes32(uint256(uint160(address(oracle)))), // oracle
-            bytes32(uint256(uint160(address(outputSettler)))), // settler
-            uint256(block.chainid), // chainId
-            bytes32(abi.encode(address(token))), // token
-            amount, // amount
-            bytes32(abi.encode(recipient)), // recipient
-            uint16(0), // call length
-            bytes(""), // call
-            uint16(0), // context length
-            bytes("") // context
-        );
+        MandateOutput memory output = MandateOutput({
+            oracle: bytes32(uint256(uint160(address(oracle)))),
+            settler: bytes32(uint256(uint160(address(outputSettler)))),
+            chainId: block.chainid,
+            token: bytes32(abi.encode(address(token))),
+            amount: amount,
+            recipient: bytes32(abi.encode(recipient)),
+            call: bytes(""),
+            context: bytes("")
+        });
 
         bytes memory fillerData = abi.encodePacked(solverIdentifier);
 
@@ -117,7 +114,7 @@ contract WormholeOracleTestSubmit is Test {
         );
 
         vm.prank(sender);
-        outputSettler.fill(orderId, output, fillerData);
+        outputSettler.fill(orderId, output, type(uint48).max, fillerData);
 
         bytes memory expectedPayload =
             this.encodeMessageCalldata(bytes32(uint256(uint160(address(outputSettler)))), payloads);
