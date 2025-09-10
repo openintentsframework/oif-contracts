@@ -3,6 +3,7 @@ pragma solidity ^0.8.26;
 
 import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
+import { Address } from "openzeppelin/utils/Address.sol";
 
 import { IAttester } from "../interfaces/IAttester.sol";
 import { IDestinationSettler } from "../interfaces/IERC7683.sol";
@@ -18,7 +19,7 @@ import { BaseInputOracle } from "../oracles/BaseInputOracle.sol";
 
 /**
  * @notice Base Output Settler implementing logic for settling outputs.
- * Does not support native tokens
+ * Supports both native tokens (ETH) and ERC20 tokens
  * This base output settler implements logic to work as both a PayloadCreator (for oracles) and as an oracle itself.
  *
  * @dev **Fill Function Patterns:**
@@ -88,6 +89,7 @@ abstract contract OutputSettlerBase is IDestinationSettler, IAttester, BaseInput
     function getFillRecord(bytes32 orderId, MandateOutput calldata output) public view returns (bytes32 payloadHash) {
         payloadHash = _fillRecords[orderId][MandateOutputEncodingLib.getMandateOutputHash(output)];
     }
+
     /**
      * @dev Performs basic validation and fills output if unfilled.
      * If an order has already been filled given the output & fillDeadline, then this function does not "re"fill the
@@ -103,12 +105,11 @@ abstract contract OutputSettlerBase is IDestinationSettler, IAttester, BaseInput
      * @param fillerData The solver data.
      * @return fillRecordHash The hash of the fill record.
      */
-
     function _fill(
         bytes32 orderId,
         bytes calldata output,
         bytes calldata fillerData
-    ) internal virtual returns (bytes32 fillRecordHash, bytes32 solver) {
+    ) internal virtual returns (bytes32 fillRecordHash, bytes32 solver, uint256 nativeTokenUsed) {
         OutputVerificationLib._isThisChain(output.chainId());
         OutputVerificationLib._isThisOutputSettler(output.settler());
 
@@ -116,11 +117,12 @@ abstract contract OutputSettlerBase is IDestinationSettler, IAttester, BaseInput
         uint256 outputAmount;
         (solver, outputAmount) = _resolveOutput(output, fillerData);
         {
-            bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHashFromBytes(output.removeFillDeadline());
+            bytes calldata outputWithoutDeadline = output.removeFillDeadline();
+            bytes32 outputHash = MandateOutputEncodingLib.getMandateOutputHashFromBytes(outputWithoutDeadline);
             bytes32 existingFillRecordHash = _fillRecords[orderId][outputHash];
 
             // Early return if already filled.
-            if (existingFillRecordHash != bytes32(0)) return (existingFillRecordHash, solver);
+            if (existingFillRecordHash != bytes32(0)) return (existingFillRecordHash, solver, nativeTokenUsed);
 
             // The above and below lines act as a local re-entry check.
             fillRecordHash = _getFillRecordHash(solver, fillTimestamp);
@@ -129,7 +131,13 @@ abstract contract OutputSettlerBase is IDestinationSettler, IAttester, BaseInput
         // Storage has been set. Fill the output.
         bytes32 tokenIdentifier = output.token();
         address recipient = output.recipient().fromIdentifier();
-        SafeERC20.safeTransferFrom(IERC20(tokenIdentifier.fromIdentifier()), msg.sender, recipient, outputAmount);
+
+        if (tokenIdentifier == bytes32(0)) {
+            Address.sendValue(payable(recipient), outputAmount);
+            nativeTokenUsed = outputAmount;
+        } else {
+            SafeERC20.safeTransferFrom(IERC20(tokenIdentifier.fromIdentifier()), msg.sender, recipient, outputAmount);
+        }
 
         bytes calldata callbackData = output.callbackData();
         if (callbackData.length > 0) {
@@ -137,7 +145,7 @@ abstract contract OutputSettlerBase is IDestinationSettler, IAttester, BaseInput
         }
         emit OutputFilled(orderId, solver, fillTimestamp, output, outputAmount);
 
-        return (fillRecordHash, solver);
+        return (fillRecordHash, solver, nativeTokenUsed);
     }
 
     /**
@@ -168,10 +176,15 @@ abstract contract OutputSettlerBase is IDestinationSettler, IAttester, BaseInput
         bytes32 orderId,
         bytes calldata originData,
         bytes calldata fillerData
-    ) external virtual returns (bytes32 fillRecordHash) {
+    ) external payable virtual returns (bytes32 fillRecordHash) {
         uint48 fillDeadline = originData.fillDeadline();
         if (fillDeadline < block.timestamp) revert FillDeadline();
-        (fillRecordHash,) = _fill(orderId, originData, fillerData);
+        uint256 nativeTokenUsed;
+        (fillRecordHash,, nativeTokenUsed) = _fill(orderId, originData, fillerData);
+
+        // refund
+        uint256 excess = msg.value - nativeTokenUsed;
+        if (excess > 0) Address.sendValue(payable(msg.sender), excess);
     }
     // -- Batch Solving -- //
 
@@ -193,18 +206,30 @@ abstract contract OutputSettlerBase is IDestinationSettler, IAttester, BaseInput
      * @param outputs Array of serialized output data to fill.
      * @param fillerData The solver data containing the proposed solver.
      */
-    function fillOrderOutputs(bytes32 orderId, bytes[] calldata outputs, bytes calldata fillerData) external virtual {
+    function fillOrderOutputs(
+        bytes32 orderId,
+        bytes[] calldata outputs,
+        bytes calldata fillerData
+    ) external payable virtual {
         uint48 fillDeadline = outputs[0].fillDeadline();
         if (fillDeadline < block.timestamp) revert FillDeadline();
 
-        (bytes32 fillRecordHash, bytes32 solver) = _fill(orderId, outputs[0], fillerData);
+        uint256 totalNativeTokenUsed;
+        (bytes32 fillRecordHash, bytes32 solver, uint256 nativeTokenUsed) = _fill(orderId, outputs[0], fillerData);
+        totalNativeTokenUsed += nativeTokenUsed;
+
         bytes32 expectedFillRecordHash = _getFillRecordHash(solver, uint32(block.timestamp));
         if (fillRecordHash != expectedFillRecordHash) revert AlreadyFilled();
 
         uint256 numOutputs = outputs.length;
         for (uint256 i = 1; i < numOutputs; ++i) {
-            _fill(orderId, outputs[i], fillerData);
+            (,, nativeTokenUsed) = _fill(orderId, outputs[i], fillerData);
+            totalNativeTokenUsed += nativeTokenUsed;
         }
+
+        // refund
+        uint256 excess = msg.value - totalNativeTokenUsed;
+        if (excess > 0) Address.sendValue(payable(msg.sender), excess);
     }
 
     // --- IAttester --- //
