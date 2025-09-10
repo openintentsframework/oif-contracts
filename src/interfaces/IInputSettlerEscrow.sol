@@ -13,20 +13,20 @@ interface IInputSettlerEscrow {
     ) external;
 
     function finalise(
-        StandardOrder memory order,
-        uint32[] memory timestamps,
-        bytes32[] memory solvers,
+        StandardOrder calldata order,
+        uint32[] calldata timestamps,
+        bytes32[] calldata solvers,
         bytes32 destination,
-        bytes memory call
+        bytes calldata call
     ) external;
 
     function finaliseWithSignature(
-        StandardOrder memory order,
-        uint32[] memory timestamps,
-        bytes32[] memory solvers,
+        StandardOrder calldata order,
+        uint32[] calldata timestamps,
+        bytes32[] calldata solvers,
         bytes32 destination,
-        bytes memory call,
-        bytes memory orderOwnerSignature
+        bytes calldata call,
+        bytes calldata orderOwnerSignature
     ) external;
 
     function orderIdentifier(

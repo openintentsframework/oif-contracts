@@ -7,22 +7,22 @@ import { StandardOrder } from "../input/types/StandardOrderType.sol";
 
 interface IInputSettlerCompact {
     function finalise(
-        StandardOrder memory order,
-        bytes memory signatures,
-        uint32[] memory timestamps,
-        bytes32[] memory solvers,
+        StandardOrder calldata order,
+        bytes calldata signatures,
+        uint32[] calldata timestamps,
+        bytes32[] calldata solvers,
         bytes32 destination,
-        bytes memory call
+        bytes calldata call
     ) external;
 
     function finaliseWithSignature(
-        StandardOrder memory order,
-        bytes memory signatures,
-        uint32[] memory timestamps,
+        StandardOrder calldata order,
+        bytes calldata signatures,
+        uint32[] calldata timestamps,
         bytes32[] memory solvers,
         bytes32 destination,
-        bytes memory call,
-        bytes memory orderOwnerSignature
+        bytes calldata call,
+        bytes calldata orderOwnerSignature
     ) external;
 
     function orderIdentifier(

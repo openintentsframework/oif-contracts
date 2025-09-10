@@ -375,7 +375,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     function finaliseWithSignature(
         StandardOrder calldata order,
         uint32[] calldata timestamps,
-        bytes32[] memory solvers,
+        bytes32[] calldata solvers,
         bytes32 destination,
         bytes calldata call,
         bytes calldata orderOwnerSignature
