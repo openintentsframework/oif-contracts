@@ -12,6 +12,8 @@ contract MockCallbackExecutor is IInputCallback, IOutputCallback {
         emit ExecutorOutputFilled(token, amount, executionData);
     }
 
+    receive() external payable { }
+
     function orderFinalised(
         uint256[2][] calldata,
         /* inputs */
