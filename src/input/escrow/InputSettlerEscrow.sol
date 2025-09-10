@@ -40,7 +40,6 @@ import { Permit2WitnessType } from "./Permit2WitnessType.sol";
  * `order.inputs` for the solver.
  */
 contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
-    using StandardOrderType for bytes;
     using StandardOrderType for StandardOrder;
     using LibAddress for bytes32;
     using LibAddress for uint256;
@@ -73,13 +72,6 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     constructor() EIP712("OIFEscrow", "1") { }
 
     // --- Generic order identifier --- //
-
-    function orderIdentifier(
-        bytes calldata order
-    ) external view returns (bytes32) {
-        return order.orderIdentifier();
-    }
-
     function orderIdentifier(
         StandardOrder calldata order
     ) external view returns (bytes32) {

@@ -11,7 +11,6 @@ import { IOutputCallback } from "../interfaces/IOutputCallback.sol";
 import { AssemblyLib } from "../libs/AssemblyLib.sol";
 import { LibAddress } from "../libs/LibAddress.sol";
 import { MandateOutput, MandateOutputEncodingLib } from "../libs/MandateOutputEncodingLib.sol";
-import { OutputFillLib } from "../libs/OutputFillLib.sol";
 import { OutputVerificationLib } from "../libs/OutputVerificationLib.sol";
 
 import { BaseInputOracle } from "../oracles/BaseInputOracle.sol";
@@ -37,7 +36,6 @@ import { BaseInputOracle } from "../oracles/BaseInputOracle.sol";
  *    - Use when you need to atomically claim an entire multi-output order
  */
 abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
-    using OutputFillLib for bytes;
     using LibAddress for bytes32;
 
     /// @dev Fill deadline has passed

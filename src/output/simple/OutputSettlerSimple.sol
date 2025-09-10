@@ -4,7 +4,6 @@ pragma solidity ^0.8.26;
 import { OutputSettlerBase } from "../OutputSettlerBase.sol";
 
 import { MandateOutput } from "../../input/types/MandateOutputType.sol";
-import { OutputFillLib } from "../../libs/OutputFillLib.sol";
 import { FillerDataLib } from "./FillerDataLib.sol";
 import { FulfilmentLib } from "./FulfilmentLib.sol";
 
@@ -24,7 +23,6 @@ import { Math } from "openzeppelin/utils/math/Math.sol";
  * `NotImplemented()`.
  */
 contract OutputSettlerSimple is OutputSettlerBase {
-    using OutputFillLib for bytes;
     using FulfilmentLib for bytes;
     using FillerDataLib for bytes;
 

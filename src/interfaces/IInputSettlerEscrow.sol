@@ -30,10 +30,6 @@ interface IInputSettlerEscrow {
     ) external;
 
     function orderIdentifier(
-        bytes memory order
-    ) external view returns (bytes32);
-
-    function orderIdentifier(
         StandardOrder memory order
     ) external view returns (bytes32);
 
