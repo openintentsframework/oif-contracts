@@ -1,9 +1,6 @@
 [submodule "lib/forge-std"]
 	path = lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
-[submodule "lib/bitcoinprism-evm"]
-	path = lib/bitcoinprism-evm
-	url = https://github.com/catalystdao/bitcoinprism-evm
 [submodule "lib/the-compact"]
 	path = lib/the-compact
 	url = https://github.com/Uniswap/the-compact
