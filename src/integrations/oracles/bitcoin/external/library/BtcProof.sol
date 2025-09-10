@@ -204,7 +204,7 @@ library BtcProof {
      * (0x0100000001-0x0300000001)
      * That means that only 3 in 1099511627775 nodes will be able to continue beyond the first check.
      * Every block contains less than 5000 transactions, 5000*6*24*365*3/1099511627775 = 0.07%.
-     * So each year there is 0.07% chance that a single node may accidently be invalided by just a single check of the
+     * So each year there is 0.07% chance that a single node may accidentally be invalided by just a single check of the
      * first 5 bytes. There are even further restrictions so the chance that 2 random nodes combine to from to make a
      * valid transaction is not important. (for example, 1 more varInt needs to be 01 or 00, and 2 varints needs to sum
      * to less than 8)
@@ -217,7 +217,7 @@ library BtcProof {
 
             // This merkle calculation is vulnerable to an attack where a transaction is converted into a leaf.
             // this is possible because it is possible to create a valid 64 bytes (2*32 bytes) transaction and
-            // leafs are hashes with the same algorithm as nodes.
+            // leaves are hashes with the same algorithm as nodes.
             //
             for (uint256 i = 0; i < len; ++i) {
                 bytes32 s;
@@ -238,7 +238,7 @@ library BtcProof {
     }
 
     /**
-     * @dev Computes the ubiquitious Bitcoin SHA256(SHA256(x))
+     * @dev Computes the ubiquitous Bitcoin SHA256(SHA256(x))
      */
     function doubleSha(
         bytes memory buf
