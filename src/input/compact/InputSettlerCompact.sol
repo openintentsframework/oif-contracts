@@ -139,7 +139,7 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
         StandardOrder calldata order,
         bytes calldata signatures,
         uint32[] calldata timestamps,
-        bytes32[] calldata solvers,
+        bytes32[] memory solvers,
         bytes32 destination,
         bytes calldata call,
         bytes calldata orderOwnerSignature
