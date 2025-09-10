@@ -1,12 +1,12 @@
 {
-  "bitcoinFinaliseDispute": "63461",
-  "bitcoinOPVerify": "88097",
-  "bitcoinOutputClaim": "99976",
-  "bitcoinOutputDispute": "71910",
-  "bitcoinVerify": "135821",
-  "bitcoinVerifyWithEmbed": "138439",
-  "hyperlaneOracleHandle": "25901",
-  "hyperlaneOracleSubmit": "37498",
-  "hyperlaneOracleSubmitCustomHook": "37494",
-  "wormholeOracleSubmit": "13910"
+  "bitcoinFinaliseDispute": "38989",
+  "bitcoinOPVerify": "67205",
+  "bitcoinOutputClaim": "78185",
+  "bitcoinOutputDispute": "34763",
+  "bitcoinVerify": "134108",
+  "bitcoinVerifyWithEmbed": "134319",
+  "hyperlaneOracleHandle": "27605",
+  "hyperlaneOracleSubmit": "44824",
+  "hyperlaneOracleSubmitCustomHook": "45003",
+  "wormholeOracleSubmit": "19569"
 }
