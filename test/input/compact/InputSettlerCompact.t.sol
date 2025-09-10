@@ -6,6 +6,7 @@ import { TheCompact } from "the-compact/src/TheCompact.sol";
 import { MandateOutput, MandateOutputType } from "../../../src/input/types/MandateOutputType.sol";
 import { StandardOrder, StandardOrderType } from "../../../src/input/types/StandardOrderType.sol";
 
+import { InputSettlerBase } from "../../../src/input/InputSettlerBase.sol";
 import { IInputSettlerCompact } from "../../../src/interfaces/IInputSettlerCompact.sol";
 import { LibAddress } from "../../../src/libs/LibAddress.sol";
 import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
@@ -83,17 +84,13 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
 
         bytes32 solverIdentifier = solver.toIdentifier();
 
-        uint32[] memory timestamps = new uint32[](1);
-        timestamps[0] = uint32(block.timestamp);
-
         // Other callers are disallowed:
         vm.prank(non_solver);
         vm.expectRevert(abi.encodeWithSignature("NotOrderOwner()"));
-        bytes32[] memory solvers = new bytes32[](1);
-        solvers[0] = solverIdentifier;
-        IInputSettlerCompact(inputSettlerCompact).finalise(
-            order, signature, timestamps, solvers, solverIdentifier, hex""
-        );
+
+        InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
+        solveParams[0] = InputSettlerBase.SolveParams({ solver: solverIdentifier, timestamp: uint32(block.timestamp) });
+        IInputSettlerCompact(inputSettlerCompact).finalise(order, signature, solveParams, solverIdentifier, hex"");
 
         assertEq(token.balanceOf(solver), 0);
 
@@ -116,9 +113,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
         );
 
         vm.prank(solver);
-        IInputSettlerCompact(inputSettlerCompact).finalise(
-            order, signature, timestamps, solvers, solverIdentifier, hex""
-        );
+        IInputSettlerCompact(inputSettlerCompact).finalise(order, signature, solveParams, solverIdentifier, hex"");
         vm.snapshotGasLastCall("inputSettler", "CompactFinaliseSelf");
 
         assertEq(token.balanceOf(solver), amount);
@@ -176,16 +171,12 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
 
         bytes32 solverIdentifier = solver.toIdentifier();
 
-        uint32[] memory timestamps = new uint32[](1);
-        timestamps[0] = filledAt;
+        InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
+        solveParams[0] = InputSettlerBase.SolveParams({ solver: solverIdentifier, timestamp: filledAt });
 
         vm.prank(solver);
         vm.expectRevert(abi.encodeWithSignature("FilledTooLate(uint32,uint32)", fillDeadline, filledAt));
-        bytes32[] memory solvers = new bytes32[](1);
-        solvers[0] = solverIdentifier;
-        IInputSettlerCompact(inputSettlerCompact).finalise(
-            order, signature, timestamps, solvers, solverIdentifier, hex""
-        );
+        IInputSettlerCompact(inputSettlerCompact).finalise(order, signature, solveParams, solverIdentifier, hex"");
     }
 
     /// forge-config: default.isolate = true
@@ -243,9 +234,6 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
 
         bytes memory signature = abi.encode(sponsorSig, hex"");
 
-        uint32[] memory timestamps = new uint32[](1);
-        timestamps[0] = uint32(block.timestamp);
-
         // Other callers are disallowed:
 
         vm.prank(non_solver);
@@ -253,18 +241,14 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
         vm.expectRevert(abi.encodeWithSignature("NotOrderOwner()"));
         bytes32 solverIdentifier = solver.toIdentifier();
         bytes32 destinationIdentifier = destination.toIdentifier();
-        bytes32[] memory solvers = new bytes32[](1);
-        solvers[0] = solverIdentifier;
-        IInputSettlerCompact(inputSettlerCompact).finalise(
-            order, signature, timestamps, solvers, destinationIdentifier, hex""
-        );
+        InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
+        solveParams[0] = InputSettlerBase.SolveParams({ solver: solverIdentifier, timestamp: uint32(block.timestamp) });
+        IInputSettlerCompact(inputSettlerCompact).finalise(order, signature, solveParams, destinationIdentifier, hex"");
 
         assertEq(token.balanceOf(destination), 0);
 
         vm.prank(solver);
-        IInputSettlerCompact(inputSettlerCompact).finalise(
-            order, signature, timestamps, solvers, destinationIdentifier, hex""
-        );
+        IInputSettlerCompact(inputSettlerCompact).finalise(order, signature, solveParams, destinationIdentifier, hex"");
         vm.snapshotGasLastCall("inputSettler", "CompactFinaliseTo");
 
         assertEq(token.balanceOf(destination), amount);
@@ -329,18 +313,16 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
             );
             signature = abi.encode(sponsorSig, hex"");
         }
-        uint32[] memory timestamps = new uint32[](1);
-        timestamps[0] = uint32(block.timestamp);
-
         // Other callers are disallowed:
+        InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
 
         {
             vm.prank(non_solver);
             vm.expectRevert(abi.encodeWithSignature("InvalidSigner()"));
-            bytes32[] memory solvers = new bytes32[](1);
-            solvers[0] = solver.toIdentifier();
+            solveParams[0] =
+                InputSettlerBase.SolveParams({ solver: solver.toIdentifier(), timestamp: uint32(block.timestamp) });
             IInputSettlerCompact(inputSettlerCompact).finaliseWithSignature(
-                order, signature, timestamps, solvers, destination.toIdentifier(), hex"", hex""
+                order, signature, solveParams, destination.toIdentifier(), hex"", hex""
             );
         }
         assertEq(token.balanceOf(destination), 0);
@@ -356,7 +338,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
             solvers[0] = solver.toIdentifier();
             vm.prank(non_solver);
             IInputSettlerCompact(inputSettlerCompact).finaliseWithSignature(
-                order, signature, timestamps, solvers, destination.toIdentifier(), hex"", orderOwnerSignature
+                order, signature, solveParams, destination.toIdentifier(), hex"", orderOwnerSignature
             );
         }
 

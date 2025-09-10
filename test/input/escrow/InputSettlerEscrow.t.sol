@@ -9,6 +9,7 @@ import { IInputSettlerEscrow } from "../../../src/interfaces/IInputSettlerEscrow
 import { LibAddress } from "../../../src/libs/LibAddress.sol";
 import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
 
+import { InputSettlerBase } from "../../../src/input/InputSettlerBase.sol";
 import { InputSettlerEscrowTestBase } from "./InputSettlerEscrow.base.t.sol";
 
 contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
@@ -356,17 +357,15 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         vm.prank(swapper);
         IInputSettlerEscrow(inputSettlerEscrow).open(abi.encode(order));
 
-        uint32[] memory timestamps = new uint32[](1);
-        timestamps[0] = uint32(block.timestamp);
-
-        bytes32[] memory solvers = new bytes32[](1);
-        solvers[0] = solver.toIdentifier();
+        InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
+        solveParams[0] =
+            InputSettlerBase.SolveParams({ solver: solver.toIdentifier(), timestamp: uint32(block.timestamp) });
 
         // Other callers are disallowed:
         vm.prank(non_solver);
 
         vm.expectRevert(abi.encodeWithSignature("NotOrderOwner()"));
-        IInputSettlerEscrow(inputSettlerEscrow).finalise(order, timestamps, solvers, solver.toIdentifier(), hex"");
+        IInputSettlerEscrow(inputSettlerEscrow).finalise(order, solveParams, solver.toIdentifier(), hex"");
 
         assertEq(token.balanceOf(solver), 0);
 
@@ -387,7 +386,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         );
 
         vm.prank(solver);
-        IInputSettlerEscrow(inputSettlerEscrow).finalise(order, timestamps, solvers, solver.toIdentifier(), hex"");
+        IInputSettlerEscrow(inputSettlerEscrow).finalise(order, solveParams, solver.toIdentifier(), hex"");
         vm.snapshotGasLastCall("inputSettler", "EscrowFinalise");
 
         assertEq(token.balanceOf(solver), amount);
@@ -431,15 +430,12 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         vm.prank(swapper);
         IInputSettlerEscrow(inputSettlerEscrow).open(abi.encode(order));
 
-        uint32[] memory timestamps = new uint32[](1);
-        timestamps[0] = filledAt;
-
-        bytes32[] memory solvers = new bytes32[](1);
-        solvers[0] = solver.toIdentifier();
+        InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
+        solveParams[0] = InputSettlerBase.SolveParams({ solver: solver.toIdentifier(), timestamp: filledAt });
 
         vm.prank(solver);
         vm.expectRevert(abi.encodeWithSignature("FilledTooLate(uint32,uint32)", fillDeadline, filledAt));
-        IInputSettlerEscrow(inputSettlerEscrow).finalise(order, timestamps, solvers, solver.toIdentifier(), hex"");
+        IInputSettlerEscrow(inputSettlerEscrow).finalise(order, solveParams, solver.toIdentifier(), hex"");
     }
 
     /// forge-config: default.isolate = true
@@ -507,14 +503,15 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
             );
         }
 
-        bytes32[] memory solvers = new bytes32[](1);
-        solvers[0] = solver.toIdentifier();
+        InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
+        solveParams[0] =
+            InputSettlerBase.SolveParams({ solver: solver.toIdentifier(), timestamp: uint32(block.timestamp) });
 
         bytes memory orderOwnerSignature =
             this.getOrderOpenSignature(solverPrivateKey, orderId, destination.toIdentifier(), hex"");
 
         IInputSettlerEscrow(inputSettlerEscrow).finaliseWithSignature(
-            order, timestamps, solvers, destination.toIdentifier(), hex"", orderOwnerSignature
+            order, solveParams, destination.toIdentifier(), hex"", orderOwnerSignature
         );
         vm.snapshotGasLastCall("inputSettler", "escrowFinaliseWithSignature");
 

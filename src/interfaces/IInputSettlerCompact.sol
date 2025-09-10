@@ -5,12 +5,13 @@ import { MandateOutput } from "../input/types/MandateOutputType.sol";
 import { OrderPurchase } from "../input/types/OrderPurchaseType.sol";
 import { StandardOrder } from "../input/types/StandardOrderType.sol";
 
+import { InputSettlerBase } from "../input/InputSettlerBase.sol";
+
 interface IInputSettlerCompact {
     function finalise(
         StandardOrder calldata order,
         bytes calldata signatures,
-        uint32[] calldata timestamps,
-        bytes32[] calldata solvers,
+        InputSettlerBase.SolveParams[] calldata solveParams,
         bytes32 destination,
         bytes calldata call
     ) external;
@@ -18,8 +19,7 @@ interface IInputSettlerCompact {
     function finaliseWithSignature(
         StandardOrder calldata order,
         bytes calldata signatures,
-        uint32[] calldata timestamps,
-        bytes32[] memory solvers,
+        InputSettlerBase.SolveParams[] calldata solveParams,
         bytes32 destination,
         bytes calldata call,
         bytes calldata orderOwnerSignature

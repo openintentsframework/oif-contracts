@@ -62,22 +62,21 @@ abstract contract InputSettlerPurchase is InputSettlerBase {
      * @notice Helper function to get the owner of order incase it may have been bought. In case an order has been
      * bought, and bought in time, the owner will be set to the purchaser. Otherwise it will be set to the solver.
      * @param orderId A unique identifier for an order.
-     * @param solver Solver identifier that filled the order.
-     * @param timestamps List of timestamps for when the outputs were filled.
+     * @param solveParams List of solve parameters for when the outputs were filled.
      * @return orderOwner Owner of the order.
      */
     function _purchaseGetOrderOwner(
         bytes32 orderId,
-        bytes32 solver,
-        uint32[] calldata timestamps
+        SolveParams[] calldata solveParams
     ) internal returns (bytes32 orderOwner) {
+        bytes32 solver = solveParams[0].solver;
         Purchased storage purchaseDetails = purchasedOrders[solver][orderId];
         uint32 lastOrderTimestamp = purchaseDetails.lastOrderTimestamp;
         bytes32 purchaser = purchaseDetails.purchaser;
 
         if (purchaser != bytes32(0)) {
             // We use the last fill (oldest) to gauge if the order was purchased in time.
-            uint256 orderTimestamp = _maxTimestamp(timestamps);
+            uint256 orderTimestamp = _maxTimestamp(solveParams);
             delete purchaseDetails.lastOrderTimestamp;
             delete purchaseDetails.purchaser;
             // If the timestamp is less than or equal to lastOrderTimestamp, the order was purchased in time.

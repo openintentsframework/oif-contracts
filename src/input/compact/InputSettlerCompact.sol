@@ -94,8 +94,7 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
      * @param order StandardOrder signed in conjunction with a Compact to form an order
      * @param signatures A signature for the sponsor and the allocator. abi.encode(bytes(sponsorSignature),
      * bytes(allocatorData))
-     * @param timestamps Array of timestamps when each output was filled
-     * @param solvers Array of solvers who filled each output (in order of outputs).
+     * @param solveParams List of solve parameters for when the outputs were filled
      * @param destination Where to send the inputs. If the solver wants to send the inputs to themselves, they should
      * pass their address to this parameter.
      * @param call Optional callback data. If non-empty, will call orderFinalised on the destination
@@ -103,8 +102,7 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
     function finalise(
         StandardOrder calldata order,
         bytes calldata signatures,
-        uint32[] calldata timestamps,
-        bytes32[] calldata solvers,
+        SolveParams[] calldata solveParams,
         bytes32 destination,
         bytes calldata call
     ) external virtual {
@@ -112,12 +110,12 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
         _validateInputChain(order.originChainId);
 
         bytes32 orderId = _orderIdentifier(order);
-        bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
+        bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solveParams);
         _orderOwnerIsCaller(orderOwner);
 
-        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, timestamps, solvers);
+        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, solveParams);
 
-        _finalise(order, signatures, orderId, solvers[0], destination);
+        _finalise(order, signatures, orderId, solveParams[0].solver, destination);
 
         if (call.length > 0) IInputCallback(destination.fromIdentifier()).orderFinalised(order.inputs, call);
     }
@@ -128,8 +126,7 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
      * @param order StandardOrder signed in conjunction with a Compact to form an order
      * @param signatures A signature for the sponsor and the allocator. abi.encode(bytes(sponsorSignature),
      * bytes(allocatorData))
-     * @param timestamps Array of timestamps when each output was filled
-     * @param solvers Array of solvers who filled each output (in order of outputs)
+     * @param solveParams List of solve parameters for when the outputs were filled
      * element
      * @param destination Where to send the inputs
      * @param call Optional callback data. If non-empty, will call orderFinalised on the destination
@@ -138,8 +135,7 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
     function finaliseWithSignature(
         StandardOrder calldata order,
         bytes calldata signatures,
-        uint32[] calldata timestamps,
-        bytes32[] memory solvers,
+        SolveParams[] calldata solveParams,
         bytes32 destination,
         bytes calldata call,
         bytes calldata orderOwnerSignature
@@ -149,15 +145,15 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
 
         bytes32 orderId = _orderIdentifier(order);
         {
-            bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
+            bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solveParams);
 
             // Validate the external claimant with signature
             _allowExternalClaimant(orderId, orderOwner.fromIdentifier(), destination, call, orderOwnerSignature);
         }
 
-        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, timestamps, solvers);
+        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, solveParams);
 
-        _finalise(order, signatures, orderId, solvers[0], destination);
+        _finalise(order, signatures, orderId, solveParams[0].solver, destination);
 
         if (call.length > 0) IInputCallback(destination.fromIdentifier()).orderFinalised(order.inputs, call);
     }

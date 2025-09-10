@@ -30,6 +30,8 @@ import { LibAddress } from "../../src/libs/LibAddress.sol";
 import { AlwaysYesOracle } from "../mocks/AlwaysYesOracle.sol";
 import { MockERC20 } from "../mocks/MockERC20.sol";
 
+import { InputSettlerBase } from "../../src/input/InputSettlerBase.sol";
+
 interface EIP712 {
     function DOMAIN_SEPARATOR() external view returns (bytes32);
 }
@@ -335,12 +337,11 @@ contract InputSettlerCompactTestCrossChain is Test {
 
         bytes memory signature = abi.encode(sponsorSig, allocatorSig);
 
-        uint32[] memory timestamps = new uint32[](1);
-
         vm.prank(solver);
-        bytes32[] memory solvers = new bytes32[](1);
-        solvers[0] = solver.toIdentifier();
-        IInputSettlerCompact(inputSettlerCompact).finalise(order, signature, timestamps, solvers, solvers[0], hex"");
+        InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
+        solveParams[0] =
+            InputSettlerBase.SolveParams({ solver: solver.toIdentifier(), timestamp: uint32(block.timestamp) });
+        IInputSettlerCompact(inputSettlerCompact).finalise(order, signature, solveParams, solveParams[0].solver, hex"");
     }
 
     function _buildPreMessage(
@@ -461,13 +462,11 @@ contract InputSettlerCompactTestCrossChain is Test {
             vm.snapshotGasLastCall("inputSettler", "IntegrationWormholeReceiveMessage");
         }
 
-        uint32[] memory timestamps = new uint32[](1);
-        timestamps[0] = uint32(block.timestamp);
-
         vm.prank(solver);
-        bytes32[] memory solvers = new bytes32[](1);
-        solvers[0] = solver.toIdentifier();
-        IInputSettlerCompact(inputSettlerCompact).finalise(order, signature, timestamps, solvers, solvers[0], hex"");
+        InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
+        solveParams[0] =
+            InputSettlerBase.SolveParams({ solver: solver.toIdentifier(), timestamp: uint32(block.timestamp) });
+        IInputSettlerCompact(inputSettlerCompact).finalise(order, signature, solveParams, solveParams[0].solver, hex"");
         vm.snapshotGasLastCall("inputSettler", "IntegrationCompactFinaliseSelf");
     }
 
@@ -605,31 +604,29 @@ contract InputSettlerCompactTestCrossChain is Test {
 
             wormholeOracle.receiveMessage(vaa);
         }
-        uint32[] memory timestamps = new uint32[](2);
-        timestamps[0] = uint32(block.timestamp);
-        timestamps[1] = uint32(block.timestamp);
+        InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](2);
 
         vm.expectRevert(abi.encodeWithSignature("NotProven()"));
         vm.prank(solver);
         {
-            bytes32[] memory solvers = new bytes32[](2);
-            solvers[0] = solverIdentifier;
-            solvers[1] = solverIdentifier;
+            solveParams[0] =
+                InputSettlerBase.SolveParams({ solver: solverIdentifier, timestamp: uint32(block.timestamp) });
+            solveParams[1] =
+                InputSettlerBase.SolveParams({ solver: solverIdentifier, timestamp: uint32(block.timestamp) });
             IInputSettlerCompact(inputSettlerCompact).finalise(
-                order, signature, timestamps, solvers, solverIdentifier, hex""
+                order, signature, solveParams, solveParams[0].solver, hex""
             );
         }
 
-        bytes32[] memory solverIdentifierList = new bytes32[](2);
-        solverIdentifierList[0] = solverIdentifier;
-        solverIdentifierList[1] = solverIdentifier2;
         {
+            solveParams[0] =
+                InputSettlerBase.SolveParams({ solver: solverIdentifier, timestamp: uint32(block.timestamp) });
+            solveParams[1] =
+                InputSettlerBase.SolveParams({ solver: solverIdentifier2, timestamp: uint32(block.timestamp) });
             uint256 snapshotId = vm.snapshot();
 
             vm.prank(solver);
-            IInputSettlerCompact(inputSettlerCompact).finalise(
-                order, signature, timestamps, solverIdentifierList, solverIdentifier, hex""
-            );
+            IInputSettlerCompact(inputSettlerCompact).finalise(order, signature, solveParams, solverIdentifier, hex"");
 
             vm.revertTo(snapshotId);
         }
@@ -639,7 +636,7 @@ contract InputSettlerCompactTestCrossChain is Test {
 
         vm.prank(solver);
         IInputSettlerCompact(inputSettlerCompact).finaliseWithSignature(
-            order, signature, timestamps, solverIdentifierList, solverIdentifier, hex"", solverSignature
+            order, signature, solveParams, solverIdentifier, hex"", solverSignature
         );
     }
 }

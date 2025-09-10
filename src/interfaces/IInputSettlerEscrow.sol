@@ -5,6 +5,8 @@ import { MandateOutput } from "../input/types/MandateOutputType.sol";
 import { OrderPurchase } from "../input/types/OrderPurchaseType.sol";
 import { StandardOrder } from "../input/types/StandardOrderType.sol";
 
+import { InputSettlerBase } from "../input/InputSettlerBase.sol";
+
 interface IInputSettlerEscrow {
     function openFor(bytes calldata order, address sponsor, bytes calldata signature) external;
 
@@ -14,16 +16,14 @@ interface IInputSettlerEscrow {
 
     function finalise(
         StandardOrder calldata order,
-        uint32[] calldata timestamps,
-        bytes32[] calldata solvers,
+        InputSettlerBase.SolveParams[] calldata solveParams,
         bytes32 destination,
         bytes calldata call
     ) external;
 
     function finaliseWithSignature(
         StandardOrder calldata order,
-        uint32[] calldata timestamps,
-        bytes32[] calldata solvers,
+        InputSettlerBase.SolveParams[] calldata solveParams,
         bytes32 destination,
         bytes calldata call,
         bytes calldata orderOwnerSignature
