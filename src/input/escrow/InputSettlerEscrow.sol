@@ -331,16 +331,14 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
      * @dev Finalise is not blocked after the expiry of orders.
      * The caller must be the address corresponding to the first solver in the solvers array.
      * @param order StandardOrder description of the intent.
-     * @param timestamps Array of timestamps when each output was filled
-     * @param solvers Array of solvers who filled each output (in order of outputs).
+     * @param solveParams List of solve parameters for when the outputs were filled
      * @param destination Address to send the inputs to. If the solver wants to send the inputs to themselves, they
      * should pass their address to this parameter.
      * @param call Optional callback data. If non-empty, will call orderFinalised on the destination
      */
     function finalise(
         StandardOrder calldata order,
-        uint32[] calldata timestamps,
-        bytes32[] calldata solvers,
+        SolveParams[] calldata solveParams,
         bytes32 destination,
         bytes calldata call
     ) external virtual {
@@ -348,12 +346,12 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         _validateInputChain(order.originChainId);
 
         bytes32 orderId = order.orderIdentifier();
-        bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
+        bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solveParams);
         _orderOwnerIsCaller(orderOwner);
 
-        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, timestamps, solvers);
+        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, solveParams);
 
-        _finalise(order, orderId, solvers[0], destination);
+        _finalise(order, orderId, solveParams[0].solver, destination);
 
         if (call.length > 0) IInputCallback(destination.fromIdentifier()).orderFinalised(order.inputs, call);
     }
@@ -363,16 +361,14 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
      * @dev Finalise is not blocked after the expiry of orders.
      * This function serves to finalise intents on the origin chain with proper authorization from the order owner.
      * @param order StandardOrder description of the intent.
-     * @param timestamps Array of timestamps when each output was filled
-     * @param solvers Array of solvers who filled each output (in order of outputs) element
+     * @param solveParams List of solve parameters for when the outputs were filled
      * @param destination Address to send the inputs to.
      * @param call Optional callback data. If non-empty, will call orderFinalised on the destination
      * @param orderOwnerSignature Signature from the order owner authorizing this external call
      */
     function finaliseWithSignature(
         StandardOrder calldata order,
-        uint32[] calldata timestamps,
-        bytes32[] memory solvers,
+        SolveParams[] calldata solveParams,
         bytes32 destination,
         bytes calldata call,
         bytes calldata orderOwnerSignature
@@ -383,16 +379,16 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         bytes32 orderId = order.orderIdentifier();
 
         {
-            bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
+            bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solveParams);
 
             // Validate the external claimant with signature
             _validateDestination(destination);
             _allowExternalClaimant(orderId, orderOwner.fromIdentifier(), destination, call, orderOwnerSignature);
         }
 
-        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, timestamps, solvers);
+        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, solveParams);
 
-        _finalise(order, orderId, solvers[0], destination);
+        _finalise(order, orderId, solveParams[0].solver, destination);
 
         if (call.length > 0) IInputCallback(destination.fromIdentifier()).orderFinalised(order.inputs, call);
     }
