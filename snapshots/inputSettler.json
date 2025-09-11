@@ -1,26 +1,5 @@
 {
   "BasePurchaseOrder": "107077",
-<<<<<<< HEAD
-  "CompactFinaliseFor": "117813",
-  "CompactFinaliseSelf": "109420",
-  "CompactFinaliseTo": "109420",
-  "EscrowFinalise": "50303",
-  "IntegrationCoinFill": "67098",
-  "IntegrationCompactFinaliseSelf": "102923",
-  "IntegrationWormholeReceiveMessage": "50882",
-  "IntegrationWormholeSubmit": "19569",
-  "escrowFinaliseWithSignature": "59289",
-  "escrowOpen": "60685",
-  "escrowOpenFor3009Single": "95285",
-  "escrowOpenFor3009SingleArray": "106104",
-  "escrowOpenFor3009Two": "154337",
-  "escrowOpenForMsgSender": "61419",
-  "escrowOpenForPermit2": "102781",
-  "maxTimestamp1": "1114",
-  "minTimestamp1": "1070",
-  "validate2Fills": "11092",
-  "validate2FillsMultipleSolvers": "11092"
-=======
   "CompactFinaliseFor": "117045",
   "CompactFinaliseSelf": "108545",
   "CompactFinaliseTo": "108545",
@@ -40,5 +19,4 @@
   "minTimestamp1": "1097",
   "validate2Fills": "10782",
   "validate2FillsMultipleSolvers": "10782"
->>>>>>> 6bf4faf423e3fda07597b16714a923a0b95bb872
 }
