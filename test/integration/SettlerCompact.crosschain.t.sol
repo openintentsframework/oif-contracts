@@ -30,6 +30,8 @@ import { LibAddress } from "../../src/libs/LibAddress.sol";
 import { AlwaysYesOracle } from "../mocks/AlwaysYesOracle.sol";
 import { MockERC20 } from "../mocks/MockERC20.sol";
 
+import { InputSettlerBase } from "../../src/input/InputSettlerBase.sol";
+
 interface EIP712 {
     function DOMAIN_SEPARATOR() external view returns (bytes32);
 }
@@ -335,12 +337,11 @@ contract InputSettlerCompactTestCrossChain is Test {
 
         bytes memory signature = abi.encode(sponsorSig, allocatorSig);
 
-        uint32[] memory timestamps = new uint32[](1);
-
         vm.prank(solver);
-        bytes32[] memory solvers = new bytes32[](1);
-        solvers[0] = solver.toIdentifier();
-        IInputSettlerCompact(inputSettlerCompact).finalise(order, signature, timestamps, solvers, solvers[0], hex"");
+        InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
+        solveParams[0] =
+            InputSettlerBase.SolveParams({ solver: solver.toIdentifier(), timestamp: uint32(block.timestamp) });
+        IInputSettlerCompact(inputSettlerCompact).finalise(order, signature, solveParams, solveParams[0].solver, hex"");
     }
 
     function _buildPreMessage(
@@ -425,12 +426,11 @@ contract InputSettlerCompactTestCrossChain is Test {
             //bytes32 solverIdentifier = solver.toIdentifier();
 
             bytes memory fillerData = abi.encodePacked(solverIdentifier);
-            bytes memory outputToFill = getOutputToFillFromMandateOutput(type(uint48).max, outputs[0]);
 
             //bytes32 orderId = IInputSettlerCompact(inputSettlerCompact).orderIdentifier(order);
 
             vm.prank(solver);
-            outputSettlerCoin.fill(orderId, outputToFill, fillerData);
+            outputSettlerCoin.fill(orderId, outputs[0], type(uint48).max, fillerData);
 
             vm.snapshotGasLastCall("inputSettler", "IntegrationCoinFill");
         }
@@ -461,13 +461,11 @@ contract InputSettlerCompactTestCrossChain is Test {
             vm.snapshotGasLastCall("inputSettler", "IntegrationWormholeReceiveMessage");
         }
 
-        uint32[] memory timestamps = new uint32[](1);
-        timestamps[0] = uint32(block.timestamp);
-
         vm.prank(solver);
-        bytes32[] memory solvers = new bytes32[](1);
-        solvers[0] = solver.toIdentifier();
-        IInputSettlerCompact(inputSettlerCompact).finalise(order, signature, timestamps, solvers, solvers[0], hex"");
+        InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
+        solveParams[0] =
+            InputSettlerBase.SolveParams({ solver: solver.toIdentifier(), timestamp: uint32(block.timestamp) });
+        IInputSettlerCompact(inputSettlerCompact).finalise(order, signature, solveParams, solveParams[0].solver, hex"");
         vm.snapshotGasLastCall("inputSettler", "IntegrationCompactFinaliseSelf");
     }
 
@@ -531,46 +529,16 @@ contract InputSettlerCompactTestCrossChain is Test {
         // Initiation is over. We need to fill the order.
 
         {
-            bytes[] memory outputsToFill = new bytes[](2);
-
-            outputsToFill[0] = abi.encodePacked(
-                type(uint48).max, // fill deadline
-                outputs[0].oracle, // oracle
-                outputs[0].settler, // settler
-                uint256(outputs[0].chainId), // chainId
-                outputs[0].token, // token
-                outputs[0].amount, // amount
-                outputs[0].recipient, // recipient
-                uint16(outputs[0].call.length), // call length
-                bytes(""), // call
-                uint16(outputs[0].context.length), // context length
-                bytes("") // context
-            );
-
-            outputsToFill[1] = abi.encodePacked(
-                type(uint48).max, // fill deadline
-                outputs[1].oracle, // oracle
-                outputs[1].settler, // settler
-                uint256(outputs[1].chainId), // chainId
-                outputs[1].token, // token
-                outputs[1].amount, // amount
-                outputs[1].recipient, // recipient
-                uint16(outputs[1].call.length), // call length
-                bytes(""), // call
-                uint16(outputs[1].context.length), // context length
-                bytes("") // context
-            );
-
             bytes memory fillerData1 = abi.encodePacked(solverIdentifier);
             bytes memory fillerData2 = abi.encodePacked(solverIdentifier2);
 
             bytes32 orderId = IInputSettlerCompact(inputSettlerCompact).orderIdentifier(order);
 
             vm.prank(solver);
-            outputSettlerCoin.fill(orderId, outputsToFill[0], fillerData1);
+            outputSettlerCoin.fill(orderId, outputs[0], type(uint48).max, fillerData1);
 
             vm.prank(solver);
-            outputSettlerCoin.fill(orderId, outputsToFill[1], fillerData2);
+            outputSettlerCoin.fill(orderId, outputs[1], type(uint48).max, fillerData2);
 
             bytes[] memory payloads = new bytes[](2);
             payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
@@ -605,31 +573,29 @@ contract InputSettlerCompactTestCrossChain is Test {
 
             wormholeOracle.receiveMessage(vaa);
         }
-        uint32[] memory timestamps = new uint32[](2);
-        timestamps[0] = uint32(block.timestamp);
-        timestamps[1] = uint32(block.timestamp);
+        InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](2);
 
         vm.expectRevert(abi.encodeWithSignature("NotProven()"));
         vm.prank(solver);
         {
-            bytes32[] memory solvers = new bytes32[](2);
-            solvers[0] = solverIdentifier;
-            solvers[1] = solverIdentifier;
+            solveParams[0] =
+                InputSettlerBase.SolveParams({ solver: solverIdentifier, timestamp: uint32(block.timestamp) });
+            solveParams[1] =
+                InputSettlerBase.SolveParams({ solver: solverIdentifier, timestamp: uint32(block.timestamp) });
             IInputSettlerCompact(inputSettlerCompact).finalise(
-                order, signature, timestamps, solvers, solverIdentifier, hex""
+                order, signature, solveParams, solveParams[0].solver, hex""
             );
         }
 
-        bytes32[] memory solverIdentifierList = new bytes32[](2);
-        solverIdentifierList[0] = solverIdentifier;
-        solverIdentifierList[1] = solverIdentifier2;
         {
+            solveParams[0] =
+                InputSettlerBase.SolveParams({ solver: solverIdentifier, timestamp: uint32(block.timestamp) });
+            solveParams[1] =
+                InputSettlerBase.SolveParams({ solver: solverIdentifier2, timestamp: uint32(block.timestamp) });
             uint256 snapshotId = vm.snapshot();
 
             vm.prank(solver);
-            IInputSettlerCompact(inputSettlerCompact).finalise(
-                order, signature, timestamps, solverIdentifierList, solverIdentifier, hex""
-            );
+            IInputSettlerCompact(inputSettlerCompact).finalise(order, signature, solveParams, solverIdentifier, hex"");
 
             vm.revertTo(snapshotId);
         }
@@ -639,7 +605,7 @@ contract InputSettlerCompactTestCrossChain is Test {
 
         vm.prank(solver);
         IInputSettlerCompact(inputSettlerCompact).finaliseWithSignature(
-            order, signature, timestamps, solverIdentifierList, solverIdentifier, hex"", solverSignature
+            order, signature, solveParams, solverIdentifier, hex"", solverSignature
         );
     }
 }

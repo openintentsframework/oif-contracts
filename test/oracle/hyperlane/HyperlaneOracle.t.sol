@@ -78,24 +78,21 @@ contract HyperlaneOracleTest is Test {
         address recipient,
         bytes32 orderId,
         bytes32 solverIdentifier
-    ) internal returns (bytes memory output, bytes memory payload) {
+    ) internal returns (MandateOutput memory output, bytes memory payload) {
         _token.mint(sender, amount);
         vm.prank(sender);
         _token.approve(address(_outputSettler), amount);
 
-        output = abi.encodePacked(
-            type(uint48).max, // fill deadline
-            address(_oracle).toIdentifier(), // oracle
-            address(_outputSettler).toIdentifier(), // settler
-            uint256(block.chainid), // chainId
-            bytes32(abi.encode(address(_token))), // token
-            amount, // amount
-            bytes32(abi.encode(recipient)), // recipient
-            uint16(0), // call length
-            bytes(""), // call
-            uint16(0), // context length
-            bytes("") // context
-        );
+        output = MandateOutput({
+            oracle: address(_oracle).toIdentifier(),
+            settler: address(_outputSettler).toIdentifier(),
+            chainId: block.chainid,
+            token: bytes32(abi.encode(address(_token))),
+            amount: amount,
+            recipient: bytes32(abi.encode(recipient)),
+            call: bytes(""),
+            context: bytes("")
+        });
 
         payload = MandateOutputEncodingLib.encodeFillDescriptionMemory(
             solverIdentifier,
@@ -133,7 +130,7 @@ contract HyperlaneOracleTest is Test {
     ) public {
         vm.assume(solverIdentifier != bytes32(0) && sender != address(0) && recipient != address(0));
 
-        bytes memory output;
+        MandateOutput memory output;
         bytes[] memory payloads = new bytes[](1);
         (output, payloads[0]) = _getMandatePayload(sender, amount, recipient, orderId, solverIdentifier);
 
@@ -163,7 +160,7 @@ contract HyperlaneOracleTest is Test {
     ) public {
         vm.assume(solverIdentifier != bytes32(0) && sender != address(0) && recipient != address(0));
 
-        bytes memory output;
+        MandateOutput memory output;
         bytes[] memory payloads = new bytes[](1);
         (output, payloads[0]) = _getMandatePayload(sender, amount, recipient, orderId, solverIdentifier);
 
@@ -175,7 +172,7 @@ contract HyperlaneOracleTest is Test {
         bytes memory fillerData = abi.encodePacked(solverIdentifier);
 
         vm.prank(sender);
-        _outputSettler.fill(orderId, output, fillerData);
+        _outputSettler.fill(orderId, output, type(uint48).max, fillerData);
 
         bytes memory customMetadata = bytes("customMetadata");
 
@@ -218,7 +215,7 @@ contract HyperlaneOracleTest is Test {
     ) public {
         vm.assume(solverIdentifier != bytes32(0) && sender != address(0) && recipient != address(0));
 
-        bytes memory output;
+        MandateOutput memory output;
         bytes[] memory payloads = new bytes[](1);
         (output, payloads[0]) = _getMandatePayload(sender, amount, recipient, orderId, solverIdentifier);
 
@@ -230,7 +227,7 @@ contract HyperlaneOracleTest is Test {
         bytes memory fillerData = abi.encodePacked(solverIdentifier);
 
         vm.prank(sender);
-        _outputSettler.fill(orderId, output, fillerData);
+        _outputSettler.fill(orderId, output, type(uint48).max, fillerData);
 
         bytes memory customMetadata = bytes("customMetadata");
 
@@ -267,7 +264,7 @@ contract HyperlaneOracleTest is Test {
     ) external {
         vm.assume(solverIdentifier != bytes32(0) && sender != address(0) && recipient != address(0));
 
-        bytes memory output;
+        MandateOutput memory output;
         bytes[] memory payloads = new bytes[](1);
         (output, payloads[0]) = _getMandatePayload(sender, amount, recipient, orderId, solverIdentifier);
 
@@ -296,7 +293,7 @@ contract HyperlaneOracleTest is Test {
     ) public {
         vm.assume(solverIdentifier != bytes32(0) && sender != address(0) && recipient != address(0));
 
-        bytes memory output;
+        MandateOutput memory output;
         bytes[] memory payloads = new bytes[](1);
         (output, payloads[0]) = _getMandatePayload(sender, amount, recipient, orderId, solverIdentifier);
 
