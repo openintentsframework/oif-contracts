@@ -177,9 +177,7 @@ abstract contract OutputSettlerBase is IDestinationSettler, IAttester, BaseInput
         if (fillDeadline < block.timestamp) revert FillDeadline();
         (fillRecordHash,) = _fill(orderId, originData, fillerData);
 
-        // refund
-        uint256 excess = address(this).balance;
-        if (excess > 0) Address.sendValue(payable(msg.sender), excess);
+        _refundExcess();
     }
     // -- Batch Solving -- //
 
@@ -219,7 +217,13 @@ abstract contract OutputSettlerBase is IDestinationSettler, IAttester, BaseInput
             _fill(orderId, outputs[i], fillerData);
         }
 
-        // refund
+        _refundExcess();
+    }
+
+    /**
+     * @notice Refunds the native tokenexcess value sent to the contract.
+     */
+    function _refundExcess() internal {
         uint256 excess = address(this).balance;
         if (excess > 0) Address.sendValue(payable(msg.sender), excess);
     }
