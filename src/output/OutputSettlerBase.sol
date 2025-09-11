@@ -109,7 +109,7 @@ abstract contract OutputSettlerBase is IDestinationSettler, IAttester, BaseInput
         bytes32 orderId,
         bytes calldata output,
         bytes calldata fillerData
-    ) internal virtual returns (bytes32 fillRecordHash, bytes32 solver, uint256 nativeTokenUsed) {
+    ) internal virtual returns (bytes32 fillRecordHash, bytes32 solver) {
         OutputVerificationLib._isThisChain(output.chainId());
         OutputVerificationLib._isThisOutputSettler(output.settler());
 
@@ -122,7 +122,7 @@ abstract contract OutputSettlerBase is IDestinationSettler, IAttester, BaseInput
             bytes32 existingFillRecordHash = _fillRecords[orderId][outputHash];
 
             // Early return if already filled.
-            if (existingFillRecordHash != bytes32(0)) return (existingFillRecordHash, solver, nativeTokenUsed);
+            if (existingFillRecordHash != bytes32(0)) return (existingFillRecordHash, solver);
 
             // The above and below lines act as a local re-entry check.
             fillRecordHash = _getFillRecordHash(solver, fillTimestamp);
@@ -132,12 +132,8 @@ abstract contract OutputSettlerBase is IDestinationSettler, IAttester, BaseInput
         bytes32 tokenIdentifier = output.token();
         address recipient = output.recipient().fromIdentifier();
 
-        if (tokenIdentifier == bytes32(0)) {
-            Address.sendValue(payable(recipient), outputAmount);
-            nativeTokenUsed = outputAmount;
-        } else {
-            SafeERC20.safeTransferFrom(IERC20(tokenIdentifier.fromIdentifier()), msg.sender, recipient, outputAmount);
-        }
+        if (tokenIdentifier == bytes32(0)) Address.sendValue(payable(recipient), outputAmount);
+        else SafeERC20.safeTransferFrom(IERC20(tokenIdentifier.fromIdentifier()), msg.sender, recipient, outputAmount);
 
         bytes calldata callbackData = output.callbackData();
         if (callbackData.length > 0) {
@@ -145,7 +141,7 @@ abstract contract OutputSettlerBase is IDestinationSettler, IAttester, BaseInput
         }
         emit OutputFilled(orderId, solver, fillTimestamp, output, outputAmount);
 
-        return (fillRecordHash, solver, nativeTokenUsed);
+        return (fillRecordHash, solver);
     }
 
     /**
@@ -179,11 +175,10 @@ abstract contract OutputSettlerBase is IDestinationSettler, IAttester, BaseInput
     ) external payable virtual returns (bytes32 fillRecordHash) {
         uint48 fillDeadline = originData.fillDeadline();
         if (fillDeadline < block.timestamp) revert FillDeadline();
-        uint256 nativeTokenUsed;
-        (fillRecordHash,, nativeTokenUsed) = _fill(orderId, originData, fillerData);
+        (fillRecordHash,) = _fill(orderId, originData, fillerData);
 
         // refund
-        uint256 excess = msg.value - nativeTokenUsed;
+        uint256 excess = address(this).balance;
         if (excess > 0) Address.sendValue(payable(msg.sender), excess);
     }
     // -- Batch Solving -- //
@@ -214,21 +209,18 @@ abstract contract OutputSettlerBase is IDestinationSettler, IAttester, BaseInput
         uint48 fillDeadline = outputs[0].fillDeadline();
         if (fillDeadline < block.timestamp) revert FillDeadline();
 
-        uint256 totalNativeTokenUsed;
-        (bytes32 fillRecordHash, bytes32 solver, uint256 nativeTokenUsed) = _fill(orderId, outputs[0], fillerData);
-        totalNativeTokenUsed += nativeTokenUsed;
+        (bytes32 fillRecordHash, bytes32 solver) = _fill(orderId, outputs[0], fillerData);
 
         bytes32 expectedFillRecordHash = _getFillRecordHash(solver, uint32(block.timestamp));
         if (fillRecordHash != expectedFillRecordHash) revert AlreadyFilled();
 
         uint256 numOutputs = outputs.length;
         for (uint256 i = 1; i < numOutputs; ++i) {
-            (,, nativeTokenUsed) = _fill(orderId, outputs[i], fillerData);
-            totalNativeTokenUsed += nativeTokenUsed;
+            _fill(orderId, outputs[i], fillerData);
         }
 
         // refund
-        uint256 excess = msg.value - totalNativeTokenUsed;
+        uint256 excess = address(this).balance;
         if (excess > 0) Address.sendValue(payable(msg.sender), excess);
     }
 
