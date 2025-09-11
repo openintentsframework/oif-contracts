@@ -426,12 +426,11 @@ contract InputSettlerCompactTestCrossChain is Test {
             //bytes32 solverIdentifier = solver.toIdentifier();
 
             bytes memory fillerData = abi.encodePacked(solverIdentifier);
-            bytes memory outputToFill = getOutputToFillFromMandateOutput(type(uint48).max, outputs[0]);
 
             //bytes32 orderId = IInputSettlerCompact(inputSettlerCompact).orderIdentifier(order);
 
             vm.prank(solver);
-            outputSettlerCoin.fill(orderId, outputToFill, fillerData);
+            outputSettlerCoin.fill(orderId, outputs[0], type(uint48).max, fillerData);
 
             vm.snapshotGasLastCall("inputSettler", "IntegrationCoinFill");
         }
@@ -530,46 +529,16 @@ contract InputSettlerCompactTestCrossChain is Test {
         // Initiation is over. We need to fill the order.
 
         {
-            bytes[] memory outputsToFill = new bytes[](2);
-
-            outputsToFill[0] = abi.encodePacked(
-                type(uint48).max, // fill deadline
-                outputs[0].oracle, // oracle
-                outputs[0].settler, // settler
-                uint256(outputs[0].chainId), // chainId
-                outputs[0].token, // token
-                outputs[0].amount, // amount
-                outputs[0].recipient, // recipient
-                uint16(outputs[0].call.length), // call length
-                bytes(""), // call
-                uint16(outputs[0].context.length), // context length
-                bytes("") // context
-            );
-
-            outputsToFill[1] = abi.encodePacked(
-                type(uint48).max, // fill deadline
-                outputs[1].oracle, // oracle
-                outputs[1].settler, // settler
-                uint256(outputs[1].chainId), // chainId
-                outputs[1].token, // token
-                outputs[1].amount, // amount
-                outputs[1].recipient, // recipient
-                uint16(outputs[1].call.length), // call length
-                bytes(""), // call
-                uint16(outputs[1].context.length), // context length
-                bytes("") // context
-            );
-
             bytes memory fillerData1 = abi.encodePacked(solverIdentifier);
             bytes memory fillerData2 = abi.encodePacked(solverIdentifier2);
 
             bytes32 orderId = IInputSettlerCompact(inputSettlerCompact).orderIdentifier(order);
 
             vm.prank(solver);
-            outputSettlerCoin.fill(orderId, outputsToFill[0], fillerData1);
+            outputSettlerCoin.fill(orderId, outputs[0], type(uint48).max, fillerData1);
 
             vm.prank(solver);
-            outputSettlerCoin.fill(orderId, outputsToFill[1], fillerData2);
+            outputSettlerCoin.fill(orderId, outputs[1], type(uint48).max, fillerData2);
 
             bytes[] memory payloads = new bytes[](2);
             payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionMemory(

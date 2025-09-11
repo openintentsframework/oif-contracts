@@ -8,10 +8,10 @@ import { StandardOrder } from "../input/types/StandardOrderType.sol";
 import { InputSettlerBase } from "../input/InputSettlerBase.sol";
 
 interface IInputSettlerEscrow {
-    function openFor(bytes calldata order, address sponsor, bytes calldata signature) external;
+    function openFor(StandardOrder calldata order, address sponsor, bytes calldata signature) external;
 
     function open(
-        bytes calldata order
+        StandardOrder calldata order
     ) external;
 
     function finalise(
@@ -28,10 +28,6 @@ interface IInputSettlerEscrow {
         bytes calldata call,
         bytes calldata orderOwnerSignature
     ) external;
-
-    function orderIdentifier(
-        bytes memory order
-    ) external view returns (bytes32);
 
     function orderIdentifier(
         StandardOrder memory order

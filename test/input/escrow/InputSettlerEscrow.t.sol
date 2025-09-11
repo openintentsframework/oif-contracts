@@ -50,7 +50,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         assertEq(token.balanceOf(address(user)), amount);
 
         vm.prank(user);
-        IInputSettlerEscrow(inputSettlerEscrow).open(abi.encode(order));
+        IInputSettlerEscrow(inputSettlerEscrow).open(order);
         vm.snapshotGasLastCall("inputSettler", "escrowOpen");
 
         assertEq(token.balanceOf(address(user)), 0);
@@ -95,7 +95,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         assertEq(token.balanceOf(address(user)), amount);
 
         vm.prank(user);
-        IInputSettlerEscrow(inputSettlerEscrow).openFor(abi.encode(order), user, hex"");
+        IInputSettlerEscrow(inputSettlerEscrow).openFor(order, user, hex"");
         vm.snapshotGasLastCall("inputSettler", "escrowOpenForMsgSender");
 
         assertEq(token.balanceOf(address(user)), 0);
@@ -137,9 +137,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         assertEq(token.balanceOf(address(swapper)), amount);
 
         vm.prank(swapper);
-        IInputSettlerEscrow(inputSettlerEscrow).openFor(
-            abi.encode(order), order.user, abi.encodePacked(bytes1(0x00), signature)
-        );
+        IInputSettlerEscrow(inputSettlerEscrow).openFor(order, order.user, abi.encodePacked(bytes1(0x00), signature));
         vm.snapshotGasLastCall("inputSettler", "escrowOpenForPermit2");
 
         assertEq(token.balanceOf(address(swapper)), 0);
@@ -181,9 +179,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         assertEq(token.balanceOf(address(swapper)), amount);
 
         vm.prank(swapper);
-        IInputSettlerEscrow(inputSettlerEscrow).openFor(
-            abi.encode(order), order.user, abi.encodePacked(bytes1(0x01), signature)
-        );
+        IInputSettlerEscrow(inputSettlerEscrow).openFor(order, order.user, abi.encodePacked(bytes1(0x01), signature));
         vm.snapshotGasLastCall("inputSettler", "escrowOpenFor3009Single");
 
         assertEq(token.balanceOf(address(swapper)), 0);
@@ -224,7 +220,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
 
         vm.prank(swapper);
         IInputSettlerEscrow(inputSettlerEscrow).openFor(
-            abi.encode(order), order.user, abi.encodePacked(bytes1(0x01), abi.encode(signatures))
+            order, order.user, abi.encodePacked(bytes1(0x01), abi.encode(signatures))
         );
         vm.snapshotGasLastCall("inputSettler", "escrowOpenFor3009SingleArray");
 
@@ -272,7 +268,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
 
         vm.prank(swapper);
         IInputSettlerEscrow(inputSettlerEscrow).openFor(
-            abi.encode(order), order.user, abi.encodePacked(bytes1(0x01), abi.encode(signatures))
+            order, order.user, abi.encodePacked(bytes1(0x01), abi.encode(signatures))
         );
         vm.snapshotGasLastCall("inputSettler", "escrowOpenFor3009Two");
 
@@ -355,7 +351,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         vm.prank(swapper);
         token.approve(inputSettlerEscrow, amount);
         vm.prank(swapper);
-        IInputSettlerEscrow(inputSettlerEscrow).open(abi.encode(order));
+        IInputSettlerEscrow(inputSettlerEscrow).open(order);
 
         InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
         solveParams[0] =
@@ -428,7 +424,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         vm.prank(swapper);
         token.approve(inputSettlerEscrow, amount);
         vm.prank(swapper);
-        IInputSettlerEscrow(inputSettlerEscrow).open(abi.encode(order));
+        IInputSettlerEscrow(inputSettlerEscrow).open(order);
 
         InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
         solveParams[0] = InputSettlerBase.SolveParams({ solver: solver.toIdentifier(), timestamp: filledAt });
@@ -480,7 +476,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         vm.prank(swapper);
         token.approve(inputSettlerEscrow, amount);
         vm.prank(swapper);
-        IInputSettlerEscrow(inputSettlerEscrow).open(abi.encode(order));
+        IInputSettlerEscrow(inputSettlerEscrow).open(order);
 
         uint32[] memory timestamps = new uint32[](1);
         timestamps[0] = uint32(block.timestamp);
