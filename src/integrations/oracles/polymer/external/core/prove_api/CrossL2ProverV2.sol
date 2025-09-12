@@ -232,7 +232,7 @@ contract CrossL2ProverV2 is SequencerSignatureVerifierV2, ICrossL2ProverV2 {
     }
 
     /**
-     * @notice Verifies polymer state through an iavl proof. Useful for proving wether a given value exists in an iavl
+     * @notice Verifies polymer state through an iavl proof. Useful for proving whether a given value exists in an iavl
      * tree of the given root
      * @param root The root of the iavl tree
      * @param key The key to verify in the iavl tree - in the case of this crossl2Prover, generated using
