@@ -6,6 +6,7 @@ import { Test } from "forge-std/Test.sol";
 
 import { MandateOutput } from "src/input/types/MandateOutputType.sol";
 import { PolymerOracle } from "src/integrations/oracles/polymer/PolymerOracle.sol";
+import { PolymerOracleMapped } from "src/integrations/oracles/polymer/PolymerOracleMapped.sol";
 import { MockCrossL2ProverV2 } from "src/integrations/oracles/polymer/external/mocks/MockCrossL2ProverV2.sol";
 import { LibAddress } from "src/libs/LibAddress.sol";
 
@@ -19,13 +20,13 @@ import { MandateOutputEncodingLib } from "src/libs/MandateOutputEncodingLib.sol"
 import { OutputSettlerBase } from "src/output/OutputSettlerBase.sol";
 import { OutputSettlerSimple } from "src/output/simple/OutputSettlerSimple.sol";
 
-contract PolymerOracleTest is Test {
+contract PolymerOracleMappedTest is Test {
     using LibAddress for address;
 
     event OutputProven(uint256 chainid, bytes32 remoteIdentifier, bytes32 application, bytes32 payloadHash);
 
     MockCrossL2ProverV2 mockCrossL2ProverV2;
-    PolymerOracle polymerOracle;
+    PolymerOracleMapped polymerOracleMapped;
 
     string clientType = "mock-proof";
     address sequencer = vm.addr(uint256(keccak256("sequencer")));
@@ -39,9 +40,12 @@ contract PolymerOracleTest is Test {
     address solver;
     OutputSettlerSimple outputSettler;
 
+    address owner;
+
     function setUp() public {
+        owner = makeAddr("owner");
         mockCrossL2ProverV2 = new MockCrossL2ProverV2(clientType, sequencer, peptideChainId);
-        polymerOracle = new PolymerOracle(address(mockCrossL2ProverV2));
+        polymerOracleMapped = new PolymerOracleMapped(owner, address(mockCrossL2ProverV2));
 
         alwaysYesOracle = address(new AlwaysYesOracle());
         inputSettlerEscrow = address(new InputSettlerEscrow());
@@ -60,6 +64,9 @@ contract PolymerOracleTest is Test {
         topics[1] = keccak256("data");
 
         bytes memory data = abi.encode("some data");
+
+        vm.prank(owner);
+        polymerOracleMapped.setChainMap(1, 1);
 
         bytes memory mockProof =
             mockCrossL2ProverV2.generateAndEmitProof(1, vm.addr(uint256(keccak256("emitter"))), topics, data);
@@ -95,6 +102,9 @@ contract PolymerOracleTest is Test {
 
         uint32 remoteChainId = 1;
 
+        vm.prank(owner);
+        polymerOracleMapped.setChainMap(remoteChainId, remoteChainId);
+
         bytes memory mockProof =
             mockCrossL2ProverV2.generateAndEmitProof(remoteChainId, makeAddr("settler"), topics, unindexedData);
 
@@ -107,11 +117,11 @@ contract PolymerOracleTest is Test {
         vm.expectEmit();
         emit OutputProven(
             remoteChainId,
-            address(polymerOracle).toIdentifier(),
+            address(polymerOracleMapped).toIdentifier(),
             makeAddr("settler").toIdentifier(),
             expectedPayloadHash
         );
-        polymerOracle.receiveMessage(mockProof);
+        polymerOracleMapped.receiveMessage(mockProof);
     }
 
     function test_receiveMessage_multiple_proofs() public {
@@ -137,6 +147,10 @@ contract PolymerOracleTest is Test {
 
         uint32 remoteChainId1 = 1;
         uint32 remoteChainId2 = 2;
+        vm.prank(owner);
+        polymerOracleMapped.setChainMap(remoteChainId1, remoteChainId1);
+        vm.prank(owner);
+        polymerOracleMapped.setChainMap(remoteChainId2, remoteChainId2);
 
         bytes memory mockProof1 =
             mockCrossL2ProverV2.generateAndEmitProof(remoteChainId1, makeAddr("settler"), topics, unindexedData);
@@ -161,20 +175,20 @@ contract PolymerOracleTest is Test {
         vm.expectEmit();
         emit OutputProven(
             remoteChainId1,
-            address(polymerOracle).toIdentifier(),
+            address(polymerOracleMapped).toIdentifier(),
             makeAddr("settler").toIdentifier(),
             expectedPayloadHash1
         );
         emit OutputProven(
             remoteChainId2,
-            address(polymerOracle).toIdentifier(),
+            address(polymerOracleMapped).toIdentifier(),
             makeAddr("settler").toIdentifier(),
             expectedPayloadHash2
         );
         bytes[] memory proofs = new bytes[](2);
         proofs[0] = mockProof1;
         proofs[1] = mockProof2;
-        polymerOracle.receiveMessage(proofs);
+        polymerOracleMapped.receiveMessage(proofs);
     }
 
     function test_receiveMessage_wrong_event_signature() public {
@@ -183,12 +197,15 @@ contract PolymerOracleTest is Test {
         topics[0] = keccak256("event");
         topics[1] = orderId;
 
+        vm.prank(owner);
+        polymerOracleMapped.setChainMap(1, 1);
+
         bytes memory mockProof = mockCrossL2ProverV2.generateAndEmitProof(
             1, vm.addr(uint256(keccak256("emitter"))), topics, abi.encode("some data")
         );
 
         vm.expectRevert(PolymerOracle.WrongEventSignature.selector);
-        polymerOracle.receiveMessage(mockProof);
+        polymerOracleMapped.receiveMessage(mockProof);
     }
 
     function test_receiveMessage_and_finalise() public {
@@ -197,7 +214,7 @@ contract PolymerOracleTest is Test {
         MandateOutput[] memory outputs = new MandateOutput[](1);
         outputs[0] = MandateOutput({
             settler: address(outputSettler).toIdentifier(),
-            oracle: address(polymerOracle).toIdentifier(),
+            oracle: address(polymerOracleMapped).toIdentifier(),
             chainId: block.chainid,
             token: address(anotherToken).toIdentifier(),
             amount: amount,
@@ -214,7 +231,7 @@ contract PolymerOracleTest is Test {
             originChainId: block.chainid,
             expires: type(uint32).max,
             fillDeadline: type(uint32).max,
-            inputOracle: address(polymerOracle),
+            inputOracle: address(polymerOracleMapped),
             inputs: inputs,
             outputs: outputs
         });
@@ -243,6 +260,8 @@ contract PolymerOracleTest is Test {
 
         uint32 timestamp = uint32(block.timestamp);
         bytes memory unindexedData = abi.encode(solver.toIdentifier(), timestamp, outputs[0]);
+        vm.prank(owner);
+        polymerOracleMapped.setChainMap(block.chainid, block.chainid);
 
         bytes memory mockProof = mockCrossL2ProverV2.generateAndEmitProof(
             uint32(block.chainid), address(outputSettler), topics, unindexedData
@@ -250,12 +269,15 @@ contract PolymerOracleTest is Test {
 
         vm.expectEmit();
         emit OutputProven(
-            block.chainid, address(polymerOracle).toIdentifier(), address(outputSettler).toIdentifier(), payloadHash
+            block.chainid,
+            address(polymerOracleMapped).toIdentifier(),
+            address(outputSettler).toIdentifier(),
+            payloadHash
         );
-        polymerOracle.receiveMessage(mockProof);
+        polymerOracleMapped.receiveMessage(mockProof);
 
         vm.expectCall(
-            address(polymerOracle),
+            address(polymerOracleMapped),
             abi.encodeWithSignature(
                 "efficientRequireProven(bytes)",
                 abi.encodePacked(
