@@ -9,7 +9,6 @@ import { PolymerOracle } from "src/integrations/oracles/polymer/PolymerOracle.so
 import { MockCrossL2ProverV2 } from "src/integrations/oracles/polymer/external/mocks/MockCrossL2ProverV2.sol";
 import { LibAddress } from "src/libs/LibAddress.sol";
 
-import { AlwaysYesOracle } from "../../mocks/AlwaysYesOracle.sol";
 import { MockERC20 } from "../../mocks/MockERC20.sol";
 import { InputSettlerBase } from "src/input/InputSettlerBase.sol";
 import { InputSettlerEscrow } from "src/input/escrow/InputSettlerEscrow.sol";
@@ -31,7 +30,6 @@ contract PolymerOracleTest is Test {
     address sequencer = vm.addr(uint256(keccak256("sequencer")));
     bytes32 peptideChainId = keccak256("peptide");
 
-    address alwaysYesOracle;
     address inputSettlerEscrow;
     MockERC20 token;
     MockERC20 anotherToken;
@@ -43,7 +41,6 @@ contract PolymerOracleTest is Test {
         mockCrossL2ProverV2 = new MockCrossL2ProverV2(clientType, sequencer, peptideChainId);
         polymerOracle = new PolymerOracle(address(mockCrossL2ProverV2));
 
-        alwaysYesOracle = address(new AlwaysYesOracle());
         inputSettlerEscrow = address(new InputSettlerEscrow());
         swapper = makeAddr("swapper");
         solver = makeAddr("solver");
