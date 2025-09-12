@@ -22,7 +22,7 @@ jobs:
           version: nightly
 
       - name: Generate Gas Snapshots
-        run: FOUNDRY_FUZZ_RUNS=10 forge test --gas-snapshot
+        run: FOUNDRY_FUZZ_RUNS=10 forge test --gas-snapshot-check true
 
       - name: Update Gas Snapshots
         run: |
