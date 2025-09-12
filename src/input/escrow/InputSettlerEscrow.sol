@@ -40,7 +40,6 @@ import { Permit2WitnessType } from "./Permit2WitnessType.sol";
  * `order.inputs` for the solver.
  */
 contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
-    using StandardOrderType for bytes;
     using StandardOrderType for StandardOrder;
     using LibAddress for bytes32;
     using LibAddress for uint256;
@@ -51,7 +50,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     error ReentrancyDetected();
     error SignatureNotSupported(bytes1);
 
-    event Open(bytes32 indexed orderId, bytes order);
+    event Open(bytes32 indexed orderId, StandardOrder order);
     event Refunded(bytes32 indexed orderId);
 
     bytes1 internal constant SIGNATURE_TYPE_PERMIT2 = 0x00;
@@ -73,13 +72,6 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     constructor() EIP712("OIFEscrow", "1") { }
 
     // --- Generic order identifier --- //
-
-    function orderIdentifier(
-        bytes calldata order
-    ) external view returns (bytes32) {
-        return order.orderIdentifier();
-    }
-
     function orderIdentifier(
         StandardOrder calldata order
     ) external view returns (bytes32) {
@@ -91,12 +83,12 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
      * @param order bytes representing an encoded StandardOrder, encoded via abi.encode().
      */
     function open(
-        bytes calldata order
+        StandardOrder calldata order
     ) external {
         // Validate the order structure.
-        _validateInputChain(order.originChainId());
-        _validateTimestampHasNotPassed(order.fillDeadline());
-        _validateTimestampHasNotPassed(order.expires());
+        _validateInputChain(order.originChainId);
+        _validateTimestampHasNotPassed(order.fillDeadline);
+        _validateTimestampHasNotPassed(order.expires);
 
         bytes32 orderId = order.orderIdentifier();
 
@@ -119,10 +111,10 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
      * @param order bytes representing an encoded StandardOrder, encoded via abi.encode().
      */
     function _open(
-        bytes calldata order
+        StandardOrder calldata order
     ) internal {
         // Collect input tokens.
-        uint256[2][] calldata inputs = order.inputs();
+        uint256[2][] calldata inputs = order.inputs;
         uint256 numInputs = inputs.length;
         for (uint256 i = 0; i < numInputs; ++i) {
             uint256[2] calldata input = inputs[i];
@@ -147,11 +139,11 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
      * - SIGNATURE_TYPE_PERMIT2:  b1:0x00 | bytes:signature
      * - SIGNATURE_TYPE_3009:     b1:0x01 | bytes:signature OR abi.encode(bytes[]:signatures)
      */
-    function openFor(bytes calldata order, address sponsor, bytes calldata signature) external {
+    function openFor(StandardOrder calldata order, address sponsor, bytes calldata signature) external {
         // Validate the order structure.
-        _validateInputChain(order.originChainId());
-        _validateTimestampHasNotPassed(order.fillDeadline());
-        _validateTimestampHasNotPassed(order.expires());
+        _validateInputChain(order.originChainId);
+        _validateTimestampHasNotPassed(order.fillDeadline);
+        _validateTimestampHasNotPassed(order.expires);
 
         bytes32 orderId = order.orderIdentifier();
 
@@ -165,7 +157,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         if (signatureType == SIGNATURE_TYPE_PERMIT2) {
             _openForWithPermit2(order, sponsor, signature[1:], address(this));
         } else if (signatureType == SIGNATURE_TYPE_3009) {
-            _openForWithAuthorization(order.inputs(), order.fillDeadline(), sponsor, signature[1:], orderId);
+            _openForWithAuthorization(order.inputs, order.fillDeadline, sponsor, signature[1:], orderId);
         } else if (msg.sender == sponsor && signatureType == SIGNATURE_TYPE_SELF) {
             _open(order);
         } else {
@@ -185,12 +177,17 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
      * @param signature permit2 signature with Permit2Witness representing `order` signed by `order.user`.
      * @param to recipient of the inputs tokens. In most cases, should be address(this).
      */
-    function _openForWithPermit2(bytes calldata order, address signer, bytes calldata signature, address to) internal {
+    function _openForWithPermit2(
+        StandardOrder calldata order,
+        address signer,
+        bytes calldata signature,
+        address to
+    ) internal {
         ISignatureTransfer.TokenPermissions[] memory permitted;
         ISignatureTransfer.SignatureTransferDetails[] memory transferDetails;
 
         {
-            uint256[2][] calldata orderInputs = order.inputs();
+            uint256[2][] calldata orderInputs = order.inputs;
             // Load the number of inputs. We need them to set the array size & convert each
             // input struct into a transferDetails struct.
             uint256 numInputs = orderInputs.length;
@@ -219,8 +216,8 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         }
         ISignatureTransfer.PermitBatchTransferFrom memory permitBatch = ISignatureTransfer.PermitBatchTransferFrom({
             permitted: permitted,
-            nonce: order.nonce(),
-            deadline: order.fillDeadline()
+            nonce: order.nonce,
+            deadline: order.fillDeadline
         });
         PERMIT2.permitWitnessTransferFrom(
             permitBatch,
@@ -334,16 +331,14 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
      * @dev Finalise is not blocked after the expiry of orders.
      * The caller must be the address corresponding to the first solver in the solvers array.
      * @param order StandardOrder description of the intent.
-     * @param timestamps Array of timestamps when each output was filled
-     * @param solvers Array of solvers who filled each output (in order of outputs).
+     * @param solveParams List of solve parameters for when the outputs were filled
      * @param destination Address to send the inputs to. If the solver wants to send the inputs to themselves, they
      * should pass their address to this parameter.
      * @param call Optional callback data. If non-empty, will call orderFinalised on the destination
      */
     function finalise(
         StandardOrder calldata order,
-        uint32[] calldata timestamps,
-        bytes32[] calldata solvers,
+        SolveParams[] calldata solveParams,
         bytes32 destination,
         bytes calldata call
     ) external virtual {
@@ -351,12 +346,12 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         _validateInputChain(order.originChainId);
 
         bytes32 orderId = order.orderIdentifier();
-        bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
+        bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solveParams);
         _orderOwnerIsCaller(orderOwner);
 
-        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, timestamps, solvers);
+        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, solveParams);
 
-        _finalise(order, orderId, solvers[0], destination);
+        _finalise(order, orderId, solveParams[0].solver, destination);
 
         if (call.length > 0) IInputCallback(destination.fromIdentifier()).orderFinalised(order.inputs, call);
     }
@@ -366,16 +361,14 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
      * @dev Finalise is not blocked after the expiry of orders.
      * This function serves to finalise intents on the origin chain with proper authorization from the order owner.
      * @param order StandardOrder description of the intent.
-     * @param timestamps Array of timestamps when each output was filled
-     * @param solvers Array of solvers who filled each output (in order of outputs) element
+     * @param solveParams List of solve parameters for when the outputs were filled
      * @param destination Address to send the inputs to.
      * @param call Optional callback data. If non-empty, will call orderFinalised on the destination
      * @param orderOwnerSignature Signature from the order owner authorizing this external call
      */
     function finaliseWithSignature(
         StandardOrder calldata order,
-        uint32[] calldata timestamps,
-        bytes32[] memory solvers,
+        SolveParams[] calldata solveParams,
         bytes32 destination,
         bytes calldata call,
         bytes calldata orderOwnerSignature
@@ -386,16 +379,16 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         bytes32 orderId = order.orderIdentifier();
 
         {
-            bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
+            bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solveParams);
 
             // Validate the external claimant with signature
             _validateDestination(destination);
             _allowExternalClaimant(orderId, orderOwner.fromIdentifier(), destination, call, orderOwnerSignature);
         }
 
-        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, timestamps, solvers);
+        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, solveParams);
 
-        _finalise(order, orderId, solvers[0], destination);
+        _finalise(order, orderId, solveParams[0].solver, destination);
 
         if (call.length > 0) IInputCallback(destination.fromIdentifier()).orderFinalised(order.inputs, call);
     }

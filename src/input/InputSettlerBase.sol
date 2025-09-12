@@ -35,6 +35,11 @@ abstract contract InputSettlerBase is EIP712 {
 
     event Finalised(bytes32 indexed orderId, bytes32 solver, bytes32 destination);
 
+    struct SolveParams {
+        uint32 timestamp;
+        bytes32 solver;
+    }
+
     function DOMAIN_SEPARATOR() external view returns (bytes32) {
         return _domainSeparatorV4();
     }
@@ -89,33 +94,33 @@ abstract contract InputSettlerBase is EIP712 {
     // --- Timestamp Helpers --- //
 
     /**
-     * @param timestamps Array of uint32s.
+     * @param solveParams Array of SolveParams.
      * @return timestamp Largest element of timestamps.
      */
     function _maxTimestamp(
-        uint32[] calldata timestamps
+        SolveParams[] calldata solveParams
     ) internal pure returns (uint256 timestamp) {
-        timestamp = timestamps[0];
+        timestamp = solveParams[0].timestamp;
 
-        uint256 numTimestamps = timestamps.length;
+        uint256 numTimestamps = solveParams.length;
         for (uint256 i = 1; i < numTimestamps; ++i) {
-            uint32 nextTimestamp = timestamps[i];
+            uint32 nextTimestamp = solveParams[i].timestamp;
             if (timestamp < nextTimestamp) timestamp = nextTimestamp;
         }
     }
 
     /**
-     * @param timestamps Array of uint32s.
+     * @param solveParams Array of SolveParams.
      * @return timestamp Smallest element of timestamps.
      */
     function _minTimestamp(
-        uint32[] calldata timestamps
+        SolveParams[] calldata solveParams
     ) internal pure returns (uint256 timestamp) {
-        timestamp = timestamps[0];
+        timestamp = solveParams[0].timestamp;
 
-        uint256 numTimestamps = timestamps.length;
+        uint256 numTimestamps = solveParams.length;
         for (uint256 i = 1; i < numTimestamps; ++i) {
-            uint32 nextTimestamp = timestamps[i];
+            uint32 nextTimestamp = solveParams[i].timestamp;
             if (timestamp > nextTimestamp) timestamp = nextTimestamp;
         }
     }
@@ -162,19 +167,18 @@ abstract contract InputSettlerBase is EIP712 {
         address inputOracle,
         MandateOutput[] calldata outputs,
         bytes32 orderId,
-        uint32[] calldata timestamps,
-        bytes32[] memory solvers // TODO: calldata
+        SolveParams[] calldata solveParams
     ) internal view {
         uint256 numOutputs = outputs.length;
-        uint256 numTimestamps = timestamps.length;
+        uint256 numTimestamps = solveParams.length;
         if (numTimestamps != numOutputs) revert InvalidTimestampLength();
 
         bytes memory proofSeries = new bytes(32 * 4 * numOutputs);
         for (uint256 i; i < numOutputs; ++i) {
-            uint32 outputFilledAt = timestamps[i];
+            uint32 outputFilledAt = solveParams[i].timestamp;
             if (fillDeadline < outputFilledAt) revert FilledTooLate(fillDeadline, outputFilledAt);
             MandateOutput calldata output = outputs[i];
-            bytes32 payloadHash = _proofPayloadHash(orderId, solvers[i], outputFilledAt, output);
+            bytes32 payloadHash = _proofPayloadHash(orderId, solveParams[i].solver, outputFilledAt, output);
 
             uint256 chainId = output.chainId;
             bytes32 outputOracle = output.oracle;

@@ -3,7 +3,7 @@ pragma solidity ^0.8.26;
 
 import { OutputSettlerBase } from "../OutputSettlerBase.sol";
 
-import { OutputFillLib } from "../../libs/OutputFillLib.sol";
+import { MandateOutput } from "../../input/types/MandateOutputType.sol";
 import { FillerDataLib } from "./FillerDataLib.sol";
 import { FulfilmentLib } from "./FulfilmentLib.sol";
 
@@ -23,7 +23,6 @@ import { Math } from "openzeppelin/utils/math/Math.sol";
  * `NotImplemented()`.
  */
 contract OutputSettlerSimple is OutputSettlerBase {
-    using OutputFillLib for bytes;
     using FulfilmentLib for bytes;
     using FillerDataLib for bytes;
 
@@ -38,7 +37,7 @@ contract OutputSettlerSimple is OutputSettlerBase {
 
     /**
      * @dev Executes order specific logic and returns the amount.
-     * @param output The serialized output data to resolve.
+     * @param output The `MandateOutput` struct to resolve.
      * @param fillerData The solver data.
      * @return solver The address of the solver filling the output.
      * @return amount The final amount to be transferred (may differ from base amount for Dutch auctions).
@@ -49,14 +48,14 @@ contract OutputSettlerSimple is OutputSettlerBase {
      * - Reverts with NotImplemented() for unsupported order types
      */
     function _resolveOutput(
-        bytes calldata output,
+        MandateOutput calldata output,
         bytes calldata fillerData
     ) internal view override returns (bytes32 solver, uint256 amount) {
-        amount = output.amount();
+        amount = output.amount;
         solver = fillerData.solver();
         if (solver == bytes32(0)) revert ZeroValue();
 
-        bytes calldata fulfilmentData = output.contextData();
+        bytes calldata fulfilmentData = output.context;
         uint16 fulfillmentLength = uint16(fulfilmentData.length);
         if (fulfillmentLength == 0) return (solver, amount);
 

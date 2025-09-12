@@ -5,33 +5,29 @@ import { MandateOutput } from "../input/types/MandateOutputType.sol";
 import { OrderPurchase } from "../input/types/OrderPurchaseType.sol";
 import { StandardOrder } from "../input/types/StandardOrderType.sol";
 
+import { InputSettlerBase } from "../input/InputSettlerBase.sol";
+
 interface IInputSettlerEscrow {
-    function openFor(bytes calldata order, address sponsor, bytes calldata signature) external;
+    function openFor(StandardOrder calldata order, address sponsor, bytes calldata signature) external;
 
     function open(
-        bytes calldata order
+        StandardOrder calldata order
     ) external;
 
     function finalise(
-        StandardOrder memory order,
-        uint32[] memory timestamps,
-        bytes32[] memory solvers,
+        StandardOrder calldata order,
+        InputSettlerBase.SolveParams[] calldata solveParams,
         bytes32 destination,
-        bytes memory call
+        bytes calldata call
     ) external;
 
     function finaliseWithSignature(
-        StandardOrder memory order,
-        uint32[] memory timestamps,
-        bytes32[] memory solvers,
+        StandardOrder calldata order,
+        InputSettlerBase.SolveParams[] calldata solveParams,
         bytes32 destination,
-        bytes memory call,
-        bytes memory orderOwnerSignature
+        bytes calldata call,
+        bytes calldata orderOwnerSignature
     ) external;
-
-    function orderIdentifier(
-        bytes memory order
-    ) external view returns (bytes32);
 
     function orderIdentifier(
         StandardOrder memory order
