@@ -17,9 +17,9 @@
 
 pragma solidity ^0.8.0;
 
-import {RLPReader} from "optimism/libraries/rlp/RLPReader.sol";
-import {Bytes} from "optimism/libraries/Bytes.sol";
-import {Strings} from "openzeppelin/utils/Strings.sol";
+import { RLPReader } from "../optimism/rlp/RLPReader.sol";
+import { Bytes } from "openzeppelin/utils/Bytes.sol";
+import { Strings } from "openzeppelin/utils/Strings.sol";
 
 /**
  * A library for helpers for proving peptide state
@@ -27,20 +27,19 @@ import {Strings} from "openzeppelin/utils/Strings.sol";
 library ReceiptParser {
     error invalidAddressBytes();
 
-    function bytesToAddr(bytes memory a) public pure returns (address addr) {
-        if (a.length != 20) {
-            revert invalidAddressBytes();
-        }
+    function bytesToAddr(
+        bytes memory a
+    ) public pure returns (address addr) {
+        if (a.length != 20) revert invalidAddressBytes();
         assembly {
             addr := mload(add(a, 20))
         }
     }
 
-    function parseLog(uint256 logIndex, bytes memory receiptRLP)
-        internal
-        pure
-        returns (address emittingContract, bytes[] memory topics, bytes memory unindexedData)
-    {
+    function parseLog(
+        uint256 logIndex,
+        bytes memory receiptRLP
+    ) internal pure returns (address emittingContract, bytes[] memory topics, bytes memory unindexedData) {
         // The first byte is a RLP encoded receipt type so slice it off.
         uint8 typeByte;
         assembly {
@@ -84,11 +83,11 @@ library ReceiptParser {
         }
     }
 
-    function receiptRootKey(string memory chainId, string memory clientType, uint256 height)
-        internal
-        pure
-        returns (bytes memory proofKey)
-    {
+    function receiptRootKey(
+        string memory chainId,
+        string memory clientType,
+        uint256 height
+    ) internal pure returns (bytes memory proofKey) {
         proofKey = abi.encodePacked(
             "chain/", chainId, "/storedReceipts/", clientType, "/receiptRoot/", Strings.toString(height)
         );

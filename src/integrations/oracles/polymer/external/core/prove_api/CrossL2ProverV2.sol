@@ -17,10 +17,11 @@
 
 pragma solidity ^0.8.15;
 
-import {ReceiptParser} from "../../libs/ReceiptParser.sol";
-import {ICrossL2ProverV2} from "../../interfaces/ICrossL2ProverV2.sol";
-import {LightClientType} from "../../interfaces/IClientUpdates.sol";
-import {SequencerSignatureVerifierV2} from "./SequencerSignatureVerifierV2.sol";
+import { LightClientType } from "../../interfaces/IClientUpdates.sol";
+import { ICrossL2ProverV2 } from "../../interfaces/ICrossL2ProverV2.sol";
+import { ReceiptParser } from "../../libs/ReceiptParser.sol";
+
+import { SequencerSignatureVerifierV2 } from "./SequencerSignatureVerifierV2.sol";
 
 /**
  * @title CrossL2ProverV2
@@ -37,9 +38,11 @@ contract CrossL2ProverV2 is SequencerSignatureVerifierV2, ICrossL2ProverV2 {
 
     error InvalidProofRoot();
 
-    constructor(string memory clientType_, address sequencer_, bytes32 chainId_)
-        SequencerSignatureVerifierV2(sequencer_, chainId_)
-    {
+    constructor(
+        string memory clientType_,
+        address sequencer_,
+        bytes32 chainId_
+    ) SequencerSignatureVerifierV2(sequencer_, chainId_) {
         clientType = clientType_;
         emit Ping(); // Emit an event that can be proven on polymer as a health check
     }
@@ -81,7 +84,9 @@ contract CrossL2ProverV2 is SequencerSignatureVerifierV2, ICrossL2ProverV2 {
      * @return topics The event topics
      * @return unindexedData The unindexed event data
      */
-    function validateEvent(bytes calldata proof)
+    function validateEvent(
+        bytes calldata proof
+    )
         external
         view
         virtual
@@ -147,12 +152,9 @@ contract CrossL2ProverV2 is SequencerSignatureVerifierV2, ICrossL2ProverV2 {
      * @return programID The Solana program ID that emitted the logs
      * @return logMessages Array of log messages emitted by the program
      */
-    function validateSolLogs(bytes calldata proof)
-        external
-        view
-        virtual
-        returns (uint32 chainId, bytes32 programID, string[] memory logMessages)
-    {
+    function validateSolLogs(
+        bytes calldata proof
+    ) external view virtual returns (uint32 chainId, bytes32 programID, string[] memory logMessages) {
         chainId = uint32(bytes4(proof[97:101]));
 
         _verifySequencerSignature(
@@ -204,12 +206,9 @@ contract CrossL2ProverV2 is SequencerSignatureVerifierV2, ICrossL2ProverV2 {
      * @return receiptIndex The index of the receipt within the block (extracted from bytes 117-121)
      * @return logIndex The index of the log within the receipt (extracted from bytes 121-125)
      */
-    function inspectLogIdentifier(bytes calldata proof)
-        external
-        pure
-        virtual
-        returns (uint32 srcChain, uint64 blockNumber, uint32 receiptIndex, uint32 logIndex)
-    {
+    function inspectLogIdentifier(
+        bytes calldata proof
+    ) external pure virtual returns (uint32 srcChain, uint64 blockNumber, uint32 receiptIndex, uint32 logIndex) {
         return (
             uint32(bytes4(proof[97:101])),
             uint64(bytes8(proof[109:117])),
@@ -226,12 +225,9 @@ contract CrossL2ProverV2 is SequencerSignatureVerifierV2, ICrossL2ProverV2 {
      * @return height The height/block number of the Polymer chain (extracted from bytes 101-109)
      * @return signature The signature validating the state (extracted from bytes 32-97)
      */
-    function inspectPolymerState(bytes calldata proof)
-        external
-        pure
-        virtual
-        returns (bytes32 stateRoot, uint64 height, bytes calldata signature)
-    {
+    function inspectPolymerState(
+        bytes calldata proof
+    ) external pure virtual returns (bytes32 stateRoot, uint64 height, bytes calldata signature) {
         return (bytes32(proof[:32]), uint64(bytes8(proof[101:109])), proof[32:97]);
     }
 
@@ -255,11 +251,12 @@ contract CrossL2ProverV2 is SequencerSignatureVerifierV2, ICrossL2ProverV2 {
      *     // path-n:   |  path-n suffix start (1B)  |  path-n suffix end (1B)  |  path-n prefix... |  path-n suffix...      |
      *     //           +----------------------------------------------------------------------------------------------------+
      */
-    function verifyMembership(bytes32 root, bytes memory key, bytes32 value, bytes calldata proof)
-        public
-        pure
-        virtual
-    {
+    function verifyMembership(
+        bytes32 root,
+        bytes memory key,
+        bytes32 value,
+        bytes calldata proof
+    ) public pure virtual {
         uint256 path0start = uint256(uint8(proof[1]));
         // Note: proof[2:path0start] includes both proof leaf prefix and the key length encoded as a protobuf varint
         bytes32 prehash = sha256(abi.encodePacked(proof[2:path0start], key, hex"20", sha256(abi.encodePacked(value))));
@@ -291,12 +288,10 @@ contract CrossL2ProverV2 is SequencerSignatureVerifierV2, ICrossL2ProverV2 {
      * @return topics The indexed topics data
      * @return unindexedData The unindexed data of the event
      */
-    function parseEvent(bytes calldata rawEvent, uint8 numTopics)
-        public
-        pure
-        virtual
-        returns (address emittingContract, bytes memory topics, bytes memory unindexedData)
-    {
+    function parseEvent(
+        bytes calldata rawEvent,
+        uint8 numTopics
+    ) public pure virtual returns (address emittingContract, bytes memory topics, bytes memory unindexedData) {
         uint256 topicsEnd = 32 * numTopics + 20;
         return (address(bytes20(rawEvent[:20])), rawEvent[20:topicsEnd], rawEvent[topicsEnd:]);
     }

@@ -17,7 +17,7 @@
 
 pragma solidity ^0.8.0;
 
-import {L2Configuration} from "../libs/RegistryTypes.sol";
+import { L2Configuration } from "../libs/RegistryTypes.sol";
 
 /**
  * @title ISettledStateProver

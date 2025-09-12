@@ -17,7 +17,7 @@
 
 pragma solidity ^0.8.15;
 
-import {ECDSA} from "openzeppelin/utils/cryptography/ECDSA.sol";
+import { ECDSA } from "openzeppelin/utils/cryptography/ECDSA.sol";
 
 /**
  * @title SequencerSignatureVerifierV2
@@ -40,17 +40,18 @@ contract SequencerSignatureVerifierV2 {
     /**
      * @notice Verify peptide sequencer signature over a given apphash
      */
-    function _verifySequencerSignature(bytes32 appHash, uint64 peptideHeight, uint8 v, bytes32 r, bytes32 s)
-        internal
-        view
-    {
+    function _verifySequencerSignature(
+        bytes32 appHash,
+        uint64 peptideHeight,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) internal view {
         if (
             ECDSA.recover(
                 keccak256(bytes.concat(bytes32(0), CHAIN_ID, keccak256(abi.encodePacked(appHash, peptideHeight)))),
                 bytes(abi.encodePacked(r, s, v))
             ) != SEQUENCER
-        ) {
-            revert InvalidSequencerSignature();
-        }
+        ) revert InvalidSequencerSignature();
     }
 }

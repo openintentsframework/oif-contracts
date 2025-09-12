@@ -33,7 +33,9 @@ interface ICrossL2ProverV2 {
      * Event.selector. The remaining elements in this array are the indexed parameters of the event.
      * @return unindexedData // The abi encoded non-indexed parameters of the event.
      */
-    function validateEvent(bytes calldata proof)
+    function validateEvent(
+        bytes calldata proof
+    )
         external
         view
         returns (uint32 chainId, address emittingContract, bytes calldata topics, bytes calldata unindexedData);
@@ -41,17 +43,15 @@ interface ICrossL2ProverV2 {
     /**
      * Return srcChain, Block Number, Receipt Index, and Local Index for a requested proof
      */
-    function inspectLogIdentifier(bytes calldata proof)
-        external
-        pure
-        returns (uint32 srcChain, uint64 blockNumber, uint32 receiptIndex, uint32 logIndex);
+    function inspectLogIdentifier(
+        bytes calldata proof
+    ) external pure returns (uint32 srcChain, uint64 blockNumber, uint32 receiptIndex, uint32 logIndex);
 
     /**
      * Return polymer state root, height , and signature over height and root which can be verified by
      * crypto.pubkey(keccak(peptideStateRoot, peptideHeight))
      */
-    function inspectPolymerState(bytes calldata proof)
-        external
-        pure
-        returns (bytes32 stateRoot, uint64 height, bytes memory signature);
+    function inspectPolymerState(
+        bytes calldata proof
+    ) external pure returns (bytes32 stateRoot, uint64 height, bytes memory signature);
 }

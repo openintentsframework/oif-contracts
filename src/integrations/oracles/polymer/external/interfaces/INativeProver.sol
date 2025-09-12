@@ -17,7 +17,7 @@
 
 pragma solidity ^0.8.0;
 
-import {ProveScalarArgs, ProveL1ScalarArgs, UpdateL2ConfigArgs} from "../libs/RegistryTypes.sol";
+import { ProveL1ScalarArgs, ProveScalarArgs, UpdateL2ConfigArgs } from "../libs/RegistryTypes.sol";
 
 /**
  * @title INativeProver

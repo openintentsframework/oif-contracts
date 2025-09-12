@@ -17,8 +17,8 @@
 
 pragma solidity ^0.8.15;
 
-import {ISignatureVerifier} from "../../interfaces/ISignatureVerifier.sol";
-import {ECDSA} from "openzeppelin/utils/cryptography/ECDSA.sol";
+import { ISignatureVerifier } from "../../interfaces/ISignatureVerifier.sol";
+import { ECDSA } from "openzeppelin/utils/cryptography/ECDSA.sol";
 
 /**
  * @title SequencerSignatureVerifier
@@ -44,10 +44,12 @@ contract SequencerSignatureVerifier is ISignatureVerifier {
      * @param l1BlockHash The hash of the L1 origin that the peptide height corresponds to
      * @param signature The sequencer's ECDSA over the state update
      */
-    function verifyStateUpdate(uint256 l2BlockNumber, bytes32 appHash, bytes32 l1BlockHash, bytes calldata signature)
-        external
-        view
-    {
+    function verifyStateUpdate(
+        uint256 l2BlockNumber,
+        bytes32 appHash,
+        bytes32 l1BlockHash,
+        bytes calldata signature
+    ) external view {
         _verifySequencerSignature(l2BlockNumber, appHash, l1BlockHash, signature);
     }
 
@@ -73,8 +75,6 @@ contract SequencerSignatureVerifier is ISignatureVerifier {
                 ),
                 signature
             ) != SEQUENCER
-        ) {
-            revert InvalidSequencerSignature();
-        }
+        ) revert InvalidSequencerSignature();
     }
 }

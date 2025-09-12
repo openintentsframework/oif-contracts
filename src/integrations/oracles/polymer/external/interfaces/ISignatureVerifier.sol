@@ -24,8 +24,12 @@ pragma solidity ^0.8.0;
 interface ISignatureVerifier {
     error InvalidSequencerSignature();
 
-    function verifyStateUpdate(uint256 l2BlockNumber, bytes32 appHash, bytes32 l1BlockHash, bytes calldata signature)
-        external;
+    function verifyStateUpdate(
+        uint256 l2BlockNumber,
+        bytes32 appHash,
+        bytes32 l1BlockHash,
+        bytes calldata signature
+    ) external;
 
     function SEQUENCER() external view returns (address);
     function CHAIN_ID() external view returns (bytes32);

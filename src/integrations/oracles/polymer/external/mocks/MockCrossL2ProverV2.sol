@@ -17,15 +17,17 @@
 
 pragma solidity ^0.8.15;
 
-import {CrossL2ProverV2} from "../core/prove_api/CrossL2ProverV2.sol";
+import { CrossL2ProverV2 } from "../core/prove_api/CrossL2ProverV2.sol";
 
 contract MockCrossL2ProverV2 is CrossL2ProverV2 {
     // Event for proof generation
     event ProofGenerated(bytes proof);
 
-    constructor(string memory clientType_, address sequencer_, bytes32 chainId_)
-        CrossL2ProverV2(clientType_, sequencer_, chainId_)
-    {}
+    constructor(
+        string memory clientType_,
+        address sequencer_,
+        bytes32 chainId_
+    ) CrossL2ProverV2(clientType_, sequencer_, chainId_) { }
 
     /**
      * @dev Generates a mock proof and emits it for local testing.
@@ -35,10 +37,12 @@ contract MockCrossL2ProverV2 is CrossL2ProverV2 {
      * @param data Unindexed event data.
      * @return Mock proof bytes.
      */
-    function generateAndEmitProof(uint32 chainId_, address emitter, bytes32[] memory topics, bytes memory data)
-        external
-        returns (bytes memory)
-    {
+    function generateAndEmitProof(
+        uint32 chainId_,
+        address emitter,
+        bytes32[] memory topics,
+        bytes memory data
+    ) external returns (bytes memory) {
         require(topics.length > 0, "At least one topic (event signature) required");
 
         bytes memory proof = generateMockProof(chainId_, uint8(topics.length), emitter, topics, data);
@@ -79,7 +83,9 @@ contract MockCrossL2ProverV2 is CrossL2ProverV2 {
      * @dev Modified validateEvent for testing. Skips signature and membership verification
      * to focus on proof structure and event parsing.
      */
-    function validateEvent(bytes calldata proof)
+    function validateEvent(
+        bytes calldata proof
+    )
         external
         view
         override

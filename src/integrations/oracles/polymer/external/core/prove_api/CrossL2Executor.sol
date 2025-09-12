@@ -17,7 +17,7 @@
 
 pragma solidity ^0.8.15;
 
-import {ICrossL2ProverV2} from "../../interfaces/ICrossL2ProverV2.sol";
+import { ICrossL2ProverV2 } from "../../interfaces/ICrossL2ProverV2.sol";
 
 /**
  * @title CrossL2Executor
@@ -32,7 +32,9 @@ contract CrossL2Executor {
 
     error TopicsDoNotMatch(bytes expected, bytes actual);
 
-    constructor(address _prover) {
+    constructor(
+        address _prover
+    ) {
         prover = ICrossL2ProverV2(_prover);
     }
 
@@ -48,9 +50,7 @@ contract CrossL2Executor {
             prover.validateEvent(proof);
 
         // Compare topics
-        if (keccak256(topics) != keccak256(expectedTopics)) {
-            revert TopicsDoNotMatch(expectedTopics, topics);
-        }
+        if (keccak256(topics) != keccak256(expectedTopics)) revert TopicsDoNotMatch(expectedTopics, topics);
 
         emit ValidationSuccess(chainId, emittingContract, topics, unindexedData);
     }
