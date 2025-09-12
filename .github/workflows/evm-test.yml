@@ -41,8 +41,20 @@ jobs:
         id: test
 
       - name: Run Forge Snapshots
-        run: FOUNDRY_FUZZ_RUNS=10 forge test --gas-snapshot-check true
+-       run: FOUNDRY_FUZZ_RUNS=10 forge test --gas-snapshot-check true
         id: snapshot
+
+      - name: Update Gas Snapshots
+        run: |
+          if [ -n "$(git status --porcelain snapshots/)" ]; then
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add snapshots/
+            git commit -m "Update gas snapshots [skip ci]"
+            git push
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run Forge Coverage
         run: |
