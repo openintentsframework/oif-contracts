@@ -421,4 +421,46 @@ contract CatsMulticallHandlerTest is Test {
 
         assertEq(token.balanceOf(fallbackRecipientWithCode), amount);
     }
+
+    function test_handleV3AcrossMessage_simple() public {
+        address sender = makeAddr("sender");
+        uint256 amount = 10 ** 18;
+
+        CatsMulticallHandler.Call[] memory calls = new CatsMulticallHandler.Call[](0);
+
+        CatsMulticallHandler.Instructions memory instructions = CatsMulticallHandler.Instructions({
+            setApprovalsUsingInputsFor: address(0),
+            calls: calls,
+            fallbackRecipient: address(0)
+        });
+
+        bytes memory message = abi.encode(instructions);
+
+        vm.prank(sender);
+        multicallHandler.handleV3AcrossMessage(address(token), amount, address(0), message);
+    }
+
+    function test_handleV3AcrossMessage_with_recipient() public {
+        address sender = makeAddr("sender");
+        uint256 amount = 10 ** 18;
+
+        CatsMulticallHandler.Call[] memory calls = new CatsMulticallHandler.Call[](1);
+
+        calls[0] = CatsMulticallHandler.Call({
+            target: fallbackRecipientWithCode,
+            callData: abi.encodeWithSignature("mockCall()"),
+            value: 0
+        });
+
+        CatsMulticallHandler.Instructions memory instructions = CatsMulticallHandler.Instructions({
+            setApprovalsUsingInputsFor: fallbackRecipientWithCode,
+            calls: calls,
+            fallbackRecipient: fallbackRecipientWithCode
+        });
+
+        bytes memory message = abi.encode(instructions);
+
+        vm.prank(sender);
+        multicallHandler.handleV3AcrossMessage(address(token), amount, address(0), message);
+    }
 }
