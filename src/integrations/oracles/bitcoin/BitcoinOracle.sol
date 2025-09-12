@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { Endian } from "bitcoinprism-evm/src/Endian.sol";
-import { IBtcPrism } from "bitcoinprism-evm/src/interfaces/IBtcPrism.sol";
-import { NoBlock, TooFewConfirmations } from "bitcoinprism-evm/src/interfaces/IBtcTxVerifier.sol";
-import { BtcProof, BtcTxProof, ScriptMismatch } from "bitcoinprism-evm/src/library/BtcProof.sol";
-import { AddressType, BitcoinAddress, BtcScript } from "bitcoinprism-evm/src/library/BtcScript.sol";
+import { Endian } from "./external/Endian.sol";
+import { IBtcPrism } from "./external/interfaces/IBtcPrism.sol";
+import { NoBlock, TooFewConfirmations } from "./external/interfaces/IBtcTxVerifier.sol";
+import { BtcProof, BtcTxProof, ScriptMismatch } from "./external/library/BtcProof.sol";
+import { AddressType, BitcoinAddress, BtcScript } from "./external/library/BtcScript.sol";
 
 import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";

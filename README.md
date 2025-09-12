@@ -124,5 +124,5 @@ forge test
 ### Coverage
 
 ```shell
-FOUNDRY_FUZZ_RUNS=10 forge coverage --no-match-coverage "(script|test|wormhole/external/wormhole|wormhole/external/callworm/GettersGetter)" [--report lcov]
+forge coverage --no-match-coverage "(script|test|integrations/oracles/.*/external)" [--report lcov]
 ```
