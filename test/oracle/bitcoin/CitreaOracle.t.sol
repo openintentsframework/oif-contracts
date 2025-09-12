@@ -3,9 +3,9 @@ pragma solidity ^0.8.26;
 
 import { Test } from "forge-std/Test.sol";
 
-import { Endian } from "bitcoinprism-evm/src/Endian.sol";
-import { BtcProof, BtcTxProof, ScriptMismatch } from "bitcoinprism-evm/src/library/BtcProof.sol";
-import { BtcScript } from "bitcoinprism-evm/src/library/BtcScript.sol";
+import { Endian } from "src/integrations/oracles/bitcoin/external/Endian.sol";
+import { BtcProof, BtcTxProof, ScriptMismatch } from "src/integrations/oracles/bitcoin/external/library/BtcProof.sol";
+import { BtcScript } from "src/integrations/oracles/bitcoin/external/library/BtcScript.sol";
 
 import { CitreaOracle, ICitrea } from "../../../src/integrations/oracles/bitcoin/CitreaOracle.sol";
 
