@@ -8,7 +8,7 @@ import { MandateOutput, MandateOutputEncodingLib } from "../../../libs/MandateOu
 
 import { BaseInputOracle } from "../../../oracles/BaseInputOracle.sol";
 import { OutputSettlerBase } from "../../../output/OutputSettlerBase.sol";
-import { ICrossL2Prover } from "./ICrossL2Prover.sol";
+import { ICrossL2ProverV2 } from "./external/interfaces/ICrossL2ProverV2.sol";
 
 /**
  * @notice Polymer Oracle.
@@ -19,12 +19,12 @@ contract PolymerOracle is BaseInputOracle {
 
     error WrongEventSignature();
 
-    ICrossL2Prover CROSS_L2_PROVER;
+    ICrossL2ProverV2 CROSS_L2_PROVER;
 
     constructor(
         address crossL2Prover
     ) {
-        CROSS_L2_PROVER = ICrossL2Prover(crossL2Prover);
+        CROSS_L2_PROVER = ICrossL2ProverV2(crossL2Prover);
     }
 
     function _getChainId(
