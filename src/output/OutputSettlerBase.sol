@@ -127,7 +127,7 @@ abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
             _fillRecords[orderId][outputHash] = fillRecordHash;
         }
         // Storage has been set. Fill the output.
-        bytes32 tokenIdentifier = output.token();
+        bytes32 tokenIdentifier = output.token;
         address recipient = output.recipient.fromIdentifier();
 
         if (tokenIdentifier == bytes32(0)) Address.sendValue(payable(recipient), outputAmount);

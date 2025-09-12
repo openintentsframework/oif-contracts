@@ -183,35 +183,29 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
         uint256 totalAmount = uint256(amount1) + uint256(amount2);
         vm.deal(sender, totalAmount);
 
-        bytes[] memory outputs = new bytes[](2);
+        MandateOutput[] memory outputs = new MandateOutput[](2);
 
-        outputs[0] = abi.encodePacked(
-            type(uint48).max, // fill deadline
-            bytes32(0), // oracle
-            bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
-            uint256(block.chainid), // chainId
-            bytes32(0), // token (native)
-            uint256(amount1), //amount
-            bytes32(uint256(uint160(swapper))), // recipient
-            uint16(0), // call length
-            bytes(""), // call
-            uint16(0), // context length
-            bytes("") // context
-        );
+        outputs[0] = MandateOutput({
+            oracle: bytes32(0),
+            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            chainId: block.chainid,
+            token: bytes32(0), // native token
+            amount: amount1,
+            recipient: bytes32(uint256(uint160(swapper))),
+            call: bytes(""),
+            context: bytes("")
+        });
 
-        outputs[1] = abi.encodePacked(
-            type(uint48).max, // fill deadline
-            bytes32(0), // oracle
-            bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
-            uint256(block.chainid), // chainId
-            bytes32(0), // token (native)
-            uint256(amount2), //amount
-            bytes32(uint256(uint160(swapper))), // recipient
-            uint16(0), // call length
-            bytes(""), // call
-            uint16(0), // context length
-            bytes("") // context
-        );
+        outputs[1] = MandateOutput({
+            oracle: bytes32(0),
+            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            chainId: block.chainid,
+            token: bytes32(0), // native token
+            amount: amount2,
+            recipient: bytes32(uint256(uint160(swapper))),
+            call: bytes(""),
+            context: bytes("")
+        });
 
         bytes memory fillerData = abi.encodePacked(filler);
 
@@ -222,7 +216,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
         emit OutputFilled(orderId, filler, uint32(block.timestamp), outputs[1], amount2);
 
         vm.prank(sender);
-        outputSettlerCoin.fillOrderOutputs{ value: totalAmount }(orderId, outputs, fillerData);
+        outputSettlerCoin.fillOrderOutputs{ value: totalAmount }(orderId, outputs, type(uint48).max, fillerData);
         vm.snapshotGasLastCall("outputSettler", "outputSettlerCoinFillOrderOutputsNative");
 
         assertEq(swapper.balance, swapperBalanceBefore + totalAmount);
@@ -244,37 +238,31 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
         vm.prank(sender);
         outputToken.approve(outputSettlerCoinAddress, tokenAmount);
 
-        bytes[] memory outputs = new bytes[](2);
+        MandateOutput[] memory outputs = new MandateOutput[](2);
 
         // First output: native token
-        outputs[0] = abi.encodePacked(
-            type(uint48).max, // fill deadline
-            bytes32(0), // oracle
-            bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
-            uint256(block.chainid), // chainId
-            bytes32(0), // token (native)
-            nativeAmount, //amount
-            bytes32(uint256(uint160(swapper))), // recipient
-            uint16(0), // call length
-            bytes(""), // call
-            uint16(0), // context length
-            bytes("") // context
-        );
+        outputs[0] = MandateOutput({
+            oracle: bytes32(0),
+            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            chainId: block.chainid,
+            token: bytes32(0), // native token
+            amount: nativeAmount,
+            recipient: bytes32(uint256(uint160(swapper))),
+            call: bytes(""),
+            context: bytes("")
+        });
 
         // Second output: ERC20 token
-        outputs[1] = abi.encodePacked(
-            type(uint48).max, // fill deadline
-            bytes32(0), // oracle
-            bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
-            uint256(block.chainid), // chainId
-            bytes32(uint256(uint160(outputTokenAddress))), // token
-            tokenAmount, //amount
-            bytes32(uint256(uint160(swapper))), // recipient
-            uint16(0), // call length
-            bytes(""), // call
-            uint16(0), // context length
-            bytes("") // context
-        );
+        outputs[1] = MandateOutput({
+            oracle: bytes32(0),
+            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            chainId: block.chainid,
+            token: bytes32(uint256(uint160(outputTokenAddress))),
+            amount: tokenAmount,
+            recipient: bytes32(uint256(uint160(swapper))),
+            call: bytes(""),
+            context: bytes("")
+        });
 
         bytes memory fillerData = abi.encodePacked(filler);
 
@@ -290,7 +278,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
         );
 
         vm.prank(sender);
-        outputSettlerCoin.fillOrderOutputs{ value: nativeAmount }(orderId, outputs, fillerData);
+        outputSettlerCoin.fillOrderOutputs{ value: nativeAmount }(orderId, outputs, type(uint48).max, fillerData);
 
         assertEq(swapper.balance, swapperBalanceBefore + nativeAmount);
         assertEq(outputToken.balanceOf(swapper), tokenAmount);
@@ -315,35 +303,29 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
         uint256 totalSent = totalRequired + excess;
         vm.deal(sender, totalSent);
 
-        bytes[] memory outputs = new bytes[](2);
+        MandateOutput[] memory outputs = new MandateOutput[](2);
 
-        outputs[0] = abi.encodePacked(
-            type(uint48).max, // fill deadline
-            bytes32(0), // oracle
-            bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
-            uint256(block.chainid), // chainId
-            bytes32(0), // token (native)
-            uint256(amount1), //amount
-            bytes32(uint256(uint160(swapper))), // recipient
-            uint16(0), // call length
-            bytes(""), // call
-            uint16(0), // context length
-            bytes("") // context
-        );
+        outputs[0] = MandateOutput({
+            oracle: bytes32(0),
+            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            chainId: block.chainid,
+            token: bytes32(0), // native token
+            amount: amount1,
+            recipient: bytes32(uint256(uint160(swapper))),
+            call: bytes(""),
+            context: bytes("")
+        });
 
-        outputs[1] = abi.encodePacked(
-            type(uint48).max, // fill deadline
-            bytes32(0), // oracle
-            bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
-            uint256(block.chainid), // chainId
-            bytes32(0), // token (native)
-            uint256(amount2), //amount
-            bytes32(uint256(uint160(swapper))), // recipient
-            uint16(0), // call length
-            bytes(""), // call
-            uint16(0), // context length
-            bytes("") // context
-        );
+        outputs[1] = MandateOutput({
+            oracle: bytes32(0),
+            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            chainId: block.chainid,
+            token: bytes32(0), // native token
+            amount: amount2,
+            recipient: bytes32(uint256(uint160(swapper))),
+            call: bytes(""),
+            context: bytes("")
+        });
 
         bytes memory fillerData = abi.encodePacked(filler);
 
@@ -351,7 +333,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
         uint256 senderBalanceBefore = sender.balance;
 
         vm.prank(sender);
-        outputSettlerCoin.fillOrderOutputs{ value: totalSent }(orderId, outputs, fillerData);
+        outputSettlerCoin.fillOrderOutputs{ value: totalSent }(orderId, outputs, type(uint48).max, fillerData);
 
         assertEq(swapper.balance, swapperBalanceBefore + totalRequired);
         assertEq(sender.balance, senderBalanceBefore - totalRequired); // Should get excess back
@@ -370,40 +352,34 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
         uint256 sentValue = uint256(amount1);
         vm.deal(sender, sentValue);
 
-        bytes[] memory outputs = new bytes[](2);
+        MandateOutput[] memory outputs = new MandateOutput[](2);
 
-        outputs[0] = abi.encodePacked(
-            type(uint48).max, // fill deadline
-            bytes32(0), // oracle
-            bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
-            uint256(block.chainid), // chainId
-            bytes32(0), // token (native)
-            uint256(amount1), //amount
-            bytes32(uint256(uint160(swapper))), // recipient
-            uint16(0), // call length
-            bytes(""), // call
-            uint16(0), // context length
-            bytes("") // context
-        );
+        outputs[0] = MandateOutput({
+            oracle: bytes32(0),
+            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            chainId: block.chainid,
+            token: bytes32(0), // native token
+            amount: amount1,
+            recipient: bytes32(uint256(uint160(swapper))),
+            call: bytes(""),
+            context: bytes("")
+        });
 
-        outputs[1] = abi.encodePacked(
-            type(uint48).max, // fill deadline
-            bytes32(0), // oracle
-            bytes32(uint256(uint160(outputSettlerCoinAddress))), // settler
-            uint256(block.chainid), // chainId
-            bytes32(0), // token (native)
-            uint256(amount2), //amount
-            bytes32(uint256(uint160(swapper))), // recipient
-            uint16(0), // call length
-            bytes(""), // call
-            uint16(0), // context length
-            bytes("") // context
-        );
+        outputs[1] = MandateOutput({
+            oracle: bytes32(0),
+            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            chainId: block.chainid,
+            token: bytes32(0), // native token
+            amount: amount2,
+            recipient: bytes32(uint256(uint160(swapper))),
+            call: bytes(""),
+            context: bytes("")
+        });
 
         bytes memory fillerData = abi.encodePacked(filler);
 
         vm.prank(sender);
         vm.expectRevert(abi.encodeWithSignature("InsufficientBalance(uint256,uint256)", 0, uint256(amount2)));
-        outputSettlerCoin.fillOrderOutputs{ value: sentValue }(orderId, outputs, fillerData);
+        outputSettlerCoin.fillOrderOutputs{ value: sentValue }(orderId, outputs, type(uint48).max, fillerData);
     }
 }
