@@ -3,6 +3,7 @@ pragma solidity ^0.8.26;
 
 import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
+import { Address } from "openzeppelin/utils/Address.sol";
 
 import { IAttester } from "../interfaces/IAttester.sol";
 import { IOutputCallback } from "../interfaces/IOutputCallback.sol";
@@ -16,7 +17,7 @@ import { BaseInputOracle } from "../oracles/BaseInputOracle.sol";
 
 /**
  * @notice Base Output Settler implementing logic for settling outputs.
- * Does not support native tokens
+ * Supports both native tokens (ETH) and ERC20 tokens
  * This base output settler implements logic to work as both a PayloadCreator (for oracles) and as an oracle itself.
  *
  * @dev **Fill Function Patterns:**
@@ -87,6 +88,7 @@ abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
     function getFillRecord(bytes32 orderId, MandateOutput calldata output) public view returns (bytes32 payloadHash) {
         payloadHash = _fillRecords[orderId][MandateOutputEncodingLib.getMandateOutputHash(output)];
     }
+
     /**
      * @dev Performs basic validation and fills output if unfilled.
      * If an order has already been filled given the output & fillDeadline, then this function does not "re"fill the
@@ -102,7 +104,6 @@ abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
      * @param fillerData The solver data.
      * @return fillRecordHash The hash of the fill record.
      */
-
     function _fill(
         bytes32 orderId,
         MandateOutput calldata output,
@@ -128,7 +129,9 @@ abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
         // Storage has been set. Fill the output.
         bytes32 tokenIdentifier = output.token;
         address recipient = output.recipient.fromIdentifier();
-        SafeERC20.safeTransferFrom(IERC20(tokenIdentifier.fromIdentifier()), msg.sender, recipient, outputAmount);
+
+        if (tokenIdentifier == bytes32(0)) Address.sendValue(payable(recipient), outputAmount);
+        else SafeERC20.safeTransferFrom(IERC20(tokenIdentifier.fromIdentifier()), msg.sender, recipient, outputAmount);
 
         bytes calldata callbackData = output.call;
         if (callbackData.length > 0) {
@@ -168,9 +171,11 @@ abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
         MandateOutput calldata output,
         uint48 fillDeadline,
         bytes calldata fillerData
-    ) external virtual returns (bytes32 fillRecordHash) {
+    ) external payable virtual returns (bytes32 fillRecordHash) {
         if (fillDeadline < block.timestamp) revert FillDeadline();
         (fillRecordHash,) = _fill(orderId, output, fillerData);
+
+        refundNativeExcess();
     }
 
     // -- Batch Solving -- //
@@ -198,10 +203,11 @@ abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
         MandateOutput[] calldata outputs,
         uint48 fillDeadline,
         bytes calldata fillerData
-    ) external virtual {
+    ) external payable virtual {
         if (fillDeadline < block.timestamp) revert FillDeadline();
 
         (bytes32 fillRecordHash, bytes32 solver) = _fill(orderId, outputs[0], fillerData);
+
         bytes32 expectedFillRecordHash = _getFillRecordHash(solver, uint32(block.timestamp));
         if (fillRecordHash != expectedFillRecordHash) revert AlreadyFilled();
 
@@ -209,6 +215,16 @@ abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
         for (uint256 i = 1; i < numOutputs; ++i) {
             _fill(orderId, outputs[i], fillerData);
         }
+
+        refundNativeExcess();
+    }
+
+    /**
+     * @notice Refunds the native token excess value sent to the contract.
+     */
+    function refundNativeExcess() internal {
+        uint256 excess = address(this).balance;
+        if (excess > 0) Address.sendValue(payable(msg.sender), excess);
     }
 
     // --- IAttester --- //

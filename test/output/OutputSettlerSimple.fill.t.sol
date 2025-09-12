@@ -15,6 +15,7 @@ contract OutputSettlerSimpleTestFill is Test {
     error WrongOutputSettler(bytes32 addressThis, bytes32 expected);
     error NotImplemented();
     error SlopeStopped();
+    error InsufficientBalance(uint256 balance, uint256 needed);
 
     event OutputFilled(
         bytes32 indexed orderId, bytes32 solver, uint32 timestamp, MandateOutput output, uint256 finalAmount
@@ -563,5 +564,282 @@ contract OutputSettlerSimpleTestFill is Test {
         vm.prank(sender);
         vm.expectRevert(NotImplemented.selector);
         outputSettlerCoin.fill(orderId, output, type(uint48).max, fillerData);
+    }
+
+    // --- NATIVE TOKEN TESTS --- //
+
+    /// forge-config: default.isolate = true
+    function test_fill_native_token_gas() external {
+        test_fill_native_token(keccak256(bytes("orderId")), makeAddr("sender"), keccak256(bytes("filler")), 10 ** 18);
+    }
+
+    function test_fill_native_token(bytes32 orderId, address sender, bytes32 filler, uint256 amount) public {
+        vm.assume(
+            filler != bytes32(0) && swapper != address(0) && swapper != sender && sender != address(0) && amount > 0
+        );
+        vm.deal(sender, amount);
+
+        bytes memory fillerData = abi.encodePacked(filler);
+
+        uint256 swapperBalanceBefore = swapper.balance;
+
+        MandateOutput memory outputStruct = MandateOutput({
+            oracle: bytes32(0),
+            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            chainId: block.chainid,
+            token: bytes32(0),
+            amount: amount,
+            recipient: bytes32(uint256(uint160(swapper))),
+            call: bytes(""),
+            context: bytes("")
+        });
+
+        vm.prank(sender);
+        vm.expectEmit();
+        emit OutputFilled(orderId, filler, uint32(block.timestamp), outputStruct, amount);
+
+        outputSettlerCoin.fill{ value: amount }(orderId, outputStruct, type(uint48).max, fillerData);
+        vm.snapshotGasLastCall("outputSettler", "outputSettlerCoinFillNative");
+
+        assertEq(swapper.balance, swapperBalanceBefore + amount);
+        assertEq(sender.balance, 0);
+    }
+
+    function test_fill_native_token_with_excess_refund(bytes32 orderId, bytes32 filler, uint256 amount) public {
+        vm.assume(filler != bytes32(0));
+        vm.assume(amount > 0 && amount < type(uint256).max - 1);
+
+        address sender = makeAddr("sender");
+
+        uint256 totalValue = amount + 1;
+        vm.deal(sender, totalValue);
+
+        bytes memory fillerData = abi.encodePacked(filler);
+
+        uint256 swapperBalanceBefore = swapper.balance;
+        uint256 senderBalanceBefore = sender.balance;
+
+        MandateOutput memory outputStruct = MandateOutput({
+            oracle: bytes32(0),
+            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            chainId: block.chainid,
+            token: bytes32(0),
+            amount: amount,
+            recipient: bytes32(uint256(uint160(swapper))),
+            call: bytes(""),
+            context: bytes("")
+        });
+
+        vm.prank(sender);
+        vm.expectEmit();
+        emit OutputFilled(orderId, filler, uint32(block.timestamp), outputStruct, amount);
+
+        outputSettlerCoin.fill{ value: totalValue }(orderId, outputStruct, type(uint48).max, fillerData);
+
+        assertEq(swapper.balance, swapperBalanceBefore + amount);
+        assertEq(sender.balance, senderBalanceBefore - amount); // Should get excess back
+    }
+
+    function test_fill_native_token_insufficient_value(
+        bytes32 orderId,
+        bytes32 filler,
+        uint256 amount,
+        uint256 sentValue
+    ) public {
+        vm.assume(filler != bytes32(0));
+        vm.assume(amount > 0 && sentValue < amount);
+
+        address sender = makeAddr("sender");
+        vm.deal(sender, sentValue);
+
+        bytes memory fillerData = abi.encodePacked(filler);
+
+        MandateOutput memory outputStruct = MandateOutput({
+            oracle: bytes32(0),
+            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            chainId: block.chainid,
+            token: bytes32(0),
+            amount: amount,
+            recipient: bytes32(uint256(uint160(swapper))),
+            call: bytes(""),
+            context: bytes("")
+        });
+
+        vm.prank(sender);
+        vm.expectRevert(abi.encodeWithSelector(InsufficientBalance.selector, sentValue, amount));
+        outputSettlerCoin.fill{ value: sentValue }(orderId, outputStruct, type(uint48).max, fillerData);
+    }
+
+    function test_fill_native_token_zero_amount(bytes32 orderId, bytes32 filler) public {
+        vm.assume(filler != bytes32(0));
+
+        address sender = makeAddr("sender");
+        vm.deal(sender, 1 ether);
+
+        bytes memory fillerData = abi.encodePacked(filler);
+
+        uint256 swapperBalanceBefore = swapper.balance;
+        uint256 senderBalanceBefore = sender.balance;
+
+        MandateOutput memory outputStruct = MandateOutput({
+            oracle: bytes32(0),
+            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            chainId: block.chainid,
+            token: bytes32(0),
+            amount: 0,
+            recipient: bytes32(uint256(uint160(swapper))),
+            call: bytes(""),
+            context: bytes("")
+        });
+
+        vm.prank(sender);
+        vm.expectEmit();
+        emit OutputFilled(orderId, filler, uint32(block.timestamp), outputStruct, 0);
+
+        outputSettlerCoin.fill{ value: 1 ether }(orderId, outputStruct, type(uint48).max, fillerData);
+
+        assertEq(swapper.balance, swapperBalanceBefore); // No change for zero amount
+        assertEq(sender.balance, senderBalanceBefore); // Should get full refund
+    }
+
+    function test_fill_native_token_already_filled(
+        bytes32 filler,
+        bytes32 differentFiller,
+        bytes32 orderId,
+        uint256 amount
+    ) public {
+        vm.assume(filler != bytes32(0) && amount > 0);
+        vm.assume(filler != differentFiller && differentFiller != bytes32(0));
+
+        address sender = makeAddr("sender");
+        vm.deal(sender, amount);
+
+        bytes memory fillerData = abi.encodePacked(filler);
+
+        MandateOutput memory outputStruct = MandateOutput({
+            oracle: bytes32(0),
+            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            chainId: block.chainid,
+            token: bytes32(0),
+            amount: amount / 2,
+            recipient: bytes32(uint256(uint160(sender))),
+            call: bytes(""),
+            context: bytes("")
+        });
+
+        // First fill
+        vm.prank(sender);
+        outputSettlerCoin.fill{ value: amount / 2 }(orderId, outputStruct, type(uint48).max, fillerData);
+
+        // Second fill attempt (should return existing fill record, no additional transfer)
+        bytes memory differentFillerData = abi.encodePacked(differentFiller);
+        uint256 senderBalanceBeforeSecond = sender.balance;
+
+        vm.prank(sender);
+        bytes32 alreadyFilledBy =
+            outputSettlerCoin.fill{ value: amount / 2 }(orderId, outputStruct, type(uint48).max, differentFillerData);
+
+        assertNotEq(alreadyFilledBy, keccak256(abi.encodePacked(differentFiller, uint32(block.timestamp))));
+        assertEq(alreadyFilledBy, keccak256(abi.encodePacked(filler, uint32(block.timestamp))));
+
+        // Should get full refund for second attempt since no native tokens used
+        assertEq(sender.balance, senderBalanceBeforeSecond);
+    }
+
+    function test_fill_native_token_with_callback(
+        bytes32 orderId,
+        uint256 amount,
+        bytes32 filler,
+        bytes memory callbackData
+    ) public {
+        vm.assume(filler != bytes32(0) && amount > 0);
+        vm.assume(callbackData.length > 0);
+
+        address sender = makeAddr("sender");
+        vm.deal(sender, amount);
+
+        bytes memory fillerData = abi.encodePacked(filler);
+
+        MandateOutput memory outputStruct = MandateOutput({
+            oracle: bytes32(0),
+            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            chainId: block.chainid,
+            token: bytes32(0),
+            amount: amount,
+            recipient: bytes32(uint256(uint160(mockCallbackExecutorAddress))),
+            call: callbackData,
+            context: bytes("")
+        });
+
+        vm.prank(sender);
+        vm.expectCall(
+            mockCallbackExecutorAddress,
+            abi.encodeWithSignature(
+                "outputFilled(bytes32,uint256,bytes)",
+                bytes32(0), // native token identifier
+                amount,
+                callbackData
+            )
+        );
+
+        vm.expectEmit();
+        emit OutputFilled(orderId, filler, uint32(block.timestamp), outputStruct, amount);
+
+        outputSettlerCoin.fill{ value: amount }(orderId, outputStruct, type(uint48).max, fillerData);
+
+        assertEq(mockCallbackExecutorAddress.balance, amount);
+        assertEq(sender.balance, 0);
+    }
+
+    function test_fill_erc20_with_native_value_sent_gets_refunded(
+        bytes32 orderId,
+        bytes32 filler,
+        uint256 tokenAmount,
+        uint256 nativeValue
+    ) public {
+        address sender = makeAddr("sender");
+
+        vm.assume(filler != bytes32(0) && swapper != address(0) && swapper != sender);
+        vm.assume(tokenAmount > 0 && nativeValue > 0);
+
+        outputToken.mint(sender, tokenAmount);
+        vm.prank(sender);
+        outputToken.approve(outputSettlerCoinAddress, tokenAmount);
+        vm.deal(sender, nativeValue);
+
+        bytes memory fillerData = abi.encodePacked(filler);
+
+        uint256 swapperBalanceBefore = swapper.balance;
+        uint256 senderBalanceBefore = sender.balance;
+
+        MandateOutput memory outputStruct = MandateOutput({
+            oracle: bytes32(0),
+            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            chainId: block.chainid,
+            token: bytes32(uint256(uint160(outputTokenAddress))),
+            amount: tokenAmount,
+            recipient: bytes32(uint256(uint160(swapper))),
+            call: bytes(""),
+            context: bytes("")
+        });
+
+        vm.prank(sender);
+        vm.expectEmit();
+        emit OutputFilled(orderId, filler, uint32(block.timestamp), outputStruct, tokenAmount);
+
+        vm.expectCall(
+            outputTokenAddress,
+            abi.encodeWithSignature("transferFrom(address,address,uint256)", sender, swapper, tokenAmount)
+        );
+
+        outputSettlerCoin.fill{ value: nativeValue }(orderId, outputStruct, type(uint48).max, fillerData);
+
+        // ERC20 transfer should work
+        assertEq(outputToken.balanceOf(swapper), tokenAmount);
+        assertEq(outputToken.balanceOf(sender), 0);
+
+        // Native value should be refunded (no native tokens used)
+        assertEq(swapper.balance, swapperBalanceBefore);
+        assertEq(sender.balance, senderBalanceBefore); // Full refund
     }
 }
