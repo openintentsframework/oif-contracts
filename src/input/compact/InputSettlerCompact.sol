@@ -44,7 +44,7 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
      * @dev The user cannot be the settler.
      */
     error UserCannotBeSettler();
-    
+
     /**
      * @dev Mismatch between the provided and computed order IDs.
      */

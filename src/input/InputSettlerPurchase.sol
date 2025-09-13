@@ -19,19 +19,41 @@ import { InputSettlerBase } from "./InputSettlerBase.sol";
 
 /**
  * @title Input Settler Purchase
- * @notice Defines common logic that can be reused by other input settlers to support a variety of asset management
- * schemes.
+ * @notice Extends InputSettlerBase with order purchasing functionality that allows third parties to buy orders from
+ * solvers.
+ * @dev This contract implements order purchasing functionality that enables order ownership transfer from solver to
+ * purchaser upon successful purchase. It includes a discount-based pricing mechanism where purchasers pay a reduced
+ * amount, EIP712 signature verification for purchase authorization, reentry protection and purchase state tracking, and
+ * integration with IInputCallback for post-purchase execution.
  */
 abstract contract InputSettlerPurchase is InputSettlerBase {
     using LibAddress for address;
     using LibAddress for bytes32;
     using LibAddress for uint256;
 
+    /**
+     * @dev The order has already been purchased.
+     */
     error AlreadyPurchased();
+    /**
+     * @dev The purchase expiry timestamp has passed.
+     */
     error Expired();
+    /**
+     * @dev The purchaser is invalid.
+     */
     error InvalidPurchaser();
+    /**
+     * @dev The caller is not the order owner.
+     */
     error NotOrderOwner();
 
+    /**
+     * @notice Emitted when an order is purchased.
+     * @param orderId The order identifier.
+     * @param solver The solver.
+     * @param purchaser The purchaser.
+     */
     event OrderPurchased(bytes32 indexed orderId, bytes32 solver, bytes32 purchaser);
 
     uint256 constant DISCOUNT_DENOM = 10 ** 18;

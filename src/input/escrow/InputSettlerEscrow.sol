@@ -71,7 +71,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
      * @param order The order.
      */
     event Open(bytes32 indexed orderId, StandardOrder order);
-    
+
     /**
      * @notice Emitted when an order is refunded.
      * @param orderId The order identifier.

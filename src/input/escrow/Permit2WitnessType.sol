@@ -40,6 +40,7 @@ library Permit2WitnessType {
      * @param order The Standard Order.
      * @return The permit2 witness hash.
      */
+
     function Permit2WitnessHash(
         StandardOrder calldata order
     ) internal pure returns (bytes32) {
