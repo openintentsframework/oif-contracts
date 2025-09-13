@@ -32,6 +32,11 @@ library MandateOutputType {
 
     bytes32 constant MANDATE_OUTPUT_TYPE_HASH = keccak256(MANDATE_OUTPUT_TYPE_STUB);
 
+    /**
+     * @notice Hashes a MandateOutput struct.
+     * @param output The MandateOutput struct to hash.
+     * @return The hash of the MandateOutput struct.
+     */
     function hashOutput(
         MandateOutput calldata output
     ) internal pure returns (bytes32) {
@@ -50,6 +55,11 @@ library MandateOutputType {
         );
     }
 
+    /**
+     * @notice Hashes a list of MandateOutput structs.
+     * @param outputs The list of MandateOutput structs to hash.
+     * @return The hash of the list of MandateOutput structs.
+     */
     function hashOutputs(
         MandateOutput[] calldata outputs
     ) internal pure returns (bytes32) {

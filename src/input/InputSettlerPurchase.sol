@@ -18,7 +18,7 @@ import { OrderPurchase, OrderPurchaseType } from "./types/OrderPurchaseType.sol"
 import { InputSettlerBase } from "./InputSettlerBase.sol";
 
 /**
- * @title Base Input Settler
+ * @title Input Settler Purchase
  * @notice Defines common logic that can be reused by other input settlers to support a variety of asset management
  * schemes.
  */

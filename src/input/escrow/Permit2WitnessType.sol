@@ -37,8 +37,9 @@ library Permit2WitnessType {
         "Permit2Witness witness)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)TokenPermissions(address token,uint256 amount)Permit2Witness(uint32 expires,address inputOracle,MandateOutput[] outputs)";
     /**
      * @notice Computes the permit2 witness hash.
+     * @param order The Standard Order.
+     * @return The permit2 witness hash.
      */
-
     function Permit2WitnessHash(
         StandardOrder calldata order
     ) internal pure returns (bytes32) {

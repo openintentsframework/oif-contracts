@@ -40,7 +40,14 @@ import { InputSettlerPurchase } from "../InputSettlerPurchase.sol";
 contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
     using LibAddress for bytes32;
 
+    /**
+     * @dev The user cannot be the settler.
+     */
     error UserCannotBeSettler();
+    
+    /**
+     * @dev Mismatch between the provided and computed order IDs.
+     */
     error OrderIdMismatch(bytes32 provided, bytes32 computed);
 
     TheCompact public immutable COMPACT;
@@ -53,12 +60,22 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
 
     // --- Generic order identifier --- //
 
+    /**
+     * @notice Computes the order identifier for a Standard Order. Used internally.
+     * @param order The Standard Order.
+     * @return The order identifier.
+     */
     function _orderIdentifier(
         StandardOrder calldata order
     ) internal view returns (bytes32) {
         return StandardOrderType.orderIdentifier(order);
     }
 
+    /**
+     * @notice Computes the order identifier for a Standard Order.
+     * @param order The Standard Order.
+     * @return The order identifier.
+     */
     function orderIdentifier(
         StandardOrder calldata order
     ) external view returns (bytes32) {
