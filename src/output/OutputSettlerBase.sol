@@ -18,7 +18,7 @@ import { BaseInputOracle } from "../oracles/BaseInputOracle.sol";
 /**
  * @notice Base Output Settler implementing logic for settling outputs.
  * Supports both native tokens (ETH) and ERC20 tokens
- * This base output settler implements logic to work as both a PayloadCreator (for oracles) and as an oracle itself.
+ * This base output settler implements logic to work as both a Attester (for oracles) and as an oracle itself.
  *
  * @dev **Fill Function Patterns:**
  * This contract provides two distinct fill patterns with different semantics:

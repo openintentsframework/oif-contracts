@@ -28,7 +28,7 @@ import { Permit2WitnessType } from "./Permit2WitnessType.sol";
 
 /**
  * @title OIF Input Settler supporting using an explicit escrow.
- * @notice This Catalyst Settler implementation contained an escrow to manage input assets. Intents are initiated by
+ * @notice This implementation contains an escrow to manage input assets. Intents are initiated by
  * depositing assets through either `::open` by msg.sender or `::openFor` by `order.user`. Since tokens are collected on
  * the `::open(For)` call, it is important to wait for the `::open(For)` call to be final before filling the intent.
  *
@@ -44,15 +44,41 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     using LibAddress for bytes32;
     using LibAddress for uint256;
 
+    /**
+     * @dev The order status is invalid.
+     */
     error InvalidOrderStatus();
+    /**
+     * @dev Mismatch between the provided and computed order IDs.
+     */
     error OrderIdMismatch(bytes32 provided, bytes32 computed);
+    /**
+     * @dev Mismatch between the number of inputs and signatures.
+     */
     error SignatureAndInputsNotEqual();
+    /**
+     * @dev Reentrancy detected.
+     */
     error ReentrancyDetected();
+    /**
+     * Signature type not supported.
+     */
     error SignatureNotSupported(bytes1);
 
+    /**
+     * @notice Emitted when an order is opened.
+     * @param orderId The order identifier.
+     * @param order The order.
+     */
     event Open(bytes32 indexed orderId, StandardOrder order);
+
+    /**
+     * @notice Emitted when an order is refunded.
+     * @param orderId The order identifier.
+     */
     event Refunded(bytes32 indexed orderId);
 
+    /// Signature types allowed.
     bytes1 internal constant SIGNATURE_TYPE_PERMIT2 = 0x00;
     bytes1 internal constant SIGNATURE_TYPE_3009 = 0x01;
     bytes1 internal constant SIGNATURE_TYPE_SELF = 0xff;
@@ -80,7 +106,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
     /**
      * @notice Opens an intent for `order.user`. `order.input` tokens are collected from msg.sender.
-     * @param order bytes representing an encoded StandardOrder, encoded via abi.encode().
+     * @param order StandardOrder representing the intent.
      */
     function open(
         StandardOrder calldata order
@@ -108,7 +134,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
     /**
      * @notice Collect input tokens directly from msg.sender.
-     * @param order bytes representing an encoded StandardOrder, encoded via abi.encode().
+     * @param order StandardOrder representing the intent.
      */
     function _open(
         StandardOrder calldata order
@@ -133,7 +159,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
      * call tree. To protect against reentry, the function uses the `orderStatus`. Local reentry (calling twice) is
      * protected through a checks-effect pattern while global reentry is enforced by not allowing existing the function
      * with `orderStatus` not set to `Deposited`
-     * @param order bytes representing an encoded StandardOrder, encoded via abi.encode().
+     * @param order StandardOrder representing the intent.
      * @param sponsor Address to collect tokens from.
      * @param signature Allowance signature from sponsor with a signature type encoded as:
      * - SIGNATURE_TYPE_PERMIT2:  b1:0x00 | bytes:signature
@@ -398,7 +424,10 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     /**
      * @dev This function employs a local reentry guard: we check the order status and then we update it afterwards.
      * This is an important check as it is intended to process external ERC20 transfers.
-     * @param newStatus specifies the new status to set the order to. Should never be OrderStatus.Deposited.
+     * @param orderId The order identifier.
+     * @param inputs The inputs to transfer.
+     * @param destination The destination to transfer the inputs to.
+     * @param newStatus specifies the new status to set the order to. Should never be `OrderStatus.Deposited`.
      */
     function _resolveLock(
         bytes32 orderId,
