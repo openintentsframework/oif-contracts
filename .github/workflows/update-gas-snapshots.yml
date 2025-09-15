@@ -1,0 +1,37 @@
+name: Update Gas Snapshots
+
+on:
+  push:
+    branches: [main]
+
+env:
+  FOUNDRY_PROFILE: ci
+
+jobs:
+  update-snapshots:
+    name: Update Gas Snapshots
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Generate Gas Snapshots
+        run: FOUNDRY_FUZZ_RUNS=10 forge test --gas-snapshot-check true
+
+      - name: Update Gas Snapshots
+        run: |
+          if [ -d "snapshots" ] && [ "$(ls -A snapshots)" ]; then
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add -f snapshots/
+            git commit -m "Update gas snapshots [skip ci]"
+            git push
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
