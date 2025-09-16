@@ -19,20 +19,48 @@ import { MandateOutput } from "./types/MandateOutputType.sol";
 /**
  * @title Base Input Settler
  * @notice Defines common logic that can be reused by other input settlers to support a variety of asset management
- * schemes.
+ * schemes within the Open Intents Framework (OIF). This abstract contract provides the foundational building blocks
+ * for cross-chain intent settlement, including validation, timestamp management, and proof verification.
  */
 abstract contract InputSettlerBase is EIP712 {
     using LibAddress for address;
     using LibAddress for bytes32;
 
+    /**
+     * @dev Timestamp has passed.
+     */
     error TimestampPassed();
+    /**
+     * @dev Timestamp has not passed.
+     */
     error TimestampNotPassed();
+    /**
+     * @dev Wrong chain.
+     */
     error WrongChain(uint256 expected, uint256 actual);
+    /**
+     * @dev Invalid signer.
+     */
     error InvalidSigner();
+    /**
+     * @dev Filled too late.
+     */
     error FilledTooLate(uint32 expected, uint32 actual);
+    /**
+     * @dev Invalid timestamp length.
+     */
     error InvalidTimestampLength();
+    /**
+     * @dev No destination.
+     */
     error NoDestination();
 
+    /**
+     * @notice Emitted when an order is finalised.
+     * @param orderId The order identifier.
+     * @param solver The solver.
+     * @param destination The destination.
+     */
     event Finalised(bytes32 indexed orderId, bytes32 solver, bytes32 destination);
 
     struct SolveParams {
@@ -41,8 +69,13 @@ abstract contract InputSettlerBase is EIP712 {
     }
 
     /**
+     * <<<<<<< HEAD
      * @notice Returns the domain separator for the EIP712 signature.
      * @return domainSeparator The domain separator.
+     * =======
+     * @notice Returns the domain separator for the EIP712 contract.
+     * @return The domain separator.
+     * >>>>>>> df415ead6ac049319bf6de2fa55d47c4c34242e0
      */
     function DOMAIN_SEPARATOR() external view returns (bytes32) {
         return _domainSeparatorV4();

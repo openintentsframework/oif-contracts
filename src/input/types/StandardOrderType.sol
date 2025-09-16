@@ -25,7 +25,7 @@ struct Mandate {
 }
 
 /**
- * @notice Helper library for the Catalyst order type.
+ * @notice Helper library for the StandardOrder type.
  * TYPE_PARTIAL: An incomplete type. Is missing a field.
  * TYPE_STUB: Type has no subtypes.
  * TYPE: Is complete including sub-types.
