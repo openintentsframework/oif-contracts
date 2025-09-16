@@ -99,6 +99,9 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
     /**
      * @notice Returns the domain name of the EIP712 signature.
+     * @dev This function is only called in the constructor and the returned value is cached
+     * by the EIP712 base contract. It is marked as `view` rather than `pure` to be less
+     * restrictive for overrides in derived contracts.
      * @return name The domain name.
      */
     function _domainName() internal view virtual returns (string memory) {
@@ -107,6 +110,9 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
     /**
      * @notice Returns the domain version of the EIP712 signature.
+     * @dev This function is only called in the constructor and the returned value is cached
+     * by the EIP712 base contract. It is marked as `view` rather than `pure` to be less
+     * restrictive for overrides in derived contracts.
      * @return version The domain version.
      */
     function _domainVersion() internal view virtual returns (string memory) {
