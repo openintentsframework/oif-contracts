@@ -47,8 +47,18 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
 
     constructor(
         address compact
-    ) EIP712("OIFCompact", "1") {
+    ) EIP712(_domainName(), _domainVersion()) {
         COMPACT = TheCompact(compact);
+    }
+
+    /// @inheritdoc InputSettlerBase
+    function _domainName() internal pure override returns (string memory) {
+        return "OIFCompact";
+    }
+
+    /// @inheritdoc InputSettlerBase
+    function _domainVersion() internal pure override returns (string memory) {
+        return "1";
     }
 
     // --- Generic order identifier --- //

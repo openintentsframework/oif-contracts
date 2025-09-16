@@ -40,9 +40,25 @@ abstract contract InputSettlerBase is EIP712 {
         bytes32 solver;
     }
 
+    /**
+     * @notice Returns the domain separator for the EIP712 signature.
+     * @return domainSeparator The domain separator.
+     */
     function DOMAIN_SEPARATOR() external view returns (bytes32) {
         return _domainSeparatorV4();
     }
+
+    /**
+     * @notice Returns the domain name of the EIP712 signature.
+     * @return name The domain name.
+     */
+    function _domainName() internal view virtual returns (string memory);
+
+    /**
+     * @notice Returns the domain version of the EIP712 signature.
+     * @return version The domain version.
+     */
+    function _domainVersion() internal view virtual returns (string memory);
 
     // --- Validation --- //
 

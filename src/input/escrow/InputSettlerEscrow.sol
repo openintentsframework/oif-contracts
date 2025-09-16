@@ -69,7 +69,17 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     // Address of the Permit2 contract.
     ISignatureTransfer constant PERMIT2 = ISignatureTransfer(0x000000000022D473030F116dDEE9F6B43aC78BA3);
 
-    constructor() EIP712("OIFEscrow", "1") { }
+    constructor() EIP712(_domainName(), _domainVersion()) { }
+
+    /// @inheritdoc InputSettlerBase
+    function _domainName() internal pure override returns (string memory) {
+        return "OIFEscrow";
+    }
+
+    /// @inheritdoc InputSettlerBase
+    function _domainVersion() internal pure override returns (string memory) {
+        return "1";
+    }
 
     // --- Generic order identifier --- //
     function orderIdentifier(

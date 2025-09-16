@@ -9,7 +9,15 @@ import { InputSettlerBase } from "../../src/input/InputSettlerBase.sol";
 import { EIP712 } from "openzeppelin/utils/cryptography/EIP712.sol";
 
 contract MockSettler is InputSettlerBase {
-    constructor() EIP712("MockSettler", "-1") { }
+    constructor() EIP712(_domainName(), _domainVersion()) { }
+
+    function _domainName() internal pure override returns (string memory) {
+        return "MockSettler";
+    }
+
+    function _domainVersion() internal pure override returns (string memory) {
+        return "-1";
+    }
 
     function maxTimestamp(
         InputSettlerBase.SolveParams[] calldata solveParams
