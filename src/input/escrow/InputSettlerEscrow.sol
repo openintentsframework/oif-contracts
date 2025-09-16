@@ -71,12 +71,18 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
     constructor() EIP712(_domainName(), _domainVersion()) { }
 
-    /// @inheritdoc InputSettlerBase
+    /**
+     * @notice Returns the domain name of the EIP712 signature.
+     * @return name The domain name.
+     */
     function _domainName() internal pure override returns (string memory) {
         return "OIFEscrow";
     }
 
-    /// @inheritdoc InputSettlerBase
+    /**
+     * @notice Returns the domain version of the EIP712 signature.
+     * @return version The domain version.
+     */
     function _domainVersion() internal pure override returns (string memory) {
         return "1";
     }
