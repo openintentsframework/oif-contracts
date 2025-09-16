@@ -16,15 +16,7 @@ import { MandateOutputEncodingLib } from "../../src/libs/MandateOutputEncodingLi
 import { EIP712 } from "openzeppelin/utils/cryptography/EIP712.sol";
 
 contract MockSettler is InputSettlerPurchase {
-    constructor() EIP712(_domainName(), _domainVersion()) { }
-
-    function _domainName() internal pure override returns (string memory) {
-        return "MockSettler";
-    }
-
-    function _domainVersion() internal pure override returns (string memory) {
-        return "-1";
-    }
+    constructor() EIP712("MockSettler", "-1") { }
 
     function purchaseGetOrderOwner(
         bytes32 orderId,
