@@ -100,7 +100,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
     /**
      * @notice Returns the domain name of the EIP712 signature.
      * @dev This function is only called in the constructor and the returned value is cached
-     * by the EIP712 base contract. 
+     * by the EIP712 base contract.
      * @return name The domain name.
      */
     function _domainName() internal view virtual returns (string memory) {
