@@ -54,8 +54,28 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
 
     constructor(
         address compact
-    ) EIP712("OIFCompact", "1") {
+    ) EIP712(_domainName(), _domainVersion()) {
         COMPACT = TheCompact(compact);
+    }
+
+    /**
+     * @notice Returns the domain name of the EIP712 signature.
+     * @dev This function is only called in the constructor and the returned value is cached
+     * by the EIP712 base contract.
+     * @return name The domain name.
+     */
+    function _domainName() internal view virtual returns (string memory) {
+        return "OIFCompact";
+    }
+
+    /**
+     * @notice Returns the domain version of the EIP712 signature.
+     * @dev This function is only called in the constructor and the returned value is cached
+     * by the EIP712 base contract.
+     * @return version The domain version.
+     */
+    function _domainVersion() internal view virtual returns (string memory) {
+        return "1";
     }
 
     // --- Generic order identifier --- //
