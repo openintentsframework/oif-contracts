@@ -24,8 +24,22 @@ contract ChainlinkCCIPOracle is BaseInputOracle, ChainMap, CCIPReceiver {
 
     error NotAllPayloadsValid();
     error RefundFailed();
+    error NoReceivers();
 
     constructor(address _owner, address router) payable ChainMap(_owner) CCIPReceiver(router) { }
+
+    modifier validatePayloads(address source, bytes[] calldata payloads) {
+        if (!IAttester(source).hasAttested(payloads)) revert NotAllPayloadsValid();
+        _;
+    }
+
+    function refundExcess() internal returns (uint256 refunded) {
+        if (address(this).balance > 0) {
+            refunded = address(this).balance;
+            (bool success,) = msg.sender.call{ value: address(this).balance }("");
+            if (!success) revert RefundFailed();
+        }
+    }
 
     // --- Sending Proofs --- //
 
@@ -35,33 +49,41 @@ contract ChainlinkCCIPOracle is BaseInputOracle, ChainMap, CCIPReceiver {
      * @param payloads List of payloads to broadcast.
      * @return refund If too much value has been sent, the excess will be returned to msg.sender.
      */
-    function submit(
+    function submitBatch(
         uint64[] calldata destinationChainSelectors,
         bytes32[] calldata receivers,
         bytes calldata extraArgs,
         address source,
         bytes[] calldata payloads,
         address feeToken
-    ) public payable returns (uint256 refund) {
-        if (!IAttester(source).hasAttested(payloads)) revert NotAllPayloadsValid();
-        return _submits(destinationChainSelectors, receivers, extraArgs, source, payloads, feeToken);
+    ) public payable validatePayloads(source, payloads) returns (uint256 refund) {
+        _submitBatch(destinationChainSelectors, receivers, extraArgs, source, payloads, feeToken);
+        return refundExcess();
     }
 
-    // --- Wormhole Logic --- //
+    function submit(
+        uint64 destinationChainSelector,
+        bytes32 receiver,
+        bytes calldata extraArgs,
+        address source,
+        bytes[] calldata payloads,
+        address feeToken
+    ) public payable validatePayloads(source, payloads) returns (uint256 refund) {
+        _submit(destinationChainSelector, receiver, extraArgs, source, payloads, feeToken);
+        return refundExcess();
+    }
 
-    function _submits(
+    function _submitBatch(
         uint64[] calldata destinationChainSelectors,
         bytes32[] calldata receivers,
         bytes calldata extraArgs,
         address source,
         bytes[] calldata payloads,
         address feeToken
-    ) internal returns (uint256 refund) {
-        bytes memory message = MessageEncodingLib.encodeMessage(source.toIdentifier(), payloads);
-
+    ) internal {
         Client.EVM2AnyMessage memory evm2AnyMessage = Client.EVM2AnyMessage({
             receiver: new bytes(0), // We will set the receiver in the for loop.
-            data: message,
+            data: MessageEncodingLib.encodeMessage(source.toIdentifier(), payloads),
             tokenAmounts: new Client.EVMTokenAmount[](0),
             extraArgs: extraArgs,
             feeToken: feeToken
@@ -69,40 +91,54 @@ contract ChainlinkCCIPOracle is BaseInputOracle, ChainMap, CCIPReceiver {
 
         // TODO: Should chain ids be translated from chainlink to erc20?
         uint256 numDestinationChains = destinationChainSelectors.length;
-        uint256 numReceivers = receivers.length;
-        // todo: numReceivers != 0;
+        if (receivers.length == 0) revert NoReceivers();
 
-        uint256 nativeSpent = 0;
         for (uint256 i; i < numDestinationChains; ++i) {
-            if (numReceivers >= i) evm2AnyMessage.receiver = abi.encode(receivers[i]);
-            nativeSpent += _submit(destinationChainSelectors[i], evm2AnyMessage, feeToken);
-        }
-        // Refund excess.
-        if (msg.value > nativeSpent) {
-            refund = msg.value - nativeSpent;
-            (bool success,) = msg.sender.call{ value: refund }("");
-            if (!success) revert RefundFailed();
+            if (receivers.length > i) evm2AnyMessage.receiver = abi.encodePacked(receivers[i]);
+            _submitMessage(destinationChainSelectors[i], evm2AnyMessage, feeToken);
         }
     }
 
     function _submit(
         uint64 destinationChainSelector,
+        bytes32 receiver,
+        bytes calldata extraArgs,
+        address source,
+        bytes[] calldata payloads,
+        address feeToken
+    ) internal {
+        Client.EVM2AnyMessage memory evm2AnyMessage = Client.EVM2AnyMessage({
+            receiver: abi.encodePacked(receiver), // We will set the receiver in the for loop.
+            data: MessageEncodingLib.encodeMessage(source.toIdentifier(), payloads),
+            tokenAmounts: new Client.EVMTokenAmount[](0),
+            extraArgs: extraArgs,
+            feeToken: feeToken
+        });
+
+        _submitMessage(destinationChainSelector, evm2AnyMessage, feeToken);
+    }
+
+    // --- Chainlink CCIP Logic --- //
+
+    function _submitMessage(
+        uint64 destinationChainSelector,
         Client.EVM2AnyMessage memory evm2AnyMessage,
         address feeToken
-    ) internal returns (uint256 nativeFees) {
-        uint256 fees = IRouterClient(i_ccipRouter).getFee(destinationChainSelector, evm2AnyMessage);
-        nativeFees = feeToken == address(0) ? fees : 0;
+    ) internal {
+        uint256 fees = IRouterClient(getRouter()).getFee(destinationChainSelector, evm2AnyMessage);
 
         if (feeToken != address(0)) {
             // Collect tokens from caller.
             SafeERC20.safeTransferFrom(IERC20(feeToken), msg.sender, address(this), fees);
 
             // Aprove router client.
-            uint256 currentAllowance = IERC20(feeToken).allowance(address(this), i_ccipRouter);
-            if (currentAllowance < fees) SafeERC20.forceApprove(IERC20(feeToken), i_ccipRouter, type(uint256).max);
+            uint256 currentAllowance = IERC20(feeToken).allowance(address(this), getRouter());
+            if (currentAllowance < fees) SafeERC20.forceApprove(IERC20(feeToken), getRouter(), type(uint256).max);
         }
 
-        IRouterClient(i_ccipRouter).ccipSend{ value: nativeFees }(destinationChainSelector, evm2AnyMessage);
+        IRouterClient(getRouter()).ccipSend{ value: feeToken == address(0) ? fees : 0 }(
+            destinationChainSelector, evm2AnyMessage
+        );
     }
 
     function _ccipReceive(

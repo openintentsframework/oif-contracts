@@ -17,7 +17,7 @@ import { ERC165Checker } from "openzeppelin/utils/introspection/ERC165Checker.so
 
 /// @dev
 /// https://github.com/smartcontractkit/chainlink-ccip/blob/632b2acd4f2b203fe4cdd3e93ac0e1303a10ff56/chains/evm/contracts/test/mocks/MockRouter.sol
-contract MockCCIPRouter is IRouter, IRouterClient {
+contract MockRouter is IRouter, IRouterClient {
     using SafeERC20 for IERC20;
     using ERC165Checker for address;
 

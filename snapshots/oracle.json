@@ -1,4 +1,8 @@
 {
+  "CCIPSubmitNativeBatchOfOne": "63543",
+  "CCIPSubmitNativeSingle": "62800",
+  "CCIPSubmitTokenBatchOfOne": "133559",
+  "CCIPSubmitTokenSingle": "132817",
   "bitcoinFinaliseDispute": "63461",
   "bitcoinOPVerify": "88097",
   "bitcoinOutputClaim": "99976",
