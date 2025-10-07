@@ -17,10 +17,12 @@ contract AxelarOracle is BaseInputOracle, AxelarExecutable, Ownable {
 
     error NotAllPayloadsValid();
     error SourceChainNotAllowed(string sourceChain);
+    error DestinationChainNotAllowed(string destinationChain);
 
     IAxelarGasService public immutable gasService;
 
     mapping(uint32 => bool) public allowlistedSourceChains;
+    mapping(uint32 => bool) public allowlistedDestinationChains;
 
     constructor(
         address gateway_,
@@ -73,6 +75,16 @@ contract AxelarOracle is BaseInputOracle, AxelarExecutable, Ownable {
         if (!IAttester(source).hasAttested(payloads))
             revert NotAllPayloadsValid();
 
+        bytes32 hashedDestinationChain = keccak256(
+            abi.encodePacked(destinationChain)
+        );
+        uint32 destinationChainId = uint32(
+            uint256(hashedDestinationChain) >> 224
+        );
+
+        if (!allowlistedDestinationChains[destinationChainId])
+            revert DestinationChainNotAllowed(destinationChain);
+
         bytes memory message = MessageEncodingLib.encodeMessage(
             source.toIdentifier(),
             payloads
@@ -100,6 +112,24 @@ contract AxelarOracle is BaseInputOracle, AxelarExecutable, Ownable {
             allowlistedSourceChains[sourceChainId] = true;
         } else {
             delete allowlistedSourceChains[sourceChainId];
+        }
+    }
+
+    function allowlistDestinationChain(
+        string memory destinationChain,
+        bool allowed
+    ) external onlyOwner {
+        bytes32 hashedDestinationChain = keccak256(
+            abi.encodePacked(destinationChain)
+        );
+        uint32 destinationChainId = uint32(
+            uint256(hashedDestinationChain) >> 224
+        );
+
+        if (allowed) {
+            allowlistedDestinationChains[destinationChainId] = true;
+        } else {
+            delete allowlistedDestinationChains[destinationChainId];
         }
     }
 }
