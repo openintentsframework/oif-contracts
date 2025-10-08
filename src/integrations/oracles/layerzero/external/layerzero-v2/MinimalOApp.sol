@@ -12,7 +12,7 @@ import {
 import { IERC20, SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**
- * @notice This is a minimal implemenetation of LayerZero OApp contracts
+ * @notice This is a minimal implementation of LayerZero OApp contracts
  * https://github.com/LayerZero-Labs/LayerZero-v2/blob/c09287a8b1f236fcc057f474d8a773a0fb7758df/packages/layerzero-v2/evm/oapp/contracts/oapp/OApp.sol
  * to make it ownerless and succinct.
  */
