@@ -5,12 +5,14 @@ pragma solidity ^0.8.0;
 library StringToAddress {
     error InvalidAddressString();
 
-    function toAddress(string memory addressString) internal pure returns (address) {
+    function toAddress(
+        string memory addressString
+    ) internal pure returns (address) {
         bytes memory stringBytes = bytes(addressString);
         uint160 addressNumber = 0;
         uint8 stringByte;
 
-        if (stringBytes.length != 42 || stringBytes[0] != '0' || stringBytes[1] != 'x') revert InvalidAddressString();
+        if (stringBytes.length != 42 || stringBytes[0] != "0" || stringBytes[1] != "x") revert InvalidAddressString();
 
         for (uint256 i = 2; i < 42; ++i) {
             stringByte = uint8(stringBytes[i]);
@@ -28,13 +30,15 @@ library StringToAddress {
 }
 
 library AddressToString {
-    function toString(address address_) internal pure returns (string memory) {
+    function toString(
+        address address_
+    ) internal pure returns (string memory) {
         bytes memory addressBytes = abi.encodePacked(address_);
-        bytes memory characters = '0123456789abcdef';
+        bytes memory characters = "0123456789abcdef";
         bytes memory stringBytes = new bytes(42);
 
-        stringBytes[0] = '0';
-        stringBytes[1] = 'x';
+        stringBytes[0] = "0";
+        stringBytes[1] = "x";
 
         for (uint256 i; i < 20; ++i) {
             stringBytes[2 + i * 2] = characters[uint8(addressBytes[i] >> 4)];

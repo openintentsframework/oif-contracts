@@ -33,14 +33,18 @@ interface IOwnable {
      * @notice Transfers ownership of the contract to a new address
      * @param newOwner The address to transfer ownership to
      */
-    function transferOwnership(address newOwner) external;
+    function transferOwnership(
+        address newOwner
+    ) external;
 
     /**
      * @notice Proposes to transfer the contract's ownership to a new address.
      * The new owner needs to accept the ownership explicitly.
      * @param newOwner The address to transfer ownership to
      */
-    function proposeOwnership(address newOwner) external;
+    function proposeOwnership(
+        address newOwner
+    ) external;
 
     /**
      * @notice Transfers ownership to the pending owner.

@@ -2,8 +2,8 @@
 
 pragma solidity ^0.8.0;
 
-import { IAxelarGateway } from '../interfaces/IAxelarGateway.sol';
-import { IAxelarExecutable } from '../interfaces/IAxelarExecutable.sol';
+import { IAxelarExecutable } from "../interfaces/IAxelarExecutable.sol";
+import { IAxelarGateway } from "../interfaces/IAxelarGateway.sol";
 
 /**
  * @title AxelarExecutable
@@ -19,7 +19,9 @@ abstract contract AxelarExecutable is IAxelarExecutable {
      * Reverts if the provided address is the zero address.
      * @param gateway_ The address of the Axelar Gateway contract.
      */
-    constructor(address gateway_) {
+    constructor(
+        address gateway_
+    ) {
         if (gateway_ == address(0)) revert InvalidAddress();
 
         gatewayAddress = gateway_;
@@ -43,8 +45,9 @@ abstract contract AxelarExecutable is IAxelarExecutable {
     ) external virtual {
         bytes32 payloadHash = keccak256(payload);
 
-        if (!gateway().validateContractCall(commandId, sourceChain, sourceAddress, payloadHash))
+        if (!gateway().validateContractCall(commandId, sourceChain, sourceAddress, payloadHash)) {
             revert NotApprovedByGateway();
+        }
 
         _execute(commandId, sourceChain, sourceAddress, payload);
     }

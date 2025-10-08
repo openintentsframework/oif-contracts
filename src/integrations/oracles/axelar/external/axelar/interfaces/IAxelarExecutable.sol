@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import { IAxelarGateway } from './IAxelarGateway.sol';
+import { IAxelarGateway } from "./IAxelarGateway.sol";
 
 /**
  * @title IAxelarExecutable
@@ -33,7 +33,8 @@ interface IAxelarExecutable {
      * @param commandId The identifier of the command to execute.
      * @param sourceChain The name of the source chain from where the command originated.
      * @param sourceAddress The address on the source chain that sent the command.
-     * @param payload The payload of the command to be executed. This typically includes the function selector and encoded arguments.
+     * @param payload The payload of the command to be executed. This typically includes the function selector and
+     * encoded arguments.
      */
     function execute(
         bytes32 commandId,

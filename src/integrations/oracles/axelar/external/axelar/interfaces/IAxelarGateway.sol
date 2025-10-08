@@ -77,5 +77,7 @@ interface IAxelarGateway {
      * @param commandId The identifier of the command to check.
      * @return True if the command has been executed, false otherwise.
      */
-    function isCommandExecuted(bytes32 commandId) external view returns (bool);
+    function isCommandExecuted(
+        bytes32 commandId
+    ) external view returns (bool);
 }

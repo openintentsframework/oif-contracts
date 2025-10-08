@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.0;
 
-import { GasInfo } from '../types/GasEstimationTypes.sol';
-import { IInterchainGasEstimation } from './IInterchainGasEstimation.sol';
-import { IUpgradable } from './IUpgradable.sol';
+import { GasInfo } from "../types/GasEstimationTypes.sol";
+import { IInterchainGasEstimation } from "./IInterchainGasEstimation.sol";
+import { IUpgradable } from "./IUpgradable.sol";
 
 /**
  * @title IAxelarGasService Interface
@@ -105,42 +105,28 @@ interface IAxelarGasService is IInterchainGasEstimation, IUpgradable {
     );
 
     event GasAdded(
-        bytes32 indexed txHash,
-        uint256 indexed logIndex,
-        address gasToken,
-        uint256 gasFeeAmount,
-        address refundAddress
+        bytes32 indexed txHash, uint256 indexed logIndex, address gasToken, uint256 gasFeeAmount, address refundAddress
     );
 
     event NativeGasAdded(bytes32 indexed txHash, uint256 indexed logIndex, uint256 gasFeeAmount, address refundAddress);
 
     event ExpressGasAdded(
-        bytes32 indexed txHash,
-        uint256 indexed logIndex,
-        address gasToken,
-        uint256 gasFeeAmount,
-        address refundAddress
+        bytes32 indexed txHash, uint256 indexed logIndex, address gasToken, uint256 gasFeeAmount, address refundAddress
     );
 
     event NativeExpressGasAdded(
-        bytes32 indexed txHash,
-        uint256 indexed logIndex,
-        uint256 gasFeeAmount,
-        address refundAddress
+        bytes32 indexed txHash, uint256 indexed logIndex, uint256 gasFeeAmount, address refundAddress
     );
 
     event Refunded(
-        bytes32 indexed txHash,
-        uint256 indexed logIndex,
-        address payable receiver,
-        address token,
-        uint256 amount
+        bytes32 indexed txHash, uint256 indexed logIndex, address payable receiver, address token, uint256 amount
     );
 
     /**
      * @notice Pay for gas for any type of contract execution on a destination chain.
      * @dev This function is called on the source chain before calling the gateway to execute a remote contract.
-     * @dev If estimateOnChain is true, the function will estimate the gas cost and revert if the payment is insufficient.
+     * @dev If estimateOnChain is true, the function will estimate the gas cost and revert if the payment is
+     * insufficient.
      * @param sender The address making the payment
      * @param destinationChain The target chain where the contract call will be made
      * @param destinationAddress The target address on the destination chain
@@ -353,15 +339,12 @@ interface IAxelarGasService is IInterchainGasEstimation, IUpgradable {
      * @param logIndex The log index for the cross-chain call
      * @param refundAddress The address where refunds, if any, should be sent
      */
-    function addNativeGas(
-        bytes32 txHash,
-        uint256 logIndex,
-        address refundAddress
-    ) external payable;
+    function addNativeGas(bytes32 txHash, uint256 logIndex, address refundAddress) external payable;
 
     /**
      * @notice Add additional gas payment using ERC20 tokens after initiating an express cross-chain call.
-     * @dev This function can be called on the source chain after calling the gateway to express execute a remote contract.
+     * @dev This function can be called on the source chain after calling the gateway to express execute a remote
+     * contract.
      * @param txHash The transaction hash of the cross-chain call
      * @param logIndex The log index for the cross-chain call
      * @param gasToken The ERC20 token address used to add gas
@@ -378,16 +361,13 @@ interface IAxelarGasService is IInterchainGasEstimation, IUpgradable {
 
     /**
      * @notice Add additional gas payment using native currency after initiating an express cross-chain call.
-     * @dev This function can be called on the source chain after calling the gateway to express execute a remote contract.
+     * @dev This function can be called on the source chain after calling the gateway to express execute a remote
+     * contract.
      * @param txHash The transaction hash of the cross-chain call
      * @param logIndex The log index for the cross-chain call
      * @param refundAddress The address where refunds, if any, should be sent
      */
-    function addNativeExpressGas(
-        bytes32 txHash,
-        uint256 logIndex,
-        address refundAddress
-    ) external payable;
+    function addNativeExpressGas(bytes32 txHash, uint256 logIndex, address refundAddress) external payable;
 
     /**
      * @notice Updates the gas price for a specific chain.
@@ -404,11 +384,7 @@ interface IAxelarGasService is IInterchainGasEstimation, IUpgradable {
      * @param tokens Array of token addresses to be collected
      * @param amounts Array of amounts to be collected for each respective token address
      */
-    function collectFees(
-        address payable receiver,
-        address[] calldata tokens,
-        uint256[] calldata amounts
-    ) external;
+    function collectFees(address payable receiver, address[] calldata tokens, uint256[] calldata amounts) external;
 
     /**
      * @notice Refunds gas payment to the receiver in relation to a specific cross-chain transaction.
