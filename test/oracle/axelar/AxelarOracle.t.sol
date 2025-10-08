@@ -32,8 +32,10 @@ contract AxelarOracleTest is Test {
     OutputSettlerSimple _outputSettler;
     MockERC20 _token;
 
-    string internal _destination = "ethereum-sepolia";
-    string internal _origin = "arbitrum-sepolia";
+    string internal _origin = "ethereum-sepolia";
+    uint256 internal _originChainId = 1;
+    string internal _destination = "arbitrum-sepolia";
+    uint256 internal _destinationChainId = 2;
     address internal _recipientOracle = makeAddr("axi");
     uint256 internal _gasPayment = 1e18;
     bytes32 internal _commandId = keccak256(bytes("commandId"));
@@ -44,7 +46,9 @@ contract AxelarOracleTest is Test {
 
         _axelarGateway = new MockAxelarGateway();
         _axelarGasService = new MockAxelarGasService();
-        _oracle = new AxelarOracle(address(_axelarGateway), address(_axelarGasService));
+        _oracle = new AxelarOracle(address(_axelarGateway), address(_axelarGasService), address(this));
+        _oracle.setChainMap(uint256(keccak256(abi.encodePacked(_origin))), _originChainId);
+        _oracle.setChainMap(uint256(keccak256(abi.encodePacked(_destination))), _destinationChainId);
     }
 
     function _getMandatePayload(
@@ -181,8 +185,6 @@ contract AxelarOracleTest is Test {
 
         (bytes32 application, bytes32[] memory payloadHashes) = this.getHashesOfEncodedPayloads(message);
 
-        bytes32 hashedSourceChain = keccak256(abi.encodePacked(_origin));
-        uint32 sourceChainId = uint32(uint256(hashedSourceChain) >> 224);
         address messageSender = makeAddr("messageSender");
 
         vm.prank(address(_axelarGateway));
@@ -191,7 +193,7 @@ contract AxelarOracleTest is Test {
         vm.expectRevert(IAxelarExecutable.NotApprovedByGateway.selector);
         _oracle.execute(_commandId, _origin, messageSender.toString(), message);
 
-        assertFalse(_oracle.isProven(sourceChainId, messageSender.toIdentifier(), application, payloadHashes[0]));
+        assertFalse(_oracle.isProven(_originChainId, messageSender.toIdentifier(), application, payloadHashes[0]));
     }
 
     function test_handle_works_w() external {
@@ -220,9 +222,6 @@ contract AxelarOracleTest is Test {
         bytes memory message = this.encodeMessageCalldata(address(_outputSettler).toIdentifier(), payloads);
 
         (bytes32 application, bytes32[] memory payloadHashes) = this.getHashesOfEncodedPayloads(message);
-
-        bytes32 hashedSourceChain = keccak256(abi.encodePacked(_origin));
-        uint32 sourceChainId = uint32(uint256(hashedSourceChain) >> 224);
         address messageSender = makeAddr("messageSender");
         bytes32 messageHash = keccak256(message);
 
@@ -230,11 +229,11 @@ contract AxelarOracleTest is Test {
         _axelarGateway.approveContractCall(_commandId, _origin, messageSender.toString(), messageHash);
 
         vm.expectEmit();
-        emit BaseInputOracle.OutputProven(sourceChainId, messageSender.toIdentifier(), application, payloadHashes[0]);
+        emit BaseInputOracle.OutputProven(_originChainId, messageSender.toIdentifier(), application, payloadHashes[0]);
 
         _oracle.execute(_commandId, _origin, messageSender.toString(), message);
 
-        assertTrue(_oracle.isProven(sourceChainId, messageSender.toIdentifier(), application, payloadHashes[0]));
+        assertTrue(_oracle.isProven(_originChainId, messageSender.toIdentifier(), application, payloadHashes[0]));
     }
 
     receive() external payable { }

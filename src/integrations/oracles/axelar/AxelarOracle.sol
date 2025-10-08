@@ -8,6 +8,7 @@ import { BaseInputOracle } from "../../../oracles/BaseInputOracle.sol";
 
 import { AxelarExecutable } from "./external/axelar/executable/AxelarExecutable.sol";
 
+import { ChainMap } from "../../../oracles/ChainMap.sol";
 import { IAxelarGasService } from "./external/axelar/interfaces/IAxelarGasService.sol";
 import { StringToAddress } from "./external/axelar/libs/AddressString.sol";
 
@@ -16,22 +17,19 @@ import { StringToAddress } from "./external/axelar/libs/AddressString.sol";
  * Implements a transparent oracle that allows both sending and receiving messages along with
  * exposing the hash of received messages.
  */
-contract AxelarOracle is BaseInputOracle, AxelarExecutable {
+contract AxelarOracle is AxelarExecutable, BaseInputOracle, ChainMap {
     using LibAddress for address;
     using StringToAddress for string;
 
     error NotAllPayloadsValid();
     error EmptyPayloadsNotAllowed();
 
-    // A constant is used to get the chain id from the source chain name
-    uint256 private constant BITS_TO_SHIFT_FOR_CHAIN_ID = 224; // 256 - 32
-
     IAxelarGasService public immutable gasService;
 
-    constructor(address gateway_, address gasService_) AxelarExecutable(gateway_) {
-        if (gasService_ == address(0)) revert InvalidAddress();
+    constructor(address _gateway, address _gasService, address _owner) AxelarExecutable(_gateway) ChainMap(_owner) {
+        if (_gasService == address(0)) revert InvalidAddress();
 
-        gasService = IAxelarGasService(gasService_);
+        gasService = IAxelarGasService(_gasService);
     }
 
     // --- Sending Proofs --- //
@@ -99,7 +97,7 @@ contract AxelarOracle is BaseInputOracle, AxelarExecutable {
         bytes calldata payload
     ) internal override {
         bytes32 hashedSourceChain = keccak256(abi.encodePacked(sourceChain));
-        uint32 sourceChainId = uint32(uint256(hashedSourceChain) >> BITS_TO_SHIFT_FOR_CHAIN_ID);
+        uint256 sourceChainId = _getMappedChainId(uint256(hashedSourceChain));
 
         bytes32 sourceSender = sourceAddress.toAddress().toIdentifier();
 
