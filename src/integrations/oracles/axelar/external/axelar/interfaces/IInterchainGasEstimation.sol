@@ -5,6 +5,15 @@ pragma solidity ^0.8.0;
 import { GasEstimationType, GasInfo } from "../types/GasEstimationTypes.sol";
 
 /**
+ * @notice This interface was copied from an external source.
+ * @dev Protocol: Axelar General Message Passing (GMP) SDK for Solidity
+ * @dev Source:
+ * https://github.com/axelarnetwork/axelar-gmp-sdk-solidity/blob/b3f350ba13578c835ded64f7f34b0d5adeeeeb48/contracts/interfaces/IInterchainGasEstimation.sol
+ * @dev Commit Hash: b3f350ba13578c835ded64f7f34b0d5adeeeeb48
+ * @dev Copied on: 2025-10-08
+ */
+
+/**
  * @title IInterchainGasEstimation Interface
  * @notice This is an interface for the InterchainGasEstimation contract
  * which allows for estimating gas fees for cross-chain communication on the Axelar network.

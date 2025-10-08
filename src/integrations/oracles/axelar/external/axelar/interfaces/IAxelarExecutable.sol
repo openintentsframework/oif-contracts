@@ -5,6 +5,15 @@ pragma solidity ^0.8.0;
 import { IAxelarGateway } from "./IAxelarGateway.sol";
 
 /**
+ * @notice This interface was copied from an external source.
+ * @dev Protocol: Axelar General Message Passing (GMP) SDK for Solidity
+ * @dev Source:
+ * https://github.com/axelarnetwork/axelar-gmp-sdk-solidity/blob/b3f350ba13578c835ded64f7f34b0d5adeeeeb48/contracts/interfaces/IAxelarExecutable.sol
+ * @dev Commit Hash: b3f350ba13578c835ded64f7f34b0d5adeeeeb48
+ * @dev Copied on: 2025-10-08
+ */
+
+/**
  * @title IAxelarExecutable
  * @dev Interface for a contract that is executable by Axelar Gateway's cross-chain message passing.
  * It defines a standard interface to execute commands sent from another chain.
