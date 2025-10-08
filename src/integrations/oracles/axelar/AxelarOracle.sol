@@ -10,61 +10,69 @@ import { AxelarExecutable } from "./external/axelar/executable/AxelarExecutable.
 
 import { IAxelarGasService } from "./external/axelar/interfaces/IAxelarGasService.sol";
 import { StringToAddress } from "./external/axelar/libs/AddressString.sol";
-import { Ownable } from "openzeppelin/access/Ownable.sol";
 
-contract AxelarOracle is BaseInputOracle, AxelarExecutable, Ownable {
+/**
+ * @notice Axelar Oracle.
+ * Implements a transparent oracle that allows both sending and receiving messages along with
+ * exposing the hash of received messages.
+ */
+contract AxelarOracle is BaseInputOracle, AxelarExecutable {
     using LibAddress for address;
     using StringToAddress for string;
 
     error NotAllPayloadsValid();
-    error SourceChainNotAllowed(string sourceChain);
-    error DestinationChainNotAllowed(string destinationChain);
+    error EmptyPayloadsNotAllowed();
+
+    // A constant is used to get the chain id from the source chain name
+    uint256 private constant BITS_TO_SHIFT_FOR_CHAIN_ID = 224; // 256 - 32
 
     IAxelarGasService public immutable gasService;
 
-    mapping(uint32 => bool) public allowlistedSourceChains;
-    mapping(uint32 => bool) public allowlistedDestinationChains;
+    constructor(address gateway_, address gasService_) AxelarExecutable(gateway_) {
+        if (gasService_ == address(0)) revert InvalidAddress();
 
-    constructor(address gateway_, address gasService_) AxelarExecutable(gateway_) Ownable(msg.sender) {
         gasService = IAxelarGasService(gasService_);
     }
 
-    function _execute(
-        bytes32,
-        string calldata sourceChain,
-        string calldata sourceAddress,
-        bytes calldata payload_
-    ) internal override {
-        bytes32 hashedSourceChain = keccak256(abi.encodePacked(sourceChain));
-        uint32 sourceChainId = uint32(uint256(hashedSourceChain) >> 224);
+    // --- Sending Proofs --- //
 
-        if (!allowlistedSourceChains[sourceChainId]) revert SourceChainNotAllowed(sourceChain);
-
-        bytes32 sourceSender = sourceAddress.toAddress().toIdentifier();
-
-        (bytes32 application, bytes32[] memory payloadHashes) = MessageEncodingLib.getHashesOfEncodedPayloads(payload_);
-
-        uint256 numPayloads = payloadHashes.length;
-        for (uint256 i; i < numPayloads; ++i) {
-            bytes32 payloadHash = payloadHashes[i];
-            _attestations[sourceChainId][sourceSender][application][payloadHash] = true;
-
-            emit OutputProven(sourceChainId, sourceSender, application, payloadHash);
-        }
-    }
-
+    /**
+     * @notice Takes proofs that have been marked as valid by a source and submits them to Axelar for broadcast.
+     * @param destinationChain Name of the destination chain.
+     * @param destinationAddress Address of the destination contract.
+     * @param source Application that has payloads that are marked as valid.
+     * @param payloads List of payloads to broadcast.
+     */
     function submit(
         string calldata destinationChain,
         string calldata destinationAddress,
         address source,
         bytes[] calldata payloads
     ) public payable {
+        _submit(destinationChain, destinationAddress, source, payloads);
+    }
+
+    // --- Axelar Logic --- //
+
+    /**
+     * @notice Takes proofs that have been marked as valid by a source and submits them to Axelar for broadcast.
+     * @dev A payment is required to send a cross-chain message; it can be made on either the source or destination
+     * chain, and any excess amount is refunded to msg.sender.
+     * @param destinationChain Name of the destination chain.
+     * @param destinationAddress Address of the destination contract.
+     * @param source Application that has payloads that are marked as valid.
+     * @param payloads List of payloads to broadcast.
+     */
+    function _submit(
+        string calldata destinationChain,
+        string calldata destinationAddress,
+        address source,
+        bytes[] calldata payloads
+    ) internal {
+        if (source == address(0)) revert InvalidAddress();
+        if (payloads.length == 0) revert EmptyPayloadsNotAllowed();
+
         if (!IAttester(source).hasAttested(payloads)) revert NotAllPayloadsValid();
-
-        bytes32 hashedDestinationChain = keccak256(abi.encodePacked(destinationChain));
-        uint32 destinationChainId = uint32(uint256(hashedDestinationChain) >> 224);
-
-        if (!allowlistedDestinationChains[destinationChainId]) revert DestinationChainNotAllowed(destinationChain);
 
         bytes memory message = MessageEncodingLib.encodeMessage(source.toIdentifier(), payloads);
 
@@ -75,19 +83,34 @@ contract AxelarOracle is BaseInputOracle, AxelarExecutable, Ownable {
         gateway().callContract(destinationChain, destinationAddress, message);
     }
 
-    function allowlistSourceChain(string memory sourceChain, bool allowed) external onlyOwner {
+    /**
+     * @notice Takes a Axelar message and stores attestations of the contained payloads.
+     * @dev This function is called with source chain name, but we need the chain id to store the attestations.
+     * Therefore, we hash the source chain name and shift the bits to get the chain id.
+     * However, same chain Ids may be assigned to different chain names, which can lead to collisions.
+     * @param sourceChain Name of the source chain.
+     * @param sourceAddress Address of the sender on the source chain.
+     * @param payload Payload of the message.
+     */
+    function _execute(
+        bytes32,
+        string calldata sourceChain,
+        string calldata sourceAddress,
+        bytes calldata payload
+    ) internal override {
         bytes32 hashedSourceChain = keccak256(abi.encodePacked(sourceChain));
-        uint32 sourceChainId = uint32(uint256(hashedSourceChain) >> 224);
+        uint32 sourceChainId = uint32(uint256(hashedSourceChain) >> BITS_TO_SHIFT_FOR_CHAIN_ID);
 
-        if (allowed) allowlistedSourceChains[sourceChainId] = true;
-        else delete allowlistedSourceChains[sourceChainId];
-    }
+        bytes32 sourceSender = sourceAddress.toAddress().toIdentifier();
 
-    function allowlistDestinationChain(string memory destinationChain, bool allowed) external onlyOwner {
-        bytes32 hashedDestinationChain = keccak256(abi.encodePacked(destinationChain));
-        uint32 destinationChainId = uint32(uint256(hashedDestinationChain) >> 224);
+        (bytes32 application, bytes32[] memory payloadHashes) = MessageEncodingLib.getHashesOfEncodedPayloads(payload);
 
-        if (allowed) allowlistedDestinationChains[destinationChainId] = true;
-        else delete allowlistedDestinationChains[destinationChainId];
+        uint256 numPayloads = payloadHashes.length;
+        for (uint256 i; i < numPayloads; ++i) {
+            bytes32 payloadHash = payloadHashes[i];
+            _attestations[sourceChainId][sourceSender][application][payloadHash] = true;
+
+            emit OutputProven(sourceChainId, sourceSender, application, payloadHash);
+        }
     }
 }

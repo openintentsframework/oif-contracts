@@ -4,58 +4,29 @@ pragma solidity ^0.8.22;
 
 import { Test } from "forge-std/Test.sol";
 
-import { MandateOutput } from "../../../src/input/types/MandateOutputType.sol";
+import { MandateOutput } from "src/input/types/MandateOutputType.sol";
 
-import { AxelarOracle } from "../../../src/integrations/oracles/axelar/AxelarOracle.sol";
-import { AddressToString } from "../../../src/integrations/oracles/axelar/external/axelar/libs/AddressString.sol";
-import { LibAddress } from "../../../src/libs/LibAddress.sol";
-import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
-import { MessageEncodingLib } from "../../../src/libs/MessageEncodingLib.sol";
+import { AxelarOracle } from "src/integrations/oracles/axelar/AxelarOracle.sol";
 
-import { OutputSettlerSimple } from "../../../src/output/simple/OutputSettlerSimple.sol";
-import { MockERC20 } from "../../mocks/MockERC20.sol";
+import { IAxelarExecutable } from "src/integrations/oracles/axelar/external/axelar/interfaces/IAxelarExecutable.sol";
+import { AddressToString } from "src/integrations/oracles/axelar/external/axelar/libs/AddressString.sol";
+import { MockAxelarGasService } from "src/integrations/oracles/axelar/external/axelar/mocks/MockAxelarGasService.sol";
+import { MockAxelarGateway } from "src/integrations/oracles/axelar/external/axelar/mocks/MockAxelarGateway.sol";
 
-event OutputProven(uint256 chainid, bytes32 remoteIdentifier, bytes32 application, bytes32 payloadHash);
+import { LibAddress } from "src/libs/LibAddress.sol";
+import { MandateOutputEncodingLib } from "src/libs/MandateOutputEncodingLib.sol";
+import { MessageEncodingLib } from "src/libs/MessageEncodingLib.sol";
 
-contract AxelarGatewayMock {
-    uint256 public dispatchCounter;
-
-    function callContract(string calldata, string calldata, bytes calldata) external {
-        dispatchCounter += 1;
-    }
-
-    function validateContractCall(
-        bytes32 commandId,
-        string calldata,
-        string calldata,
-        bytes32
-    ) external pure returns (bool) {
-        if (commandId == keccak256(bytes("commandId"))) return true;
-
-        return false;
-    }
-}
-
-contract AxelarGasServiceMock {
-    uint256 public dispatchCounter;
-
-    function payNativeGasForContractCall(
-        address,
-        string calldata,
-        string calldata,
-        bytes calldata,
-        address
-    ) external payable {
-        dispatchCounter += 1;
-    }
-}
+import { BaseInputOracle } from "src/oracles/BaseInputOracle.sol";
+import { OutputSettlerSimple } from "src/output/simple/OutputSettlerSimple.sol";
+import { MockERC20 } from "test/mocks/MockERC20.sol";
 
 contract AxelarOracleTest is Test {
     using LibAddress for address;
     using AddressToString for address;
 
-    AxelarGatewayMock internal _axelarGateway;
-    AxelarGasServiceMock internal _axelarGasService;
+    MockAxelarGateway internal _axelarGateway;
+    MockAxelarGasService internal _axelarGasService;
     AxelarOracle internal _oracle;
 
     OutputSettlerSimple _outputSettler;
@@ -71,12 +42,9 @@ contract AxelarOracleTest is Test {
         _outputSettler = new OutputSettlerSimple();
         _token = new MockERC20("TEST", "TEST", 18);
 
-        _axelarGateway = new AxelarGatewayMock();
-        _axelarGasService = new AxelarGasServiceMock();
+        _axelarGateway = new MockAxelarGateway();
+        _axelarGasService = new MockAxelarGasService();
         _oracle = new AxelarOracle(address(_axelarGateway), address(_axelarGasService));
-
-        _oracle.allowlistDestinationChain(_destination, true);
-        _oracle.allowlistSourceChain(_origin, true);
     }
 
     function _getMandatePayload(
@@ -142,7 +110,7 @@ contract AxelarOracleTest is Test {
         (output, payloads[0]) = _getMandatePayload(sender, amount, recipient, orderId, solverIdentifier);
 
         // Fill without submitting
-        vm.expectRevert(abi.encodeWithSignature("NotAllPayloadsValid()"));
+        vm.expectRevert(AxelarOracle.NotAllPayloadsValid.selector);
         _oracle.submit{ value: _gasPayment }(
             _destination, _recipientOracle.toString(), address(_outputSettler), payloads
         );
@@ -184,7 +152,7 @@ contract AxelarOracleTest is Test {
         vm.expectCall(
             address(_axelarGateway),
             abi.encodeWithSelector(
-                AxelarGatewayMock.callContract.selector,
+                MockAxelarGateway.callContract.selector,
                 _destination,
                 _recipientOracle.toString(),
                 this.encodeMessageCalldata(address(_outputSettler).toIdentifier(), payloads)
@@ -194,6 +162,36 @@ contract AxelarOracleTest is Test {
         _oracle.submit{ value: _gasPayment }(
             _destination, _recipientOracle.toString(), address(_outputSettler), payloads
         );
+    }
+
+    function test_handle_NotApprovedByGateway(
+        address sender,
+        uint256 amount,
+        address recipient,
+        bytes32 orderId,
+        bytes32 solverIdentifier
+    ) public {
+        vm.assume(solverIdentifier != bytes32(0) && sender != address(0) && recipient != address(0));
+
+        MandateOutput memory output;
+        bytes[] memory payloads = new bytes[](1);
+        (output, payloads[0]) = _getMandatePayload(sender, amount, recipient, orderId, solverIdentifier);
+
+        bytes memory message = this.encodeMessageCalldata(address(_outputSettler).toIdentifier(), payloads);
+
+        (bytes32 application, bytes32[] memory payloadHashes) = this.getHashesOfEncodedPayloads(message);
+
+        bytes32 hashedSourceChain = keccak256(abi.encodePacked(_origin));
+        uint32 sourceChainId = uint32(uint256(hashedSourceChain) >> 224);
+        address messageSender = makeAddr("messageSender");
+
+        vm.prank(address(_axelarGateway));
+
+        // Execute without approving the message
+        vm.expectRevert(IAxelarExecutable.NotApprovedByGateway.selector);
+        _oracle.execute(_commandId, _origin, messageSender.toString(), message);
+
+        assertFalse(_oracle.isProven(sourceChainId, messageSender.toIdentifier(), application, payloadHashes[0]));
     }
 
     function test_handle_works_w() external {
@@ -226,11 +224,14 @@ contract AxelarOracleTest is Test {
         bytes32 hashedSourceChain = keccak256(abi.encodePacked(_origin));
         uint32 sourceChainId = uint32(uint256(hashedSourceChain) >> 224);
         address messageSender = makeAddr("messageSender");
-
-        vm.expectEmit();
-        emit OutputProven(sourceChainId, messageSender.toIdentifier(), application, payloadHashes[0]);
+        bytes32 messageHash = keccak256(message);
 
         vm.prank(address(_axelarGateway));
+        _axelarGateway.approveContractCall(_commandId, _origin, messageSender.toString(), messageHash);
+
+        vm.expectEmit();
+        emit BaseInputOracle.OutputProven(sourceChainId, messageSender.toIdentifier(), application, payloadHashes[0]);
+
         _oracle.execute(_commandId, _origin, messageSender.toString(), message);
 
         assertTrue(_oracle.isProven(sourceChainId, messageSender.toIdentifier(), application, payloadHashes[0]));
