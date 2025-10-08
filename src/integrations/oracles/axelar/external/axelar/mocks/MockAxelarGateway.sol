@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 import { IAxelarGateway } from "../interfaces/IAxelarGateway.sol";
 
 /**
- * @notice This interface was copied from an external source.
+ * @notice This contract was copied from an external source.
  * @dev Protocol: Axelar General Message Passing (GMP) SDK for Solidity
  * @dev Source:
  * https://github.com/axelarnetwork/axelar-gmp-sdk-solidity/blob/b3f350ba13578c835ded64f7f34b0d5adeeeeb48/contracts/test/mocks/MockGateway.sol#L316
