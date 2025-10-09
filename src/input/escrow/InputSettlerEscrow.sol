@@ -135,6 +135,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         _validateInputChain(order.originChainId);
         _validateTimestampHasNotPassed(order.fillDeadline);
         _validateTimestampHasNotPassed(order.expires);
+        _validateFillDeadlineBeforeExpiry(order.fillDeadline, order.expires);
 
         bytes32 orderId = order.orderIdentifier();
 
@@ -190,6 +191,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         _validateInputChain(order.originChainId);
         _validateTimestampHasNotPassed(order.fillDeadline);
         _validateTimestampHasNotPassed(order.expires);
+        _validateFillDeadlineBeforeExpiry(order.fillDeadline, order.expires);
 
         bytes32 orderId = order.orderIdentifier();
 
