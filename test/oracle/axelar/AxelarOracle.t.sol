@@ -120,7 +120,7 @@ contract AxelarOracleTest is Test {
         );
     }
 
-    function test_fill_works_w() external {
+    function test_submit_works_w() external {
         test_submit_works(
             makeAddr("sender"),
             10 ** 18,
@@ -166,6 +166,7 @@ contract AxelarOracleTest is Test {
         _oracle.submit{ value: _gasPayment }(
             _destination, _recipientOracle.toString(), address(_outputSettler), payloads
         );
+        vm.snapshotGasLastCall("oracle", "axelarOracleSubmit");
     }
 
     function test_handle_NotApprovedByGateway(
@@ -196,8 +197,8 @@ contract AxelarOracleTest is Test {
         assertFalse(_oracle.isProven(_originChainId, messageSender.toIdentifier(), application, payloadHashes[0]));
     }
 
-    function test_handle_works_w() external {
-        test_handle_works(
+    function test_execute_works_w() external {
+        test_execute_works(
             makeAddr("sender"),
             10 ** 18,
             makeAddr("recipient"),
@@ -206,7 +207,7 @@ contract AxelarOracleTest is Test {
         );
     }
 
-    function test_handle_works(
+    function test_execute_works(
         address sender,
         uint256 amount,
         address recipient,
@@ -232,6 +233,7 @@ contract AxelarOracleTest is Test {
         emit BaseInputOracle.OutputProven(_originChainId, messageSender.toIdentifier(), application, payloadHashes[0]);
 
         _oracle.execute(_commandId, _origin, messageSender.toString(), message);
+        vm.snapshotGasLastCall("oracle", "axelarOracleExecute");
 
         assertTrue(_oracle.isProven(_originChainId, messageSender.toIdentifier(), application, payloadHashes[0]));
     }
