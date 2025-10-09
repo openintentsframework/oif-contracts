@@ -11,3 +11,9 @@
 	path = lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
 	branch = master
+[submodule "lib/bitcoinprism-evm"]
+	path = lib/bitcoinprism-evm
+	url = https://github.com/catalystsystem/bitcoinprism-evm
+[submodule "lib/solady"]
+	path = lib/solady
+	url = https://github.com/Vectorized/solady
