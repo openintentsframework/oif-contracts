@@ -67,6 +67,9 @@ contract OutputSettlerSimple is OutputSettlerBase {
         if (orderType == FulfilmentLib.DUTCH_AUCTION) {
             if (fulfillmentLength != 41) revert FulfilmentLib.InvalidContextDataLength();
             (uint32 startTime, uint32 stopTime, uint256 slope) = fulfilmentData.getDutchAuctionData();
+            // SECURITY WARNING: Dutch auctions in multi-output orders are vulnerable to manipulation.
+            // The first filler can wait for the price to decay before finalizing, extracting value
+            // from the time-decay mechanism. Consider using exclusive orders for Dutch auctions.
             return (solver, _dutchAuctionSlope(amount, slope, startTime, stopTime));
         }
         if (orderType == FulfilmentLib.EXCLUSIVE_LIMIT_ORDER) {
@@ -80,6 +83,8 @@ contract OutputSettlerSimple is OutputSettlerBase {
             (bytes32 exclusiveFor, uint32 startTime, uint32 stopTime, uint256 slope) =
                 fulfilmentData.getExclusiveDutchAuctionData();
             if (startTime > block.timestamp && exclusiveFor != solver) revert ExclusiveTo(exclusiveFor);
+            // Note: Exclusive Dutch auctions mitigate manipulation risks by restricting filling to
+            // specific trusted solvers, preventing first-filler exploitation of time-decay pricing.
             return (solver, _dutchAuctionSlope(amount, slope, startTime, stopTime));
         }
         revert NotImplemented();
@@ -90,6 +95,16 @@ contract OutputSettlerSimple is OutputSettlerBase {
      * @dev The auction function is fixed until x=startTime at y=minimumAmount + slope · (stopTime - startTime) then it
      * linearly decreases until x=stopTime at y=minimumAmount which it remains at.
      *  If stopTime <= startTime return minimumAmount.
+     *
+     * @dev **SECURITY CONSIDERATIONS FOR MULTI-OUTPUT ORDERS:**
+     * In multi-output orders, Dutch auctions are particularly vulnerable to manipulation:
+     * - The first filler can fill non-auction outputs immediately
+     * - Wait for auction prices to decay to their advantage
+     * - Finalize when the price is most favorable to themselves
+     * This allows extraction of value from the time-decay mechanism.
+     *
+     * **MITIGATION:** Use exclusive Dutch auctions that restrict filling to trusted solvers only.
+     *
      * @param minimumAmount After stoptime, this will be the price. The returned amount is never less.
      * @param slope Every second the auction function is decreased by the slope.
      * @param startTime Timestamp when the returned amount begins decreasing. Returns a fixed maximum amount otherwise.

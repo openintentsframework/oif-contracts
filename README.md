@@ -59,6 +59,63 @@ If an order contains multiple outputs, the **selected** solver will be the one f
 - Dutch auctions only work on the first output.
 - All Outputs may be solved atomically but in a random order. You cannot compose multiple assets into a single output call; You cannot know in which order the outputs will be filled in.
 
+## ⚠️ Multi-Output Order Security Considerations
+
+**IMPORTANT SECURITY WARNING:** Multi-output orders introduce significant risks that users must understand before creating complex orders.
+
+### First Filler Order Ownership
+
+When an order has multiple outputs, the filler of the **first output** becomes the "order owner" and gains substantial control over the order flow:
+
+1. **Exclusive Finalization Rights**: Only the first filler (order owner) can finalize the order and release input escrow funds
+2. **Solver Selection Authority**: The first filler determines which solver "wins" the entire order, even if other fillers completed subsequent outputs
+3. **Destination Control**: The first filler can choose where input funds are sent during finalization
+
+### Relevant Risks
+
+#### 1. Denial of Service (DoS) Attack
+The first filler may stall the order by:
+- Filling the first output but refusing to fill remaining outputs
+- Delaying finalization until the last moment
+- Preventing other legitimate fillers from completing their outputs
+
+**Impact**: User funds remain locked in escrow until order expiry or cancellation.
+
+**Mitigation**: Users should use **exclusive orders** with trusted fillers for multi-output scenarios.
+
+#### 2. Dutch Auction Manipulation
+For orders with Dutch auction outputs:
+- An attacker can fill the first (non-auction) output immediately
+- Wait for auction prices on later outputs to decrease over time
+- Finalize the order when auction prices are most favorable to the attacker
+- Capture the difference between the initial auction price and the final (lower) price
+
+**Impact**: Attackers can extract value from time-decay pricing mechanisms at the expense of order creators.
+
+#### 3. Solver Griefing
+The first filler can:
+- Prevent legitimate multi-solver workflows
+- Force order creators to rely on single trusted fillers
+- Create artificial scarcity in multi-output order filling
+
+### Recommendations for Users
+
+1. **Use Exclusive Orders**: When creating multi-output orders, use exclusive order types that restrict filling to specific trusted solvers
+2. **Single Output Preference**: For non-exclusive orders, prefer single-output orders to avoid ownership conflicts
+3. **Trusted Filler Relationships**: Only use multi-output orders with well-established, trusted fillers
+4. **First Output Strategy**: When multi-output orders are necessary, make the first output the most valuable/important to align incentives
+5. **Time-sensitive Orders**: For Dutch auctions, consider using exclusive orders or very short auction windows
+6. **Monitor Order Status**: Actively monitor multi-output orders and be prepared to cancel if first fillers appear malicious
+
+### Implementation Notes for Developers
+
+The order ownership mechanism is implemented in `InputSettlerPurchase._purchaseGetOrderOwner()` where the first solver in the `solveParams` array determines order ownership. This design choice prioritizes:
+- Simplicity in solver selection
+- Prevention of solver conflicts
+- Atomic batch filling capabilities
+
+However, this comes at the cost of the security considerations outlined above. Alternative designs (like multi-signature requirements or time-locked finalization) could mitigate these risks but would increase system complexity.
+
 ###  Order Purchasing / Underwriting
 
 The OIF supports underwriting. Within the contracts, this is described as order purchasing. Underwriting serves 2 purposes:

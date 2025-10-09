@@ -191,11 +191,34 @@ abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
      * - Subsequent outputs can be already filled (they are skipped)
      * - All fills in the batch succeed or the entire transaction reverts (atomicity)
      *
-     * **Solver Selection Logic:**
-     * The first output determines which solver "wins" the entire order. This prevents solver conflicts
-     * and ensures consistent solver attribution across all outputs in a multi-output order.
+     * **IMPORTANT SECURITY IMPLICATIONS - FIRST FILLER ORDER OWNERSHIP:**
+     * The first output determines which solver "wins" the entire order. This design choice gives the
+     * first filler significant control over order finalization:
+     *
+     * 1. **Order Ownership**: The first filler becomes the "order owner" with exclusive rights to:
+     *    - Finalize the order and release input escrow funds
+     *    - Choose where input funds are sent during finalization
+     *    - Control the timing of order settlement
+     *
+     * 2. **Denial of Service Risk**: The first filler can stall the order by:
+     *    - Filling the first output but refusing to fill remaining outputs
+     *    - Delaying finalization until the last moment
+     *    - Preventing other legitimate fillers from completing their outputs
+     *
+     * 3. **Dutch Auction Manipulation**: For orders with Dutch auction outputs:
+     *    - An attacker can fill the first output immediately
+     *    - Wait for auction prices on later outputs to decrease
+     *    - Finalize when prices are most favorable to themselves
+     *
+     * **RECOMMENDATIONS:**
+     * - Use exclusive orders with trusted fillers for multi-output scenarios
+     * - Make the first output the most valuable to align incentives
+     * - Monitor multi-output orders closely and be prepared to cancel if needed
+     * - Consider single-output orders when possible to avoid these risks
+     *
      * @param orderId The unique identifier of the order.
      * @param outputs Array of `MandateOutput` structs to fill
+     * @param fillDeadline The deadline for filling the order.
      * @param fillerData The solver data containing the proposed solver.
      */
     function fillOrderOutputs(
@@ -206,11 +229,18 @@ abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
     ) external payable virtual {
         if (fillDeadline < block.timestamp) revert FillDeadline();
 
+        // Fill the first output to establish order ownership
         (bytes32 fillRecordHash, bytes32 solver) = _fill(orderId, outputs[0], fillerData);
 
+        // IMPORTANT: Verify that we filled the first output with the expected solver and timestamp.
+        // This prevents race conditions where another solver filled the first output between
+        // our fill attempt and this check. The solver who fills the first output becomes the
+        // "order owner" with exclusive finalization rights.
         bytes32 expectedFillRecordHash = _getFillRecordHash(solver, uint32(block.timestamp));
         if (fillRecordHash != expectedFillRecordHash) revert AlreadyFilled();
 
+        // Fill remaining outputs - these can be filled by any solver, but the first output
+        // determines the order owner who controls finalization
         uint256 numOutputs = outputs.length;
         for (uint256 i = 1; i < numOutputs; ++i) {
             _fill(orderId, outputs[i], fillerData);

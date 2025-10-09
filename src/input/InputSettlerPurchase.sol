@@ -83,6 +83,34 @@ abstract contract InputSettlerPurchase is InputSettlerBase {
     /**
      * @notice Helper function to get the owner of order incase it may have been bought. In case an order has been
      * bought, and bought in time, the owner will be set to the purchaser. Otherwise it will be set to the solver.
+     *
+     * @dev **IMPORTANT SECURITY NOTE - FIRST SOLVER ORDER OWNERSHIP:**
+     * This function implements the "first solver wins" mechanism for multi-output orders. The solver who fills
+     * the first output (solveParams[0].solver) becomes the order owner with exclusive finalization rights.
+     *
+     * This design choice creates several security considerations:
+     *
+     * 1. **Order Ownership Control**: The first filler gains complete control over:
+     *    - When and how the order is finalized
+     *    - Where input funds are sent during finalization
+     *    - Whether other outputs get completed
+     *
+     * 2. **Denial of Service Risk**: The first filler can:
+     *    - Fill the first output but refuse to complete remaining outputs
+     *    - Delay finalization indefinitely (until expiry)
+     *    - Prevent legitimate multi-solver workflows
+     *
+     * 3. **Dutch Auction Exploitation**: For orders with Dutch auction outputs:
+     *    - An attacker can fill the first output immediately
+     *    - Wait for auction prices to decay favorably
+     *    - Finalize at the optimal time for themselves
+     *
+     * **RECOMMENDATIONS FOR ORDER CREATORS:**
+     * - Use exclusive orders with trusted fillers for multi-output scenarios
+     * - Make the first output the most valuable to align incentives
+     * - Monitor orders closely and be prepared to cancel if first fillers appear malicious
+     * - Consider single-output orders when possible to avoid these risks
+     *
      * @param orderId A unique identifier for an order.
      * @param solveParams List of solve parameters for when the outputs were filled.
      * @return orderOwner Owner of the order.
