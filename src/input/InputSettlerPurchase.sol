@@ -162,7 +162,7 @@ abstract contract InputSettlerPurchase is InputSettlerBase {
                 uint256 amountAfterDiscount = (allocatedAmount * (DISCOUNT_DENOM - discount)) / DISCOUNT_DENOM;
                 // Throws if discount > DISCOUNT_DENOM => DISCOUNT_DENOM - discount < 0;
                 SafeERC20.safeTransferFrom(
-                    IERC20(tokenId.fromIdentifier()), msg.sender, newDestination, amountAfterDiscount
+                    IERC20(tokenId.validatedCleanAddress()), msg.sender, newDestination, amountAfterDiscount
                 );
             }
             // Emit the event now because of stack issues.
