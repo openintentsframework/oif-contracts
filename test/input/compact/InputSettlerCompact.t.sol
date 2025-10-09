@@ -58,7 +58,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
             token: address(anotherToken).toIdentifier(),
             amount: amount,
             recipient: swapper.toIdentifier(),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
         StandardOrder memory order = StandardOrder({
@@ -144,7 +144,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
             token: address(anotherToken).toIdentifier(),
             amount: amount,
             recipient: swapper.toIdentifier(),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
         StandardOrder memory order = StandardOrder({
@@ -210,7 +210,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
             token: address(anotherToken).toIdentifier(),
             amount: amount,
             recipient: swapper.toIdentifier(),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
         StandardOrder memory order = StandardOrder({
@@ -287,7 +287,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
                 token: address(anotherToken).toIdentifier(),
                 amount: amount,
                 recipient: swapper.toIdentifier(),
-                call: hex"",
+                callbackData: hex"",
                 context: hex""
             });
             order = StandardOrder({

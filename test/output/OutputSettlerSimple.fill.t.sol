@@ -65,7 +65,7 @@ contract OutputSettlerSimpleTestFill is Test {
             token: bytes32(uint256(uint160(outputTokenAddress))),
             amount: amount,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -121,7 +121,7 @@ contract OutputSettlerSimpleTestFill is Test {
             token: bytes32(uint256(uint160(outputTokenAddress))),
             amount: amount,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: context
         });
 
@@ -158,7 +158,7 @@ contract OutputSettlerSimpleTestFill is Test {
             token: bytes32(uint256(uint160(outputTokenAddress))),
             amount: amount,
             recipient: bytes32(uint256(uint160(mockCallbackExecutorAddress))),
-            call: remoteCallData,
+            callbackData: remoteCallData,
             context: bytes("")
         });
         bytes memory fillerData = abi.encodePacked(filler);
@@ -242,7 +242,7 @@ contract OutputSettlerSimpleTestFill is Test {
             token: bytes32(uint256(uint160(outputTokenAddress))),
             amount: amount,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: context
         });
 
@@ -321,7 +321,7 @@ contract OutputSettlerSimpleTestFill is Test {
             token: bytes32(uint256(uint160(outputTokenAddress))),
             amount: amount,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: context
         });
 
@@ -388,7 +388,7 @@ contract OutputSettlerSimpleTestFill is Test {
             token: bytes32(uint256(uint160(outputTokenAddress))),
             amount: amount,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: context
         });
 
@@ -409,7 +409,7 @@ contract OutputSettlerSimpleTestFill is Test {
             token: bytes32(uint256(uint160(outputTokenAddress))),
             amount: 0,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -430,7 +430,7 @@ contract OutputSettlerSimpleTestFill is Test {
             token: bytes32(0),
             amount: 0,
             recipient: bytes32(0),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
         bytes memory fillerData = abi.encodePacked(filler);
@@ -452,7 +452,7 @@ contract OutputSettlerSimpleTestFill is Test {
             token: bytes32(0),
             amount: 0,
             recipient: bytes32(0),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -483,7 +483,7 @@ contract OutputSettlerSimpleTestFill is Test {
             token: bytes32(0),
             amount: 0,
             recipient: bytes32(0),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -515,7 +515,7 @@ contract OutputSettlerSimpleTestFill is Test {
             token: bytes32(uint256(uint160(outputTokenAddress))),
             amount: amount,
             recipient: bytes32(uint256(uint160(sender))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -555,7 +555,7 @@ contract OutputSettlerSimpleTestFill is Test {
             token: bytes32(uint256(uint160(outputTokenAddress))),
             amount: amount,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: outputContext
         });
 
@@ -590,7 +590,7 @@ contract OutputSettlerSimpleTestFill is Test {
             token: bytes32(0),
             amount: amount,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -626,7 +626,7 @@ contract OutputSettlerSimpleTestFill is Test {
             token: bytes32(0),
             amount: amount,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -661,7 +661,7 @@ contract OutputSettlerSimpleTestFill is Test {
             token: bytes32(0),
             amount: amount,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -688,7 +688,7 @@ contract OutputSettlerSimpleTestFill is Test {
             token: bytes32(0),
             amount: 0,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -723,7 +723,7 @@ contract OutputSettlerSimpleTestFill is Test {
             token: bytes32(0),
             amount: amount / 2,
             recipient: bytes32(uint256(uint160(sender))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -767,7 +767,7 @@ contract OutputSettlerSimpleTestFill is Test {
             token: bytes32(0),
             amount: amount,
             recipient: bytes32(uint256(uint160(mockCallbackExecutorAddress))),
-            call: callbackData,
+            callbackData: callbackData,
             context: bytes("")
         });
 
@@ -819,7 +819,7 @@ contract OutputSettlerSimpleTestFill is Test {
             token: bytes32(uint256(uint160(outputTokenAddress))),
             amount: tokenAmount,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 

@@ -114,7 +114,7 @@ contract BaseInputSettlerTest is Test {
                 token: keccak256(bytes("token")),
                 amount: 10 ** 18,
                 recipient: keccak256(bytes("recipient")),
-                call: hex"",
+                callbackData: hex"",
                 context: hex""
             })
         });
@@ -127,7 +127,7 @@ contract BaseInputSettlerTest is Test {
                 token: keccak256(bytes("token1")),
                 amount: 10 ** 12,
                 recipient: keccak256(bytes("recipient")),
-                call: hex"",
+                callbackData: hex"",
                 context: hex""
             })
         });
@@ -201,7 +201,7 @@ contract BaseInputSettlerTest is Test {
                 token: keccak256(bytes("token")),
                 amount: 10 ** 18,
                 recipient: keccak256(bytes("recipient")),
-                call: hex"",
+                callbackData: hex"",
                 context: hex""
             })
         });
@@ -215,7 +215,7 @@ contract BaseInputSettlerTest is Test {
                 token: keccak256(bytes("token1")),
                 amount: 10 ** 12,
                 recipient: keccak256(bytes("recipient")),
-                call: hex"",
+                callbackData: hex"",
                 context: hex""
             })
         });

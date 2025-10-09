@@ -246,7 +246,7 @@ contract InputSettlerCompactTestCrossChain is Test {
                     output.token,
                     output.amount,
                     output.recipient,
-                    keccak256(output.call),
+                    keccak256(output.callbackData),
                     keccak256(output.context)
                 )
             );
@@ -285,8 +285,8 @@ contract InputSettlerCompactTestCrossChain is Test {
             output.token, // token
             output.amount, // amount
             output.recipient, // recipient
-            uint16(output.call.length), // call length
-            output.call, // call
+            uint16(output.callbackData.length), // call length
+            output.callbackData, // call
             uint16(output.context.length), // context length
             output.context // context
         );
@@ -312,7 +312,7 @@ contract InputSettlerCompactTestCrossChain is Test {
             token: bytes32(tokenId),
             amount: amount,
             recipient: swapper.toIdentifier(),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
         StandardOrder memory order = StandardOrder({
@@ -382,7 +382,7 @@ contract InputSettlerCompactTestCrossChain is Test {
             token: address(anotherToken).toIdentifier(),
             amount: amount,
             recipient: swapper.toIdentifier(),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
         StandardOrder memory order = StandardOrder({
@@ -490,7 +490,7 @@ contract InputSettlerCompactTestCrossChain is Test {
             token: address(anotherToken).toIdentifier(),
             amount: amount,
             recipient: swapper.toIdentifier(),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
         outputs[1] = MandateOutput({
@@ -500,7 +500,7 @@ contract InputSettlerCompactTestCrossChain is Test {
             token: address(token).toIdentifier(),
             amount: amount,
             recipient: swapper.toIdentifier(),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
         StandardOrder memory order = StandardOrder({
@@ -548,7 +548,7 @@ contract InputSettlerCompactTestCrossChain is Test {
                 outputs[0].token,
                 outputs[0].amount,
                 outputs[0].recipient,
-                outputs[0].call,
+                outputs[0].callbackData,
                 outputs[0].context
             );
             payloads[1] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
@@ -558,7 +558,7 @@ contract InputSettlerCompactTestCrossChain is Test {
                 outputs[1].token,
                 outputs[1].amount,
                 outputs[1].recipient,
-                outputs[1].call,
+                outputs[1].callbackData,
                 outputs[1].context
             );
 

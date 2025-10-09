@@ -217,7 +217,7 @@ contract InputSettlerCompactTestBase is Test {
                     output.token,
                     output.amount,
                     output.recipient,
-                    keccak256(output.call),
+                    keccak256(output.callbackData),
                     keccak256(output.context)
                 )
             );
