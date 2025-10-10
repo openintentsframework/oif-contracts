@@ -134,7 +134,7 @@ contract CatsMulticallHandler is IInputCallback, IOutputCallback, ReentrancyGuar
         }
     }
 
-    // --- Code dedublication --- //
+    // --- Code de-duplication --- //
 
     /**
      * @notice Helper function to execute attached instructions.
