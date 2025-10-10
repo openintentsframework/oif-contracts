@@ -5,7 +5,7 @@ import { IInputOracle } from "../interfaces/IInputOracle.sol";
 import { AssemblyLib } from "../libs/AssemblyLib.sol";
 
 /**
- * @notice Base implementation for storing and exposting attesations for consumers. Maintains a storage slot which is
+ * @notice Base implementation for storing and exposing attesations for consumers. Maintains a storage slot which is
  * exposed through proving interfaces.
  */
 abstract contract BaseInputOracle is IInputOracle {
