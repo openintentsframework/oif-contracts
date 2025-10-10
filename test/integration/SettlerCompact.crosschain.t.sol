@@ -102,7 +102,7 @@ contract InputSettlerCompactTestCrossChain is Test {
         uint96 signAllocatorId = theCompact.__registerAllocator(address(simpleAllocator), "");
         signAllocatorLockTag = bytes12(signAllocatorId);
 
-        DOMAIN_SEPARATOR = EIP712(address(theCompact)).DOMAIN_SEPARATOR();
+        DOMAIN_SEPARATOR = theCompact.DOMAIN_SEPARATOR();
 
         inputSettlerCompact = address(new InputSettlerCompact(address(theCompact)));
         outputSettlerCoin = new OutputSettlerSimple();
@@ -222,12 +222,12 @@ contract InputSettlerCompactTestCrossChain is Test {
                 ),
                 order.fillDeadline,
                 order.inputOracle,
-                outputsHash(order.outputs)
+                hashOutputsForMemory(order.outputs)
             )
         );
     }
 
-    function outputsHash(
+    function hashOutputsForMemory(
         MandateOutput[] memory outputs
     ) internal pure returns (bytes32) {
         bytes32[] memory hashes = new bytes32[](outputs.length);
@@ -235,11 +235,7 @@ contract InputSettlerCompactTestCrossChain is Test {
             MandateOutput memory output = outputs[i];
             hashes[i] = keccak256(
                 abi.encode(
-                    keccak256(
-                        bytes(
-                            "MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
-                        )
-                    ),
+                    MandateOutputType.MANDATE_OUTPUT_TYPE_HASH,
                     output.oracle,
                     output.settler,
                     output.chainId,
@@ -264,7 +260,7 @@ contract InputSettlerCompactTestCrossChain is Test {
         bytes32 destination,
         bytes calldata call
     ) external view returns (bytes memory sig) {
-        bytes32 domainSeparator = EIP712(inputSettlerCompact).DOMAIN_SEPARATOR();
+        bytes32 domainSeparator = InputSettlerBase(inputSettlerCompact).DOMAIN_SEPARATOR();
         bytes32 msgHash = keccak256(
             abi.encodePacked("\x19\x01", domainSeparator, AllowOpenType.hashAllowOpen(orderId, destination, call))
         );

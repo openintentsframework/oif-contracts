@@ -12,8 +12,10 @@ import { ResetPeriod } from "the-compact/src/types/ResetPeriod.sol";
 import { Scope } from "the-compact/src/types/Scope.sol";
 
 import { InputSettlerCompact } from "../../../src/input/compact/InputSettlerCompact.sol";
+import { IInputSettlerCompact } from "../../../src/interfaces/IInputSettlerCompact.sol";
+import { InputSettlerBase } from "../../../src/input/InputSettlerBase.sol";
 import { AllowOpenType } from "../../../src/input/types/AllowOpenType.sol";
-import { MandateOutput } from "../../../src/input/types/MandateOutputType.sol";
+import { MandateOutput, MandateOutputType } from "../../../src/input/types/MandateOutputType.sol";
 import { OrderPurchase, OrderPurchaseType } from "../../../src/input/types/OrderPurchaseType.sol";
 import { StandardOrder } from "../../../src/input/types/StandardOrderType.sol";
 
@@ -88,7 +90,7 @@ contract InputSettlerCompactTestBase is Test {
         uint96 signAllocatorId = theCompact.__registerAllocator(address(simpleAllocator), "");
         signAllocatorLockTag = bytes12(signAllocatorId);
 
-        DOMAIN_SEPARATOR = EIP712(address(theCompact)).DOMAIN_SEPARATOR();
+        DOMAIN_SEPARATOR = theCompact.DOMAIN_SEPARATOR();
 
         inputSettlerCompact = address(new InputSettlerCompact(address(theCompact)));
         outputSettlerCoin = new OutputSettlerSimple();
@@ -193,12 +195,12 @@ contract InputSettlerCompactTestBase is Test {
                 ),
                 order.fillDeadline,
                 order.inputOracle,
-                outputsHash(order.outputs)
+                hashOutputsForMemory(order.outputs)
             )
         );
     }
 
-    function outputsHash(
+    function hashOutputsForMemory(
         MandateOutput[] memory outputs
     ) internal pure returns (bytes32) {
         bytes32[] memory hashes = new bytes32[](outputs.length);
@@ -206,11 +208,7 @@ contract InputSettlerCompactTestBase is Test {
             MandateOutput memory output = outputs[i];
             hashes[i] = keccak256(
                 abi.encode(
-                    keccak256(
-                        bytes(
-                            "MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
-                        )
-                    ),
+                    MandateOutputType.MANDATE_OUTPUT_TYPE_HASH,
                     output.oracle,
                     output.settler,
                     output.chainId,
@@ -253,7 +251,7 @@ contract InputSettlerCompactTestBase is Test {
         uint256 privateKey,
         OrderPurchase calldata orderPurchase
     ) external view returns (bytes memory sig) {
-        bytes32 domainSeparator = EIP712(inputSettlerCompact).DOMAIN_SEPARATOR();
+        bytes32 domainSeparator = InputSettlerBase(inputSettlerCompact).DOMAIN_SEPARATOR();
         bytes32 msgHash =
             keccak256(abi.encodePacked("\x19\x01", domainSeparator, OrderPurchaseType.hashOrderPurchase(orderPurchase)));
 
@@ -267,7 +265,7 @@ contract InputSettlerCompactTestBase is Test {
         bytes32 destination,
         bytes calldata call
     ) external view returns (bytes memory sig) {
-        bytes32 domainSeparator = EIP712(inputSettlerCompact).DOMAIN_SEPARATOR();
+        bytes32 domainSeparator = InputSettlerBase(inputSettlerCompact).DOMAIN_SEPARATOR();
         bytes32 msgHash = keccak256(
             abi.encodePacked("\x19\x01", domainSeparator, AllowOpenType.hashAllowOpen(orderId, destination, call))
         );
