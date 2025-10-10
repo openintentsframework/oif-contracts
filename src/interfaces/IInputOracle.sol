@@ -20,7 +20,7 @@ interface IInputOracle {
      * @notice Check if a series of data has been attested to.
      * @dev More efficient implementation of isProven. Does not return a boolean, instead reverts if false.
      * This function returns true if proofSeries is empty.
-     * @param proofSeries remoteChainId, remoteOracle, application, and dataHash encoded in chucks of 32*4=128 bytes.
+     * @param proofSeries remoteChainId, remoteOracle, application, and dataHash encoded in chunks of 32*4=128 bytes.
      */
     function efficientRequireProven(
         bytes calldata proofSeries
