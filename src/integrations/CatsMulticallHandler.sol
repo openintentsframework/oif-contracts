@@ -130,7 +130,9 @@ contract CatsMulticallHandler is IInputCallback, IOutputCallback, ReentrancyGuar
         // If there are leftover tokens, send them to the fallback recipient regardless of execution success.
         uint256 numInputs = inputs.length;
         for (uint256 i; i < numInputs; ++i) {
-            _drainRemainingTokens(uint256(inputs[i][0]).validatedCleanAddress(), payable(instructions.fallbackRecipient));
+            _drainRemainingTokens(
+                uint256(inputs[i][0]).validatedCleanAddress(), payable(instructions.fallbackRecipient)
+            );
         }
     }
 
