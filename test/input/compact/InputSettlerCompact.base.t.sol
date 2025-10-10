@@ -11,13 +11,13 @@ import { AlwaysOKAllocator } from "the-compact/src/test/AlwaysOKAllocator.sol";
 import { ResetPeriod } from "the-compact/src/types/ResetPeriod.sol";
 import { Scope } from "the-compact/src/types/Scope.sol";
 
-import { InputSettlerCompact } from "../../../src/input/compact/InputSettlerCompact.sol";
-import { IInputSettlerCompact } from "../../../src/interfaces/IInputSettlerCompact.sol";
 import { InputSettlerBase } from "../../../src/input/InputSettlerBase.sol";
+import { InputSettlerCompact } from "../../../src/input/compact/InputSettlerCompact.sol";
 import { AllowOpenType } from "../../../src/input/types/AllowOpenType.sol";
 import { MandateOutput, MandateOutputType } from "../../../src/input/types/MandateOutputType.sol";
 import { OrderPurchase, OrderPurchaseType } from "../../../src/input/types/OrderPurchaseType.sol";
 import { StandardOrder } from "../../../src/input/types/StandardOrderType.sol";
+import { IInputSettlerCompact } from "../../../src/interfaces/IInputSettlerCompact.sol";
 
 import { WormholeOracle } from "../../../src/integrations/oracles/wormhole/WormholeOracle.sol";
 import { Messages } from "../../../src/integrations/oracles/wormhole/external/wormhole/Messages.sol";
