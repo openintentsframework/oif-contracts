@@ -1532,7 +1532,7 @@ contract BitcoinOracleTest is Test {
         );
     }
 
-    function test_verify_after_block_sumbission(bytes32 solver, bytes32 orderId, address caller) public {
+    function test_verify_after_block_submission(bytes32 solver, bytes32 orderId, address caller) public {
         vm.assume(solver != bytes32(0));
         vm.assume(orderId != bytes32(0));
         vm.assume(caller != address(0));
