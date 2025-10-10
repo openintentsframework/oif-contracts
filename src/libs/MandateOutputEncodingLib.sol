@@ -10,7 +10,8 @@ import { MandateOutput } from "../input/types/MandateOutputType.sol";
  * encoding may be used to obtain a collision free hash to uniquely identify a MandateOutput.
  * - FillDescription serialisation to describe describe what has been filled on a output chain. Its purpose is to
  * provide a source of truth of a output action.
- * The encoding scheme uses 2 bytes long length identifiers. As a result, neither callbackData nor context exceed 65'535 bytes.
+ * The encoding scheme uses 2 bytes long length identifiers. As a result, neither callbackData nor context exceed 65'535
+ * bytes.
  *
  * Serialised MandateOutput
  *      OUTPUT_ORACLE           0               (32 bytes)
