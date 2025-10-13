@@ -47,6 +47,11 @@ contract AxelarOracle is AxelarExecutable, BaseInputOracle, ChainMap {
         address source,
         bytes[] calldata payloads
     ) public payable {
+        if (source == address(0)) revert InvalidAddress();
+        if (payloads.length == 0) revert EmptyPayloadsNotAllowed();
+
+        if (!IAttester(source).hasAttested(payloads)) revert NotAllPayloadsValid();
+
         _submit(destinationChain, destinationAddress, source, payloads);
     }
 
@@ -67,11 +72,6 @@ contract AxelarOracle is AxelarExecutable, BaseInputOracle, ChainMap {
         address source,
         bytes[] calldata payloads
     ) internal {
-        if (source == address(0)) revert InvalidAddress();
-        if (payloads.length == 0) revert EmptyPayloadsNotAllowed();
-
-        if (!IAttester(source).hasAttested(payloads)) revert NotAllPayloadsValid();
-
         bytes memory message = MessageEncodingLib.encodeMessage(source.toIdentifier(), payloads);
 
         gasService.payNativeGasForContractCall{ value: msg.value }(

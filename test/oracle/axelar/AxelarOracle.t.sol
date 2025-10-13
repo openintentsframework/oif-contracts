@@ -9,6 +9,7 @@ import { MandateOutput } from "src/input/types/MandateOutputType.sol";
 import { AxelarOracle } from "src/integrations/oracles/axelar/AxelarOracle.sol";
 
 import { IAxelarExecutable } from "src/integrations/oracles/axelar/external/axelar/interfaces/IAxelarExecutable.sol";
+import { IAxelarGasService } from "src/integrations/oracles/axelar/external/axelar/interfaces/IAxelarGasService.sol";
 import { AddressToString } from "src/integrations/oracles/axelar/external/axelar/libs/AddressString.sol";
 import { MockAxelarGasService } from "src/integrations/oracles/axelar/external/axelar/mocks/MockAxelarGasService.sol";
 import { MockAxelarGateway } from "src/integrations/oracles/axelar/external/axelar/mocks/MockAxelarGateway.sol";
@@ -100,6 +101,11 @@ contract AxelarOracleTest is Test {
         (application, payloadHashes) = MessageEncodingLib.getHashesOfEncodedPayloads(encodedMessage);
     }
 
+    function test_invalid_gas_service() public {
+        vm.expectRevert(IAxelarGasService.InvalidAddress.selector);
+        new AxelarOracle(address(_axelarGateway), address(0), address(this));
+    }
+
     function test_submit_NotAllPayloadsValid(
         address sender,
         uint256 amount,
@@ -113,8 +119,59 @@ contract AxelarOracleTest is Test {
         bytes[] memory payloads = new bytes[](1);
         (output, payloads[0]) = _getMandatePayload(sender, amount, recipient, orderId, solverIdentifier);
 
-        // Fill without submitting
         vm.expectRevert(AxelarOracle.NotAllPayloadsValid.selector);
+        _oracle.submit{ value: _gasPayment }(
+            _destination, _recipientOracle.toString(), address(_outputSettler), payloads
+        );
+    }
+
+    function test_submit_InvalidSourceAddress() public {
+        address sender = makeAddr("sender");
+        uint256 amount = 10 ** 18;
+        address recipient = makeAddr("recipient");
+        bytes32 orderId = keccak256(bytes("orderId"));
+        bytes32 solverIdentifier = keccak256(bytes("solverIdentifier"));
+
+        MandateOutput memory output;
+        bytes[] memory payloads = new bytes[](1);
+        (output, payloads[0]) = _getMandatePayload(sender, amount, recipient, orderId, solverIdentifier);
+
+        vm.expectCall(
+            address(_token),
+            abi.encodeWithSignature("transferFrom(address,address,uint256)", address(sender), recipient, amount)
+        );
+
+        bytes memory fillerData = abi.encodePacked(solverIdentifier);
+
+        vm.prank(sender);
+        _outputSettler.fill(orderId, output, type(uint48).max, fillerData);
+
+        vm.expectRevert(IAxelarGasService.InvalidAddress.selector);
+        _oracle.submit{ value: _gasPayment }(_destination, _recipientOracle.toString(), address(0), payloads);
+    }
+
+    function test_submit_EmptyPayloadsNotAllowed() public {
+        address sender = makeAddr("sender");
+        uint256 amount = 10 ** 18;
+        address recipient = makeAddr("recipient");
+        bytes32 orderId = keccak256(bytes("orderId"));
+        bytes32 solverIdentifier = keccak256(bytes("solverIdentifier"));
+
+        MandateOutput memory output;
+        bytes[] memory payloads = new bytes[](0);
+        (output,) = _getMandatePayload(sender, amount, recipient, orderId, solverIdentifier);
+
+        vm.expectCall(
+            address(_token),
+            abi.encodeWithSignature("transferFrom(address,address,uint256)", address(sender), recipient, amount)
+        );
+
+        bytes memory fillerData = abi.encodePacked(solverIdentifier);
+
+        vm.prank(sender);
+        _outputSettler.fill(orderId, output, type(uint48).max, fillerData);
+
+        vm.expectRevert(AxelarOracle.EmptyPayloadsNotAllowed.selector);
         _oracle.submit{ value: _gasPayment }(
             _destination, _recipientOracle.toString(), address(_outputSettler), payloads
         );
