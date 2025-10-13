@@ -6,7 +6,7 @@ struct OrderPurchase {
     bytes32 orderId;
     /// @dev unlike other destinations, this needs to be an external address
     address destination;
-    bytes call;
+    bytes callData;
     uint64 discount;
     /// @dev The purchaser has timeToBuy to buy the order after the order has been filled.
     uint32 timeToBuy;
@@ -20,7 +20,7 @@ struct OrderPurchase {
  */
 library OrderPurchaseType {
     bytes constant ORDER_PURCHASE_TYPE_STUB =
-        bytes("OrderPurchase(bytes32 orderId,address destination,bytes call,uint64 discount,uint32 timeToBuy)");
+        bytes("OrderPurchase(bytes32 orderId,address destination,bytes callData,uint64 discount,uint32 timeToBuy)");
 
     bytes32 constant ORDER_PURCHASE_TYPE_HASH = keccak256(ORDER_PURCHASE_TYPE_STUB);
 
@@ -37,7 +37,7 @@ library OrderPurchaseType {
                 ORDER_PURCHASE_TYPE_HASH,
                 orderPurchase.orderId,
                 orderPurchase.destination,
-                keccak256(orderPurchase.call),
+                keccak256(orderPurchase.callData),
                 orderPurchase.discount,
                 orderPurchase.timeToBuy
             )

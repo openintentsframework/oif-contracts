@@ -169,8 +169,8 @@ abstract contract InputSettlerPurchase is InputSettlerBase {
             emit OrderPurchased(orderPurchase.orderId, orderSolvedByIdentifier, purchaser);
         }
         {
-            bytes calldata call = orderPurchase.call;
-            if (call.length > 0) IInputCallback(newDestination).orderFinalised(inputs, call);
+            bytes calldata callData = orderPurchase.callData;
+            if (callData.length > 0) IInputCallback(newDestination).orderFinalised(inputs, callData);
         }
     }
 }
