@@ -35,14 +35,14 @@ import { InputSettlerBase } from "./InputSettlerBase.sol";
  * execution until expiry (when user can be refunded).
  *    - Mitigation: Users should ensure that the first output is the most important/valuable, making this attack more
  * costly.
- * 2. Exploitation of different order types: When openning orders, users are able to set different rules for filling
+ * 2. Exploitation of different order types: When opening orders, users are able to set different rules for filling
  * them, i.e., output amounts could be determined by a dutch auction. If the order has multiple outputs, the solver of
  * the first output (the owner) can optimize the filling of other outputs, which could lead to worse prices for users.
  *    - Mitigation: In general, users SHOULD NOT open orders where any output other than the first has an order type
  * whose output amount is determined by a time based mechanism.
  *
- * Users should be very careful when openning orders with multiple outputs. The general recommendation is that such
- * orders should have one output per output chain. Users should also consider openning orders with exclusivity for
+ * Users should be very careful when opening orders with multiple outputs. The general recommendation is that such
+ * orders should have one output per output chain. Users should also consider opening orders with exclusivity for
  * trusted solvers, especially when the order has multiple outputs.
  *
  * For Solvers:
