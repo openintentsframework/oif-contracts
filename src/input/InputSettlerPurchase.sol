@@ -38,8 +38,8 @@ import { InputSettlerBase } from "./InputSettlerBase.sol";
  * 2. Exploitation of different order types: When openning orders, users are able to set different rules for filling
  * them, i.e., output amounts could be determined by a dutch auction. If the order has multiple outputs, the solver of
  * the first output (the owner) can optimize the filling of other outputs, which could lead to worse prices for users.
- *    - Mitigation: In general, users SHOULD NOT open orders where any output other than the first has a order type
- * whose price is time based.
+ *    - Mitigation: In general, users SHOULD NOT open orders where any output other than the first has an order type
+ * whose output amount is determined by a time based mechanism.
  *
  * Users should be very careful when openning orders with multiple outputs. The general recommendation is that such
  * orders should have one output per output chain. Users should also consider openning orders with exclusivity for
