@@ -59,6 +59,25 @@ If an order contains multiple outputs, the **selected** solver will be the one f
 - Dutch auctions only work on the first output.
 - All Outputs may be solved atomically but in a random order. You cannot compose multiple assets into a single output call; You cannot know in which order the outputs will be filled in.
 
+### Security Considerations: First Solver Ownership
+
+**Important**: The solver filling the first output becomes the order owner and can claim funds after settlement. This creates specific risks for multi-output orders:
+
+**For Users:**
+- **DoS Risk**: First solver may refuse to fill remaining outputs, delaying execution until expiry
+  - *Mitigation*: Make the first output the most valuable
+- **Price Manipulation**: First solver can optimize other outputs, potentially worsening prices
+  - *Mitigation*: Avoid time-based mechanisms (e.g., Dutch auctions) on non-first outputs
+
+**For Solvers:**
+- **Completion Risk**: Must fill ALL outputs before `fillDeadline` and prove completion before `expiry`
+- **Callback Risk**: Arbitrary code execution during output filling may revert transactions
+  - *Mitigation*: Simulate all transactions and understand callback risks
+
+**Recommendations:**
+- Users: Use one output per chain, consider exclusivity for trusted solvers
+- Solvers: Thoroughly simulate multi-chain transactions and timing constraints
+
 ###  Order Purchasing / Underwriting
 
 The OIF supports underwriting. Within the contracts, this is described as order purchasing. Underwriting serves 2 purposes:
