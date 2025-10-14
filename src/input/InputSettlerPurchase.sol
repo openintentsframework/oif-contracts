@@ -42,7 +42,8 @@ import { InputSettlerBase } from "./InputSettlerBase.sol";
  * whose price is time based.
  *
  * Users should be very careful when openning orders with multiple outputs. The general recommendation is that such
- * orders should have one output per output chain.
+ * orders should have one output per output chain. Users should also consider openning orders with exclusivity for
+ * trusted solvers, especially when the order has multiple outputs.
  *
  * For Solvers:
  * 1. Multiple outputs risk: When filling an order, the solver MUST be aware that they will only be able to finalise the
