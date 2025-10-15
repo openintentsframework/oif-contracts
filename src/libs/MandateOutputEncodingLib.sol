@@ -10,7 +10,8 @@ import { MandateOutput } from "../input/types/MandateOutputType.sol";
  * encoding may be used to obtain a collision free hash to uniquely identify a MandateOutput.
  * - FillDescription serialisation to describe describe what has been filled on a output chain. Its purpose is to
  * provide a source of truth of a output action.
- * The encoding scheme uses 2 bytes long length identifiers. As a result, neither call nor context exceed 65'535 bytes.
+ * The encoding scheme uses 2 bytes long length identifiers. As a result, neither callbackData nor context exceed 65'535
+ * bytes.
  *
  * Serialised MandateOutput
  *      OUTPUT_ORACLE           0               (32 bytes)
@@ -49,9 +50,9 @@ library MandateOutputEncodingLib {
     function encodeMandateOutput(
         MandateOutput calldata mandateOutput
     ) internal pure returns (bytes memory encodedOutput) {
-        bytes calldata call = mandateOutput.call;
+        bytes calldata callbackData = mandateOutput.callbackData;
         bytes calldata context = mandateOutput.context;
-        if (call.length > type(uint16).max) revert CallOutOfRange();
+        if (callbackData.length > type(uint16).max) revert CallOutOfRange();
         if (context.length > type(uint16).max) revert ContextOutOfRange();
 
         return encodedOutput = abi.encodePacked(
@@ -61,8 +62,8 @@ library MandateOutputEncodingLib {
             mandateOutput.token,
             mandateOutput.amount,
             mandateOutput.recipient,
-            uint16(call.length), // To protect against data collisions
-            call,
+            uint16(callbackData.length), // To protect against data collisions
+            callbackData,
             uint16(context.length), // To protect against data collisions
             context
         );
@@ -71,9 +72,9 @@ library MandateOutputEncodingLib {
     function encodeMandateOutputMemory(
         MandateOutput memory mandateOutput
     ) internal pure returns (bytes memory encodedOutput) {
-        bytes memory call = mandateOutput.call;
+        bytes memory callbackData = mandateOutput.callbackData;
         bytes memory context = mandateOutput.context;
-        if (call.length > type(uint16).max) revert CallOutOfRange();
+        if (callbackData.length > type(uint16).max) revert CallOutOfRange();
         if (context.length > type(uint16).max) revert ContextOutOfRange();
 
         return encodedOutput = abi.encodePacked(
@@ -83,8 +84,8 @@ library MandateOutputEncodingLib {
             mandateOutput.token,
             mandateOutput.amount,
             mandateOutput.recipient,
-            uint16(call.length), // To protect against data collisions
-            call,
+            uint16(callbackData.length), // To protect against data collisions
+            callbackData,
             uint16(context.length), // To protect against data collisions
             context
         );
@@ -138,10 +139,10 @@ library MandateOutputEncodingLib {
         bytes32 token,
         uint256 amount,
         bytes32 recipient,
-        bytes calldata call,
+        bytes calldata callbackData,
         bytes calldata context
     ) internal pure returns (bytes memory encodedOutput) {
-        if (call.length > type(uint16).max) revert CallOutOfRange();
+        if (callbackData.length > type(uint16).max) revert CallOutOfRange();
         if (context.length > type(uint16).max) revert ContextOutOfRange();
 
         return encodedOutput = abi.encodePacked(
@@ -151,8 +152,8 @@ library MandateOutputEncodingLib {
             token,
             amount,
             recipient,
-            uint16(call.length), // To protect against data collisions
-            call,
+            uint16(callbackData.length), // To protect against data collisions
+            callbackData,
             uint16(context.length), // To protect against data collisions
             context
         );
@@ -168,10 +169,10 @@ library MandateOutputEncodingLib {
         bytes32 token,
         uint256 amount,
         bytes32 recipient,
-        bytes memory call,
+        bytes memory callbackData,
         bytes memory context
     ) internal pure returns (bytes memory encodedOutput) {
-        if (call.length > type(uint16).max) revert CallOutOfRange();
+        if (callbackData.length > type(uint16).max) revert CallOutOfRange();
         if (context.length > type(uint16).max) revert ContextOutOfRange();
 
         return encodedOutput = abi.encodePacked(
@@ -181,8 +182,8 @@ library MandateOutputEncodingLib {
             token,
             amount,
             recipient,
-            uint16(call.length), // To protect against data collisions
-            call,
+            uint16(callbackData.length), // To protect against data collisions
+            callbackData,
             uint16(context.length), // To protect against data collisions
             context
         );
@@ -204,7 +205,7 @@ library MandateOutputEncodingLib {
             mandateOutput.token,
             mandateOutput.amount,
             mandateOutput.recipient,
-            mandateOutput.call,
+            mandateOutput.callbackData,
             mandateOutput.context
         );
     }
@@ -222,7 +223,7 @@ library MandateOutputEncodingLib {
             mandateOutput.token,
             mandateOutput.amount,
             mandateOutput.recipient,
-            mandateOutput.call,
+            mandateOutput.callbackData,
             mandateOutput.context
         );
     }

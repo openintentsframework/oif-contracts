@@ -7,7 +7,6 @@ import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 
 import { SignatureChecker } from "openzeppelin/utils/cryptography/SignatureChecker.sol";
-import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
 import { IInputCallback } from "../interfaces/IInputCallback.sol";
 
@@ -169,8 +168,8 @@ abstract contract InputSettlerPurchase is InputSettlerBase {
             emit OrderPurchased(orderPurchase.orderId, orderSolvedByIdentifier, purchaser);
         }
         {
-            bytes calldata call = orderPurchase.call;
-            if (call.length > 0) IInputCallback(newDestination).orderFinalised(inputs, call);
+            bytes calldata callData = orderPurchase.callData;
+            if (callData.length > 0) IInputCallback(newDestination).orderFinalised(inputs, callData);
         }
     }
 }

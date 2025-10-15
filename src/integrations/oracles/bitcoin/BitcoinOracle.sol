@@ -399,7 +399,7 @@ contract BitcoinOracle is BaseInputOracle {
             inclusionProof,
             txOutIndex,
             _bitcoinScript(token, output.recipient),
-            output.call
+            output.callbackData
         );
         if (sats != output.amount) revert BadAmount(); // Exact amount is checked to protect against "double spends".
 

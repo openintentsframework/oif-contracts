@@ -5,7 +5,6 @@ import { LibAddress } from "../libs/LibAddress.sol";
 
 import { EIP712 } from "openzeppelin/utils/cryptography/EIP712.sol";
 import { SignatureChecker } from "openzeppelin/utils/cryptography/SignatureChecker.sol";
-import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
 import { IInputCallback } from "../interfaces/IInputCallback.sol";
 import { IInputOracle } from "../interfaces/IInputOracle.sol";

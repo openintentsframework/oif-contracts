@@ -139,7 +139,7 @@ abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
             );
         }
 
-        bytes calldata callbackData = output.call;
+        bytes calldata callbackData = output.callbackData;
         if (callbackData.length > 0) {
             IOutputCallback(recipient).outputFilled(tokenIdentifier, outputAmount, callbackData);
         }

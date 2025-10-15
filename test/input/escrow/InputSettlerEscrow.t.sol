@@ -330,7 +330,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
             token: address(anotherToken).toIdentifier(),
             amount: amount,
             recipient: swapper.toIdentifier(),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
         uint256[2][] memory inputs = new uint256[2][](1);
@@ -403,7 +403,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
             token: address(anotherToken).toIdentifier(),
             amount: amount,
             recipient: swapper.toIdentifier(),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
         uint256[2][] memory inputs = new uint256[2][](1);
@@ -455,7 +455,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
             token: address(anotherToken).toIdentifier(),
             amount: amount,
             recipient: swapper.toIdentifier(),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
         uint256[2][] memory inputs = new uint256[2][](1);
