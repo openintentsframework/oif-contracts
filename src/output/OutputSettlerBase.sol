@@ -47,7 +47,7 @@ import { BaseInputOracle } from "../oracles/BaseInputOracle.sol";
  * 2. Exploitation of different order types: When opening orders, users are able to set different rules for filling
  * them, i.e., output amounts could be determined by a dutch auction. If the order has multiple outputs, the solver of
  * the first output (the owner) can delay the filling of other outputs, which could lead to worse prices for users.
- *    - Mitigation: Users should be cautios when openning orders whose outputs have variable output amounts. In general,
+ *    - Mitigation: Users should be cautious when opening orders whose outputs have variable output amounts. In general,
  * users SHOULD NOT open orders where any output other than the first has an order type whose output amount is
  * determined by a time based mechanism. Note that other mechanisms can also be used to manipulate prices.
  *
