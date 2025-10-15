@@ -1,13 +1,4 @@
 {
-<<<<<<< HEAD
-  "outputSettlerCoinFill": "83343",
-  "outputSettlerCoinFillDutchAuction": "84573",
-  "outputSettlerCoinFillExclusive": "84739",
-  "outputSettlerCoinFillExclusiveDutchAuction": "85453",
-  "outputSettlerCoinFillNative": "89395",
-  "outputSettlerCoinFillOrderOutputsNative": "128935",
-  "outputSettlerCoinfillOrderOutputs": "119906"
-=======
   "outputSettlerCoinFill": "90630",
   "outputSettlerCoinFillDutchAuction": "92600",
   "outputSettlerCoinFillExclusive": "92241",
@@ -15,5 +6,4 @@
   "outputSettlerCoinFillNative": "95049",
   "outputSettlerCoinFillOrderOutputsNative": "140044",
   "outputSettlerCoinfillOrderOutputs": "134282"
->>>>>>> 107d4e13c39a965a269fb67a47e9e8feca560e58
 }
