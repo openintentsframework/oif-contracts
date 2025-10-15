@@ -513,4 +513,117 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
 
         assertEq(token.balanceOf(destination), amount);
     }
+
+    /// forge-config: default.isolate = true
+    function test_open_fill_deadline_after_expires() external {
+        uint128 amount = 10 ** 18;
+        address user = makeAddr("user");
+
+        // Set up user with tokens
+        token.mint(user, amount);
+        vm.prank(user);
+        token.approve(inputSettlerEscrow, amount);
+
+        MandateOutput[] memory outputs = new MandateOutput[](0);
+
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        // Create order where fillDeadline > expires (invalid order)
+        uint32 expires = uint32(block.timestamp + 1000);
+        uint32 fillDeadline = expires + 1; // fillDeadline is after expires
+
+        StandardOrder memory order = StandardOrder({
+            user: swapper,
+            nonce: 0,
+            originChainId: block.chainid,
+            expires: expires,
+            fillDeadline: fillDeadline,
+            inputOracle: address(0),
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        // Expect revert with FillDeadlineAfterExpiry error
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSignature("FillDeadlineAfterExpiry(uint32,uint32)", fillDeadline, expires));
+        IInputSettlerEscrow(inputSettlerEscrow).open(order);
+    }
+
+    /// forge-config: default.isolate = true
+    function test_open_for_fill_deadline_after_expires() external {
+        uint128 amount = 10 ** 18;
+        address user = makeAddr("user");
+        address sponsor = makeAddr("sponsor");
+
+        // Set up sponsor with tokens
+        token.mint(sponsor, amount);
+        vm.prank(sponsor);
+        token.approve(inputSettlerEscrow, amount);
+
+        MandateOutput[] memory outputs = new MandateOutput[](0);
+
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        // Create order where fillDeadline > expires (invalid order)
+        uint32 expires = uint32(block.timestamp + 1000);
+        uint32 fillDeadline = expires + 1; // fillDeadline is after expires
+
+        StandardOrder memory order = StandardOrder({
+            user: user,
+            nonce: 0,
+            originChainId: block.chainid,
+            expires: expires,
+            fillDeadline: fillDeadline,
+            inputOracle: address(0),
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        // Expect revert with FillDeadlineAfterExpiry error
+        vm.prank(sponsor);
+        vm.expectRevert(abi.encodeWithSignature("FillDeadlineAfterExpiry(uint32,uint32)", fillDeadline, expires));
+        IInputSettlerEscrow(inputSettlerEscrow).openFor(order, sponsor, hex"");
+    }
+
+    /// forge-config: default.isolate = true
+    function test_open_fill_deadline_equals_expires() external {
+        uint128 amount = 10 ** 18;
+        address user = makeAddr("user");
+
+        // Set up user with tokens
+        token.mint(user, amount);
+        vm.prank(user);
+        token.approve(inputSettlerEscrow, amount);
+
+        MandateOutput[] memory outputs = new MandateOutput[](0);
+
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        // Create order where fillDeadline == expires (valid order)
+        uint32 expires = uint32(block.timestamp + 1000);
+        uint32 fillDeadline = expires; // fillDeadline equals expires
+
+        StandardOrder memory order = StandardOrder({
+            user: swapper,
+            nonce: 0,
+            originChainId: block.chainid,
+            expires: expires,
+            fillDeadline: fillDeadline,
+            inputOracle: address(0),
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        // This should succeed (fillDeadline == expires is allowed)
+        vm.prank(user);
+        IInputSettlerEscrow(inputSettlerEscrow).open(order);
+
+        // Verify the order was deposited
+        bytes32 orderId = IInputSettlerEscrow(inputSettlerEscrow).orderIdentifier(order);
+        InputSettlerEscrow.OrderStatus status = InputSettlerEscrow(inputSettlerEscrow).orderStatus(orderId);
+        assertEq(uint8(status), uint8(InputSettlerEscrow.OrderStatus.Deposited));
+    }
 }

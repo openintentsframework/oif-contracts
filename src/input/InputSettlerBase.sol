@@ -53,6 +53,10 @@ abstract contract InputSettlerBase is EIP712 {
      * @dev No destination.
      */
     error NoDestination();
+    /**
+     * @dev Fill deadline is after expiry deadline.
+     */
+    error FillDeadlineAfterExpiry(uint32 fillDeadline, uint32 expires);
 
     /**
      * @notice Emitted when an order is finalised.
@@ -95,6 +99,15 @@ abstract contract InputSettlerBase is EIP712 {
         uint32 timestamp
     ) internal view {
         if (block.timestamp <= timestamp) revert TimestampNotPassed();
+    }
+
+    /**
+     * @notice Checks that fillDeadline is before or equal to expires.
+     * @param fillDeadline The fill deadline timestamp to validate.
+     * @param expires The expiry timestamp to validate against.
+     */
+    function _validateFillDeadlineBeforeExpiry(uint32 fillDeadline, uint32 expires) internal pure {
+        if (fillDeadline > expires) revert FillDeadlineAfterExpiry(fillDeadline, expires);
     }
 
     /**
