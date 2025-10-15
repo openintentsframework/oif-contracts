@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-//  To test bitcoin verification we deploy prism with the following constants.
-//  prism deployment block #858615 in BTC mainnet.
+// To test bitcoin verification we deploy prism with the following constants.
+// prism deployment block #858615 in BTC mainnet.
 
 uint120 constant BLOCK_HEIGHT = 858615;
 bytes32 constant BLOCK_HASH = 0x00000000000000000000dd1ee5ffff1b823029ccb49ad30395d085d51f531d03;
@@ -25,10 +25,10 @@ bytes constant RAW_TX =
 uint256 constant SATS_AMOUNT = 563_119;
 uint256 constant TX_OUTPUT_INDEX = 0;
 
-bytes1 constant UTXO_TYPE = 0x01; //the TX was P2PKH
+bytes1 constant UTXO_TYPE = 0x01; // the TX was P2PKH
 bytes20 constant PHASH = bytes20(0x93AB15e523955F293Df3A68029eC41E6b1ca1790);
 
-//Next block to test verification after subimssion
+// Next block to test verification after subimssion
 uint256 constant NEXT_BLOCK_HEIGHT = 858616;
 bytes constant NEXT_BLOCK_HEADER =
     hex"00000036031d531fd585d09503d39ab4cc2930821bffffe51edd00000000000000000000248874d648ad0fc9b9ddb3b6110ea45b70fb89117c016efdf948acf51b3ebd74d29bcd66763d03178e77291f";
@@ -42,7 +42,7 @@ uint256 constant NEXT_SATS_AMOUNT = 938_435;
 uint256 constant NEXT_TX_OUTPUT_INDEX = 0;
 bytes20 constant NEXT_PHASH = bytes20(0x7A8A21aA30c3dD51E071dc7B7C39024fA7b9428F);
 uint120 constant NEXT_BLOCK_TIME = 1724750802;
-bytes1 constant NEXT_UTXO_TYPE = 0x03; //the TX was P2WPKH
+bytes1 constant NEXT_UTXO_TYPE = 0x03; // the TX was P2WPKH
 
 // Transaction in block
 
@@ -59,5 +59,5 @@ bytes constant EMBEDDED_DATA_OP_RETURN_SCRIPT =
 uint256 constant EMBED_SATS_AMOUNT = 188_950;
 uint256 constant EMBED_TX_OUTPUT_INDEX = 0;
 
-bytes1 constant EMBED_UTXO_TYPE = 0x01; //the TX was P2PKH
+bytes1 constant EMBED_UTXO_TYPE = 0x01; // the TX was P2PKH
 bytes20 constant EMBED_PHASH = bytes20(0x96CE690E9cb096Ca302559821254e941bADD2033);

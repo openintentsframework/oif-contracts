@@ -26,7 +26,11 @@ contract AxelarOracle is AxelarExecutable, BaseInputOracle, ChainMap {
 
     IAxelarGasService public immutable gasService;
 
-    constructor(address _gateway, address _gasService, address _owner) AxelarExecutable(_gateway) ChainMap(_owner) {
+    constructor(
+        address _gateway,
+        address _gasService,
+        address _owner
+    ) AxelarExecutable(_gateway) ChainMap(_owner) {
         if (_gasService == address(0)) revert InvalidAddress();
 
         gasService = IAxelarGasService(_gasService);
@@ -74,9 +78,9 @@ contract AxelarOracle is AxelarExecutable, BaseInputOracle, ChainMap {
     ) internal {
         bytes memory message = MessageEncodingLib.encodeMessage(source.toIdentifier(), payloads);
 
-        gasService.payNativeGasForContractCall{ value: msg.value }(
-            address(this), destinationChain, destinationAddress, message, msg.sender
-        );
+        gasService.payNativeGasForContractCall{
+            value: msg.value
+        }(address(this), destinationChain, destinationAddress, message, msg.sender);
 
         gateway().callContract(destinationChain, destinationAddress, message);
     }

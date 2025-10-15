@@ -120,9 +120,9 @@ contract AxelarOracleTest is Test {
         (output, payloads[0]) = _getMandatePayload(sender, amount, recipient, orderId, solverIdentifier);
 
         vm.expectRevert(AxelarOracle.NotAllPayloadsValid.selector);
-        _oracle.submit{ value: _gasPayment }(
-            _destination, _recipientOracle.toString(), address(_outputSettler), payloads
-        );
+        _oracle.submit{
+            value: _gasPayment
+        }(_destination, _recipientOracle.toString(), address(_outputSettler), payloads);
     }
 
     function test_submit_InvalidSourceAddress() public {
@@ -172,9 +172,9 @@ contract AxelarOracleTest is Test {
         _outputSettler.fill(orderId, output, type(uint48).max, fillerData);
 
         vm.expectRevert(AxelarOracle.EmptyPayloadsNotAllowed.selector);
-        _oracle.submit{ value: _gasPayment }(
-            _destination, _recipientOracle.toString(), address(_outputSettler), payloads
-        );
+        _oracle.submit{
+            value: _gasPayment
+        }(_destination, _recipientOracle.toString(), address(_outputSettler), payloads);
     }
 
     function test_submit_works_w() external {
@@ -220,9 +220,9 @@ contract AxelarOracleTest is Test {
             )
         );
 
-        _oracle.submit{ value: _gasPayment }(
-            _destination, _recipientOracle.toString(), address(_outputSettler), payloads
-        );
+        _oracle.submit{
+            value: _gasPayment
+        }(_destination, _recipientOracle.toString(), address(_outputSettler), payloads);
         vm.snapshotGasLastCall("oracle", "axelarOracleSubmit");
     }
 

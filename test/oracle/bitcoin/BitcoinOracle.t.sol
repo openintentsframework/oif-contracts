@@ -81,9 +81,9 @@ contract BitcoinOracleTest is Test {
     }
 
     // --- Optimistic Component --- //
-    //  TODO: mock _resolveClaimed
+    // TODO: mock _resolveClaimed
 
-    //-- Claim
+    // -- Claim
 
     /// forge-config: default.isolate = true
     function test_claim_gas() external {
@@ -246,7 +246,7 @@ contract BitcoinOracleTest is Test {
         bitcoinOracle.claim(solver, orderId, output);
     }
 
-    //-- Dispute
+    // -- Dispute
 
     /// forge-config: default.isolate = true
     function test_dispute_gas() external {
@@ -516,7 +516,7 @@ contract BitcoinOracleTest is Test {
         bitcoinOracle.dispute(orderId, output);
     }
 
-    //-- Optimistic Verification
+    // -- Optimistic Verification
 
     /// forge-config: default.isolate = true
     function test_optimistically_verify_gas() external {
@@ -725,7 +725,7 @@ contract BitcoinOracleTest is Test {
         bitcoinOracle.optimisticallyVerify(orderId, output);
     }
 
-    //-- Finalise Dispute
+    // -- Finalise Dispute
 
     /// forge-config: default.isolate = true
     function test_finalise_dispute_gas() external {
@@ -983,7 +983,7 @@ contract BitcoinOracleTest is Test {
         // TODO: implement this check without stack too deep
         // Check that storage has been correctly updated.
         // (bytes32 solver_, uint32 claimTimestamp_, uint64 multiplier_, address sponsor_, address disputer_,) =
-        //     bitcoinOracle._claimedOrder(orderId, outputId);
+        // bitcoinOracle._claimedOrder(orderId, outputId);
 
         // assertEq(bytes32(0), solver_);
         // assertEq(0, claimTimestamp_);
@@ -1054,7 +1054,7 @@ contract BitcoinOracleTest is Test {
         // TODO: implement this check without stack too deep
         // Check that storage has been correctly updated.
         // (bytes32 solver_, uint32 claimTimestamp_, uint64 multiplier_, address sponsor_, address disputer_,) =
-        //     bitcoinOracle._claimedOrder(orderId, outputId);
+        // bitcoinOracle._claimedOrder(orderId, outputId);
 
         // assertEq(bytes32(0), solver_);
         // assertEq(0, claimTimestamp_);

@@ -24,7 +24,7 @@ abstract contract BaseInputOracle is IInputOracle {
             => mapping(bytes32 senderIdentifier => mapping(bytes32 application => mapping(bytes32 dataHash => bool)))
     ) internal _attestations;
 
-    //--- Data Attestation Validation ---//
+    // --- Data Attestation Validation ---//
 
     /**
      * @notice Check if some data has been attested to on some chain.
