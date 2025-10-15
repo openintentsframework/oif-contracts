@@ -120,20 +120,16 @@ contract BitcoinOracle is BaseInputOracle {
     ) internal pure returns (uint256) {
         unchecked {
             uint256 gammaDistribution = confirmations <= 3
-                ? (confirmations == 1 ? ONE_CONFIRMATION : (confirmations == 2 ? TWO_CONFIRMATIONS : THREE_CONFIRMATIONS))
-                : (
-                    confirmations < 8
-                        ? (
-                            confirmations == 4
+                ? (confirmations == 1
+                        ? ONE_CONFIRMATION
+                        : (confirmations == 2 ? TWO_CONFIRMATIONS : THREE_CONFIRMATIONS))
+                : (confirmations < 8
+                        ? (confirmations == 4
                                 ? FOUR_CONFIRMATIONS
-                                : (
-                                    confirmations == 5
+                                : (confirmations == 5
                                         ? FIVE_CONFIRMATIONS
-                                        : (confirmations == 6 ? SIX_CONFIRMATIONS : SEVEN_CONFIRMATIONS)
-                                )
-                        )
-                        : 181 minutes + (confirmations - 7) * TIME_PER_ADDITIONAL_CONFIRMATION
-                );
+                                        : (confirmations == 6 ? SIX_CONFIRMATIONS : SEVEN_CONFIRMATIONS)))
+                        : 181 minutes + (confirmations - 7) * TIME_PER_ADDITIONAL_CONFIRMATION);
             return gammaDistribution + LEAD_TIME;
         }
     }
@@ -256,7 +252,10 @@ contract BitcoinOracle is BaseInputOracle {
      * @param scriptHash Depending on address version is: Public key hash, script hash, or witness hash.
      * @return script Bitcoin output script.
      */
-    function _bitcoinScript(bytes32 token, bytes32 scriptHash) internal pure returns (bytes memory script) {
+    function _bitcoinScript(
+        bytes32 token,
+        bytes32 scriptHash
+    ) internal pure returns (bytes memory script) {
         if (bytes30(token) != BITCOIN_AS_TOKEN) revert BadTokenFormat();
         AddressType bitcoinAddressType = AddressType(uint8(uint256(token)));
         return BtcScript.getBitcoinScript(bitcoinAddressType, scriptHash);
@@ -556,7 +555,11 @@ contract BitcoinOracle is BaseInputOracle {
      * @param orderId Input chain order identifier.
      * @param output The output to verify.
      */
-    function claim(bytes32 solver, bytes32 orderId, MandateOutput calldata output) external {
+    function claim(
+        bytes32 solver,
+        bytes32 orderId,
+        MandateOutput calldata output
+    ) external {
         if (solver == bytes32(0)) revert ZeroValue();
         if (orderId == bytes32(0)) revert ZeroValue();
         OutputVerificationLib._isThisChain(output.chainId);
@@ -584,7 +587,10 @@ contract BitcoinOracle is BaseInputOracle {
      * @param orderId Order Identifier
      * @param output Output description of the order to dispute.
      */
-    function dispute(bytes32 orderId, MandateOutput calldata output) external {
+    function dispute(
+        bytes32 orderId,
+        MandateOutput calldata output
+    ) external {
         bytes32 outputId = _outputIdentifier(output);
 
         ClaimedOrder storage claimedOrder = _claimedOrder[orderId][outputId];
@@ -611,7 +617,10 @@ contract BitcoinOracle is BaseInputOracle {
      * @param orderId Order Identifier
      * @param output Output description of the order to dispute.
      */
-    function optimisticallyVerify(bytes32 orderId, MandateOutput calldata output) external {
+    function optimisticallyVerify(
+        bytes32 orderId,
+        MandateOutput calldata output
+    ) external {
         bytes32 outputId = _outputIdentifier(output);
 
         ClaimedOrder storage claimedOrder = _claimedOrder[orderId][outputId];
@@ -646,7 +655,10 @@ contract BitcoinOracle is BaseInputOracle {
      * @param orderId Order Identifier
      * @param output Output description of the order to dispute.
      */
-    function finaliseDispute(bytes32 orderId, MandateOutput calldata output) external {
+    function finaliseDispute(
+        bytes32 orderId,
+        MandateOutput calldata output
+    ) external {
         bytes32 outputId = _outputIdentifier(output);
 
         ClaimedOrder storage claimedOrder = _claimedOrder[orderId][outputId];

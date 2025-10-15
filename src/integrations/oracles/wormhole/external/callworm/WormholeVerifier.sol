@@ -46,7 +46,11 @@ contract WormholeVerifier is GettersGetter {
      * in the case that the vm is securely parsed and the hash field can be trusted, checkHash can be set to false
      * as the check would be redundant
      */
-    function verifyVMInternal(uint32 guardianSetIndex, bytes calldata signatures, bytes32 bodyHash) internal view {
+    function verifyVMInternal(
+        uint32 guardianSetIndex,
+        bytes calldata signatures,
+        bytes32 bodyHash
+    ) internal view {
         /// @dev Obtain the current guardianSet for the guardianSetIndex provided
         Structs.GuardianSet memory guardianSet = getGuardianSet(guardianSetIndex);
 
@@ -109,10 +113,10 @@ contract WormholeVerifier is GettersGetter {
                     // bytes32 r = bytes32(signatures[index: index + 32]);
                     r := calldataload(add(signatures.offset, index))
                     index := add(index, 0x20) // index += 32;
-                    // bytes32 s = bytes32(signatures[index: index + 32]);
+                        // bytes32 s = bytes32(signatures[index: index + 32]);
                     s := calldataload(add(signatures.offset, index))
                     index := add(index, 0x20) // index += 32;
-                    // bytes1(signatures[index:index + 1])
+                        // bytes1(signatures[index:index + 1])
                     v1 := calldataload(add(signatures.offset, index))
                     index := add(index, 0x01) // index += 1;
                 }
@@ -198,12 +202,12 @@ contract WormholeVerifier is GettersGetter {
             // }
 
             /*
-        Hash the body
+            Hash the body
 
-        SECURITY: Do not change the way the hash of a VM is computed! 
-        Changing it could result into two different hashes for the same observation. 
-        But xDapps rely on the hash of an observation for replay protection.
-        */
+            SECURITY: Do not change the way the hash of a VM is computed!
+            Changing it could result into two different hashes for the same observation.
+            But xDapps rely on the hash of an observation for replay protection.
+            */
             bytes calldata body = encodedVM[index:];
             bodyHash = keccak256(abi.encodePacked(keccak256(body)));
 

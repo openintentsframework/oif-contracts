@@ -7,7 +7,10 @@ import { BytesLib } from "../../src/libs/BytesLib.sol";
 
 contract BytesLibTest is Test {
     /// @notice Function for validation BytesLib.getLengthOfBytesArray
-    function getLengthOfBytesArray(bytes calldata _bytes, bytes[] calldata bytesArray) external pure {
+    function getLengthOfBytesArray(
+        bytes calldata _bytes,
+        bytes[] calldata bytesArray
+    ) external pure {
         uint256 length = BytesLib.getLengthOfBytesArray(_bytes);
         assertEq(length, bytesArray.length);
     }
@@ -20,7 +23,10 @@ contract BytesLibTest is Test {
     }
 
     /// @notice Function for validation BytesLib.getBytesOfArray
-    function getBytesOfArray(bytes calldata _bytes, bytes[] calldata bytesArray) external pure {
+    function getBytesOfArray(
+        bytes calldata _bytes,
+        bytes[] calldata bytesArray
+    ) external pure {
         for (uint256 i; i < bytesArray.length; ++i) {
             bytes calldata bytesArraySlice = bytesArray[i];
             bytes calldata libArraySlice = BytesLib.getBytesOfArray(_bytes, i);

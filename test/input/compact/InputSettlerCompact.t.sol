@@ -119,7 +119,11 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
         assertEq(token.balanceOf(solver), amount);
     }
 
-    function test_revert_finalise_self_too_late(address non_solver, uint32 fillDeadline, uint32 filledAt) external {
+    function test_revert_finalise_self_too_late(
+        address non_solver,
+        uint32 fillDeadline,
+        uint32 filledAt
+    ) external {
         vm.assume(non_solver != solver);
         vm.assume(fillDeadline < filledAt);
 
@@ -184,7 +188,10 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
         test_finalise_to(makeAddr("non_solver"), makeAddr("destination"));
     }
 
-    function test_finalise_to(address non_solver, address destination) public {
+    function test_finalise_to(
+        address non_solver,
+        address destination
+    ) public {
         vm.assume(destination != inputSettlerCompact);
         vm.assume(destination != address(theCompact));
         vm.assume(destination != swapper);
@@ -259,7 +266,10 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
         test_finalise_for(makeAddr("non_solver"), makeAddr("destination"));
     }
 
-    function test_finalise_for(address non_solver, address destination) public {
+    function test_finalise_for(
+        address non_solver,
+        address destination
+    ) public {
         vm.assume(destination != inputSettlerCompact);
         vm.assume(destination != address(theCompact));
         vm.assume(destination != address(swapper));
@@ -321,9 +331,8 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
             vm.expectRevert(abi.encodeWithSignature("InvalidSigner()"));
             solveParams[0] =
                 InputSettlerBase.SolveParams({ solver: solver.toIdentifier(), timestamp: uint32(block.timestamp) });
-            IInputSettlerCompact(inputSettlerCompact).finaliseWithSignature(
-                order, signature, solveParams, destination.toIdentifier(), hex"", hex""
-            );
+            IInputSettlerCompact(inputSettlerCompact)
+                .finaliseWithSignature(order, signature, solveParams, destination.toIdentifier(), hex"", hex"");
         }
         assertEq(token.balanceOf(destination), 0);
 
@@ -337,9 +346,10 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
             bytes32[] memory solvers = new bytes32[](1);
             solvers[0] = solver.toIdentifier();
             vm.prank(non_solver);
-            IInputSettlerCompact(inputSettlerCompact).finaliseWithSignature(
-                order, signature, solveParams, destination.toIdentifier(), hex"", orderOwnerSignature
-            );
+            IInputSettlerCompact(inputSettlerCompact)
+                .finaliseWithSignature(
+                    order, signature, solveParams, destination.toIdentifier(), hex"", orderOwnerSignature
+                );
         }
 
         vm.snapshotGasLastCall("inputSettler", "CompactFinaliseFor");

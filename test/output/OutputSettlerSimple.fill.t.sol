@@ -49,7 +49,12 @@ contract OutputSettlerSimpleTestFill is Test {
         test_fill(keccak256(bytes("orderId")), makeAddr("sender"), keccak256(bytes("filler")), 10 ** 18);
     }
 
-    function test_fill(bytes32 orderId, address sender, bytes32 filler, uint256 amount) public {
+    function test_fill(
+        bytes32 orderId,
+        address sender,
+        bytes32 filler,
+        uint256 amount
+    ) public {
         vm.assume(filler != bytes32(0) && swapper != sender && sender != address(0));
 
         outputToken.mint(sender, amount);
@@ -399,7 +404,10 @@ contract OutputSettlerSimpleTestFill is Test {
 
     // --- FAILURE CASES --- //
 
-    function test_fill_zero_filler(address sender, bytes32 orderId) public {
+    function test_fill_zero_filler(
+        address sender,
+        bytes32 orderId
+    ) public {
         bytes32 filler = bytes32(0);
 
         MandateOutput memory output = MandateOutput({
@@ -420,7 +428,12 @@ contract OutputSettlerSimpleTestFill is Test {
         outputSettlerCoin.fill(orderId, output, type(uint48).max, fillerData);
     }
 
-    function test_invalid_chain_id(address sender, bytes32 filler, bytes32 orderId, uint256 chainId) public {
+    function test_invalid_chain_id(
+        address sender,
+        bytes32 filler,
+        bytes32 orderId,
+        uint256 chainId
+    ) public {
         vm.assume(chainId != block.chainid);
         vm.assume(filler != bytes32(0));
         MandateOutput memory output = MandateOutput({
@@ -440,7 +453,12 @@ contract OutputSettlerSimpleTestFill is Test {
         outputSettlerCoin.fill(orderId, output, type(uint48).max, fillerData);
     }
 
-    function test_invalid_filler(address sender, bytes32 filler, bytes32 orderId, bytes32 fillerOracleBytes) public {
+    function test_invalid_filler(
+        address sender,
+        bytes32 filler,
+        bytes32 orderId,
+        bytes32 fillerOracleBytes
+    ) public {
         bytes32 outputSettlerCoinOracleBytes = bytes32(uint256(uint160(outputSettlerCoinAddress)));
 
         vm.assume(fillerOracleBytes != outputSettlerCoinOracleBytes);
@@ -573,7 +591,12 @@ contract OutputSettlerSimpleTestFill is Test {
         test_fill_native_token(keccak256(bytes("orderId")), makeAddr("sender"), keccak256(bytes("filler")), 10 ** 18);
     }
 
-    function test_fill_native_token(bytes32 orderId, address sender, bytes32 filler, uint256 amount) public {
+    function test_fill_native_token(
+        bytes32 orderId,
+        address sender,
+        bytes32 filler,
+        uint256 amount
+    ) public {
         vm.assume(
             filler != bytes32(0) && swapper != address(0) && swapper != sender && sender != address(0) && amount > 0
         );
@@ -605,7 +628,11 @@ contract OutputSettlerSimpleTestFill is Test {
         assertEq(sender.balance, 0);
     }
 
-    function test_fill_native_token_with_excess_refund(bytes32 orderId, bytes32 filler, uint256 amount) public {
+    function test_fill_native_token_with_excess_refund(
+        bytes32 orderId,
+        bytes32 filler,
+        uint256 amount
+    ) public {
         vm.assume(filler != bytes32(0));
         vm.assume(amount > 0 && amount < type(uint256).max - 1);
 
@@ -670,7 +697,10 @@ contract OutputSettlerSimpleTestFill is Test {
         outputSettlerCoin.fill{ value: sentValue }(orderId, outputStruct, type(uint48).max, fillerData);
     }
 
-    function test_fill_native_token_zero_amount(bytes32 orderId, bytes32 filler) public {
+    function test_fill_native_token_zero_amount(
+        bytes32 orderId,
+        bytes32 filler
+    ) public {
         vm.assume(filler != bytes32(0));
 
         address sender = makeAddr("sender");
