@@ -93,7 +93,11 @@ contract CatsMulticallHandler is IInputCallback, IOutputCallback, ReentrancyGuar
      * @dev Please make sure to empty the contract of tokens after your call otherwise they can be taken by someone
      * else.
      */
-    function outputFilled(bytes32 token, uint256 amount, bytes calldata executionData) external nonReentrant {
+    function outputFilled(
+        bytes32 token,
+        uint256 amount,
+        bytes calldata executionData
+    ) external nonReentrant {
         Instructions memory instructions = abi.decode(executionData, (Instructions));
 
         // Set approvals base on inputs if requested.
@@ -114,7 +118,10 @@ contract CatsMulticallHandler is IInputCallback, IOutputCallback, ReentrancyGuar
      * @dev Please make sure to empty the contract of tokens after your call otherwise they can be taken by someone
      * else.
      */
-    function orderFinalised(uint256[2][] calldata inputs, bytes calldata executionData) external nonReentrant {
+    function orderFinalised(
+        uint256[2][] calldata inputs,
+        bytes calldata executionData
+    ) external nonReentrant {
         Instructions memory instructions = abi.decode(executionData, (Instructions));
         // Set approvals base on inputs if requested.
         if (instructions.setApprovalsUsingInputsFor != address(0)) {
@@ -156,14 +163,21 @@ contract CatsMulticallHandler is IInputCallback, IOutputCallback, ReentrancyGuar
     /**
      * @notice Sets approval for a token.
      */
-    function _setApproval(address token, uint256 amount, address to) internal {
+    function _setApproval(
+        address token,
+        uint256 amount,
+        address to
+    ) internal {
         SafeERC20.forceApprove(IERC20(token), to, amount);
     }
 
     /**
      * @notice Set approvals for a list of tokens.
      */
-    function _setApprovals(uint256[2][] calldata inputs, address to) internal {
+    function _setApprovals(
+        uint256[2][] calldata inputs,
+        address to
+    ) internal {
         uint256 numInputs = inputs.length;
         for (uint256 i; i < numInputs; ++i) {
             uint256[2] calldata input = inputs[i];
@@ -178,7 +192,10 @@ contract CatsMulticallHandler is IInputCallback, IOutputCallback, ReentrancyGuar
      * @param token Token to drain
      * @param destination Target for the tokens
      */
-    function _drainRemainingTokens(address token, address payable destination) internal {
+    function _drainRemainingTokens(
+        address token,
+        address payable destination
+    ) internal {
         if (token != address(0)) {
             // ERC20 token.
             uint256 amount = IERC20(token).balanceOf(address(this));
@@ -199,7 +216,10 @@ contract CatsMulticallHandler is IInputCallback, IOutputCallback, ReentrancyGuar
     /**
      * @notice External helper to drain remaining tokens. Can be called as an instruction to empty other tokens.
      */
-    function drainLeftoverTokens(address token, address payable destination) external onlySelf {
+    function drainLeftoverTokens(
+        address token,
+        address payable destination
+    ) external onlySelf {
         _drainRemainingTokens(token, destination);
     }
 

@@ -128,7 +128,10 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
         outputSettlerCoin.fillOrderOutputs(orderId, outputs, type(uint48).max, fillerData);
     }
 
-    function test_revert_fill_batch_fillDeadline(uint24 fillDeadline, uint24 excess) public {
+    function test_revert_fill_batch_fillDeadline(
+        uint24 fillDeadline,
+        uint24 excess
+    ) public {
         bytes32 orderId = keccak256(bytes("orderId"));
         address sender = makeAddr("sender");
         bytes32 filler = keccak256(bytes("filler"));

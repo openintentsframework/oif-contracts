@@ -184,7 +184,11 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
      * - SIGNATURE_TYPE_PERMIT2:  b1:0x00 | bytes:signature
      * - SIGNATURE_TYPE_3009:     b1:0x01 | bytes:signature OR abi.encode(bytes[]:signatures)
      */
-    function openFor(StandardOrder calldata order, address sponsor, bytes calldata signature) external {
+    function openFor(
+        StandardOrder calldata order,
+        address sponsor,
+        bytes calldata signature
+    ) external {
         // Validate the order structure.
         _validateInputChain(order.originChainId);
         _validateTimestampHasNotPassed(order.fillDeadline);
@@ -261,9 +265,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
             }
         }
         ISignatureTransfer.PermitBatchTransferFrom memory permitBatch = ISignatureTransfer.PermitBatchTransferFrom({
-            permitted: permitted,
-            nonce: order.nonce,
-            deadline: order.fillDeadline
+            permitted: permitted, nonce: order.nonce, deadline: order.fillDeadline
         });
         PERMIT2.permitWitnessTransferFrom(
             permitBatch,
@@ -323,15 +325,16 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         for (uint256 i; i < numInputs; ++i) {
             uint256[2] calldata input = inputs[i];
             bytes calldata signature = BytesLib.getBytesOfArray(_signature_, i);
-            IERC3009(input[0].validatedCleanAddress()).receiveWithAuthorization({
-                from: signer,
-                to: address(this),
-                value: input[1],
-                validAfter: 0,
-                validBefore: fillDeadline,
-                nonce: orderId,
-                signature: signature
-            });
+            IERC3009(input[0].validatedCleanAddress())
+                .receiveWithAuthorization({
+                    from: signer,
+                    to: address(this),
+                    value: input[1],
+                    validAfter: 0,
+                    validBefore: fillDeadline,
+                    nonce: orderId,
+                    signature: signature
+                });
         }
     }
 

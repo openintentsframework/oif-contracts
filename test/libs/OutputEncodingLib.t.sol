@@ -176,8 +176,9 @@ contract MandateOutputEncodingLibTest is Test {
             this.encodeFillDescriptionMemoryHarness(solver, orderId, timestamp, output);
         bytes memory encodedOutput =
             this.encodeFillDescriptionHarness(solver, orderId, timestamp, token, amount, recipient, call, context);
-        bytes memory encodedOutputMemory =
-            this.encodeFillDescriptionMemoryHarness(solver, orderId, timestamp, token, amount, recipient, call, context);
+        bytes memory encodedOutputMemory = this.encodeFillDescriptionMemoryHarness(
+            solver, orderId, timestamp, token, amount, recipient, call, context
+        );
         assertEq(encodedOutputFromOutput, encodedOutputFromOutputMemory);
         assertEq(encodedOutputFromOutput, encodedOutput);
         assertEq(encodedOutput, encodedOutputMemory);
@@ -197,8 +198,9 @@ contract MandateOutputEncodingLibTest is Test {
         encodedOutputFromOutputMemory = this.encodeFillDescriptionMemoryHarness(solver, orderId, timestamp, output);
         encodedOutput =
             this.encodeFillDescriptionHarness(solver, orderId, timestamp, token, amount, recipient, call, context);
-        encodedOutputMemory =
-            this.encodeFillDescriptionMemoryHarness(solver, orderId, timestamp, token, amount, recipient, call, context);
+        encodedOutputMemory = this.encodeFillDescriptionMemoryHarness(
+            solver, orderId, timestamp, token, amount, recipient, call, context
+        );
         assertEq(encodedOutputFromOutput, encodedOutputFromOutputMemory);
         assertEq(encodedOutputFromOutput, encodedOutput);
         assertEq(encodedOutput, encodedOutputMemory);
