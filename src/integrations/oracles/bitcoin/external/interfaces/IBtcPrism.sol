@@ -37,5 +37,8 @@ interface IBtcPrism {
     /**
      * @notice Submits a new Bitcoin chain segment (80-byte headers) s
      */
-    function submit(uint256 blockHeight, bytes calldata blockHeaders) external;
+    function submit(
+        uint256 blockHeight,
+        bytes calldata blockHeaders
+    ) external;
 }

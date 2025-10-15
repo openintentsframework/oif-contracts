@@ -57,8 +57,9 @@ contract BitcoinOracleTest is Test {
 
         btcPrism = new BtcPrism(BLOCK_HEIGHT, BLOCK_HASH, BLOCK_TIME, EXPECTED_TARGET, false);
 
-        bitcoinOracle =
-            new BitcoinOracleHarness(address(btcPrism), disputedOrderFeeDestination, address(token), uint64(multiplier));
+        bitcoinOracle = new BitcoinOracleHarness(
+            address(btcPrism), disputedOrderFeeDestination, address(token), uint64(multiplier)
+        );
     }
 
     // --- Time To Confirmation --- //
@@ -89,14 +90,21 @@ contract BitcoinOracleTest is Test {
         test_claim(keccak256(bytes("solver")), keccak256(bytes("orderId")), 10 ** 18, makeAddr("caller"));
     }
 
-    function test_claim(bytes32 solver, bytes32 orderId, uint64 amount, address caller) public {
+    function test_claim(
+        bytes32 solver,
+        bytes32 orderId,
+        uint64 amount,
+        address caller
+    ) public {
         vm.assume(caller != address(bitcoinOracle) && caller != address(0));
         vm.assume(caller != address(token));
 
         MandateOutput memory output = MandateOutput({
             oracle: bytes32(uint256(uint160(address(bitcoinOracle)))),
             settler: bytes32(uint256(uint160(address(bitcoinOracle)))),
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
@@ -135,7 +143,11 @@ contract BitcoinOracleTest is Test {
         assertEq(address(0), disputer_);
     }
 
-    function test_revert_claim_solver_0(bytes32 orderId, address caller, uint64 amount) external {
+    function test_revert_claim_solver_0(
+        bytes32 orderId,
+        address caller,
+        uint64 amount
+    ) external {
         bytes32 solver = bytes32(0);
         vm.assume(orderId != bytes32(0));
         vm.assume(caller != address(bitcoinOracle) && caller != address(0));
@@ -144,7 +156,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bytes32(uint256(uint160(address(bitcoinOracle)))),
             settler: bytes32(uint256(uint160(address(bitcoinOracle)))),
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
@@ -162,7 +176,11 @@ contract BitcoinOracleTest is Test {
         bitcoinOracle.claim(solver, orderId, output);
     }
 
-    function test_revert_claim_amount_0(bytes32 solver, uint64 amount, address caller) external {
+    function test_revert_claim_amount_0(
+        bytes32 solver,
+        uint64 amount,
+        address caller
+    ) external {
         bytes32 orderId = bytes32(0);
         vm.assume(solver != bytes32(0));
         vm.assume(caller != address(bitcoinOracle) && caller != address(0));
@@ -171,7 +189,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bytes32(uint256(uint160(address(bitcoinOracle)))),
             settler: bytes32(uint256(uint160(address(bitcoinOracle)))),
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
@@ -189,7 +209,12 @@ contract BitcoinOracleTest is Test {
         bitcoinOracle.claim(solver, orderId, output);
     }
 
-    function test_revert_claim_twice(bytes32 solver, bytes32 orderId, uint64 amount, address caller) external {
+    function test_revert_claim_twice(
+        bytes32 solver,
+        bytes32 orderId,
+        uint64 amount,
+        address caller
+    ) external {
         vm.assume(solver != bytes32(0));
         vm.assume(orderId != bytes32(0));
         vm.assume(caller != address(bitcoinOracle) && caller != address(0));
@@ -198,7 +223,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bytes32(uint256(uint160(address(bitcoinOracle)))),
             settler: bytes32(uint256(uint160(address(bitcoinOracle)))),
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
@@ -228,7 +255,13 @@ contract BitcoinOracleTest is Test {
         );
     }
 
-    function test_dispute(bytes32 solver, bytes32 orderId, uint64 amount, address caller, address disputer) public {
+    function test_dispute(
+        bytes32 solver,
+        bytes32 orderId,
+        uint64 amount,
+        address caller,
+        address disputer
+    ) public {
         vm.assume(solver != bytes32(0));
         vm.assume(disputer != address(0));
         vm.assume(caller != address(0));
@@ -243,7 +276,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bytes32(uint256(uint160(address(bitcoinOracle)))),
             settler: bytes32(uint256(uint160(address(bitcoinOracle)))),
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
@@ -308,7 +343,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bytes32(uint256(uint160(address(bitcoinOracle)))),
             settler: bytes32(uint256(uint160(address(bitcoinOracle)))),
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
@@ -359,7 +396,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bytes32(uint256(uint160(address(bitcoinOracle)))),
             settler: bytes32(uint256(uint160(address(bitcoinOracle)))),
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
@@ -404,7 +443,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bytes32(uint256(uint160(address(bitcoinOracle)))),
             settler: bytes32(uint256(uint160(address(bitcoinOracle)))),
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
@@ -444,7 +485,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bytes32(uint256(uint160(address(bitcoinOracle)))),
             settler: bytes32(uint256(uint160(address(bitcoinOracle)))),
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
@@ -503,7 +546,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bytes32(uint256(uint160(address(bitcoinOracle)))),
             settler: bytes32(uint256(uint160(address(bitcoinOracle)))),
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
@@ -564,7 +609,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bytes32(uint256(uint160(address(bitcoinOracle)))),
             settler: bytes32(uint256(uint160(address(bitcoinOracle)))),
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
@@ -616,7 +663,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bytes32(uint256(uint160(address(bitcoinOracle)))),
             settler: bytes32(uint256(uint160(address(bitcoinOracle)))),
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
@@ -651,7 +700,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bytes32(uint256(uint160(address(bitcoinOracle)))),
             settler: bytes32(uint256(uint160(address(bitcoinOracle)))),
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
@@ -703,7 +754,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bytes32(uint256(uint160(address(bitcoinOracle)))),
             settler: bytes32(uint256(uint160(address(bitcoinOracle)))),
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
@@ -780,7 +833,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bytes32(uint256(uint160(address(bitcoinOracle)))),
             settler: bytes32(uint256(uint160(address(bitcoinOracle)))),
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
@@ -831,7 +886,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bytes32(uint256(uint160(address(bitcoinOracle)))),
             settler: bytes32(uint256(uint160(address(bitcoinOracle)))),
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
@@ -861,7 +918,11 @@ contract BitcoinOracleTest is Test {
         test_verify_as_filler(keccak256(bytes("solver")), keccak256(bytes("orderId")), makeAddr("caller"));
     }
 
-    function test_verify_as_filler(bytes32 solver, bytes32 orderId, address caller) public {
+    function test_verify_as_filler(
+        bytes32 solver,
+        bytes32 orderId,
+        address caller
+    ) public {
         vm.assume(solver != bytes32(0));
         vm.assume(orderId != bytes32(0));
         vm.assume(caller != address(0));
@@ -873,7 +934,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bytes32(uint256(uint160(address(this)))),
             settler: bitcoinOracleBytes32,
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
@@ -897,11 +960,7 @@ contract BitcoinOracleTest is Test {
         assertEq(token.balanceOf(caller), 0);
         {
             BtcTxProof memory inclusionProof = BtcTxProof({
-                blockHeader: BLOCK_HEADER,
-                txId: TX_ID,
-                txIndex: TX_INDEX,
-                txMerkleProof: TX_MERKLE_PROOF,
-                rawTx: RAW_TX
+                blockHeader: BLOCK_HEADER, txId: TX_ID, txIndex: TX_INDEX, txMerkleProof: TX_MERKLE_PROOF, rawTx: RAW_TX
             });
 
             bitcoinOracle.verify(orderId, output, BLOCK_HEIGHT, inclusionProof, TX_OUTPUT_INDEX);
@@ -933,7 +992,11 @@ contract BitcoinOracleTest is Test {
         // assertEq(address(0), disputer_);
     }
 
-    function test_verify_as_oracle(bytes32 solver, bytes32 orderId, address caller) public {
+    function test_verify_as_oracle(
+        bytes32 solver,
+        bytes32 orderId,
+        address caller
+    ) public {
         vm.assume(solver != bytes32(0));
         vm.assume(orderId != bytes32(0));
         vm.assume(caller != address(0));
@@ -945,7 +1008,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bitcoinOracleBytes32,
             settler: bitcoinOracleBytes32,
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
@@ -969,11 +1034,7 @@ contract BitcoinOracleTest is Test {
         assertEq(token.balanceOf(caller), 0);
         {
             BtcTxProof memory inclusionProof = BtcTxProof({
-                blockHeader: BLOCK_HEADER,
-                txId: TX_ID,
-                txIndex: TX_INDEX,
-                txMerkleProof: TX_MERKLE_PROOF,
-                rawTx: RAW_TX
+                blockHeader: BLOCK_HEADER, txId: TX_ID, txIndex: TX_INDEX, txMerkleProof: TX_MERKLE_PROOF, rawTx: RAW_TX
             });
 
             bitcoinOracle.verify(orderId, output, BLOCK_HEIGHT, inclusionProof, TX_OUTPUT_INDEX);
@@ -1024,7 +1085,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bytes32(uint256(uint160(address(this)))),
             settler: bitcoinOracleBytes32,
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
@@ -1054,11 +1117,7 @@ contract BitcoinOracleTest is Test {
         assertEq(token.balanceOf(caller), 0);
 
         BtcTxProof memory inclusionProof = BtcTxProof({
-            blockHeader: BLOCK_HEADER,
-            txId: TX_ID,
-            txIndex: TX_INDEX,
-            txMerkleProof: TX_MERKLE_PROOF,
-            rawTx: RAW_TX
+            blockHeader: BLOCK_HEADER, txId: TX_ID, txIndex: TX_INDEX, txMerkleProof: TX_MERKLE_PROOF, rawTx: RAW_TX
         });
 
         bitcoinOracle.verify(orderId, output, BLOCK_HEIGHT, inclusionProof, TX_OUTPUT_INDEX);
@@ -1092,7 +1151,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bitcoinOracleBytes32,
             settler: bitcoinOracleBytes32,
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
@@ -1122,11 +1183,7 @@ contract BitcoinOracleTest is Test {
         assertEq(token.balanceOf(caller), 0);
 
         BtcTxProof memory inclusionProof = BtcTxProof({
-            blockHeader: BLOCK_HEADER,
-            txId: TX_ID,
-            txIndex: TX_INDEX,
-            txMerkleProof: TX_MERKLE_PROOF,
-            rawTx: RAW_TX
+            blockHeader: BLOCK_HEADER, txId: TX_ID, txIndex: TX_INDEX, txMerkleProof: TX_MERKLE_PROOF, rawTx: RAW_TX
         });
 
         bitcoinOracle.verify(orderId, output, BLOCK_HEIGHT, inclusionProof, TX_OUTPUT_INDEX);
@@ -1139,7 +1196,12 @@ contract BitcoinOracleTest is Test {
         assertEq(oracleValid, true);
     }
 
-    function test_verify_after_dispute(bytes32 solver, bytes32 orderId, address caller, address disputer) external {
+    function test_verify_after_dispute(
+        bytes32 solver,
+        bytes32 orderId,
+        address caller,
+        address disputer
+    ) external {
         vm.assume(solver != bytes32(0));
         vm.assume(orderId != bytes32(0));
         vm.assume(caller != address(0));
@@ -1155,7 +1217,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bitcoinOracleBytes32,
             settler: bitcoinOracleBytes32,
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
@@ -1180,17 +1244,17 @@ contract BitcoinOracleTest is Test {
         bitcoinOracle.dispute(orderId, output);
 
         BtcTxProof memory inclusionProof = BtcTxProof({
-            blockHeader: BLOCK_HEADER,
-            txId: TX_ID,
-            txIndex: TX_INDEX,
-            txMerkleProof: TX_MERKLE_PROOF,
-            rawTx: RAW_TX
+            blockHeader: BLOCK_HEADER, txId: TX_ID, txIndex: TX_INDEX, txMerkleProof: TX_MERKLE_PROOF, rawTx: RAW_TX
         });
 
         bitcoinOracle.verify(orderId, output, BLOCK_HEIGHT, inclusionProof, TX_OUTPUT_INDEX);
     }
 
-    function test_revert_verify_no_claim(bytes32 solver, bytes32 orderId, address caller) external {
+    function test_revert_verify_no_claim(
+        bytes32 solver,
+        bytes32 orderId,
+        address caller
+    ) external {
         vm.assume(solver != bytes32(0));
         vm.assume(orderId != bytes32(0));
         vm.assume(caller != address(0));
@@ -1202,7 +1266,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bitcoinOracleBytes32,
             settler: bitcoinOracleBytes32,
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
@@ -1211,11 +1277,7 @@ contract BitcoinOracleTest is Test {
         });
 
         BtcTxProof memory inclusionProof = BtcTxProof({
-            blockHeader: BLOCK_HEADER,
-            txId: TX_ID,
-            txIndex: TX_INDEX,
-            txMerkleProof: TX_MERKLE_PROOF,
-            rawTx: RAW_TX
+            blockHeader: BLOCK_HEADER, txId: TX_ID, txIndex: TX_INDEX, txMerkleProof: TX_MERKLE_PROOF, rawTx: RAW_TX
         });
 
         vm.expectRevert(abi.encodeWithSignature("NotClaimed()"));
@@ -1227,7 +1289,11 @@ contract BitcoinOracleTest is Test {
         test_verify_embed_as_filler(keccak256(bytes("solver")), keccak256(bytes("orderId")), makeAddr("caller"));
     }
 
-    function test_verify_embed_as_filler(bytes32 solver, bytes32 orderId, address caller) public {
+    function test_verify_embed_as_filler(
+        bytes32 solver,
+        bytes32 orderId,
+        address caller
+    ) public {
         vm.assume(solver != bytes32(0));
         vm.assume(orderId != bytes32(0));
         vm.assume(caller != address(0));
@@ -1282,7 +1348,11 @@ contract BitcoinOracleTest is Test {
         assertEq(fillerValid, true);
     }
 
-    function test_verify_embed_as_oracle(bytes32 solver, bytes32 orderId, address caller) public {
+    function test_verify_embed_as_oracle(
+        bytes32 solver,
+        bytes32 orderId,
+        address caller
+    ) public {
         vm.assume(solver != bytes32(0));
         vm.assume(orderId != bytes32(0));
         vm.assume(caller != address(0));
@@ -1408,7 +1478,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bitcoinOracleBytes32,
             settler: bitcoinOracleBytes32,
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", bytes1(0x04))),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", bytes1(0x04))
+            ),
             recipient: bytes32(EMBED_PHASH),
             amount: EMBED_SATS_AMOUNT,
             chainId: uint32(block.chainid),
@@ -1436,7 +1508,11 @@ contract BitcoinOracleTest is Test {
         bitcoinOracle.verify(orderId, output, BLOCK_HEIGHT, inclusionProof, EMBED_TX_OUTPUT_INDEX);
     }
 
-    function test_verify_with_previous_block_header(bytes32 solver, bytes32 orderId, address caller) external {
+    function test_verify_with_previous_block_header(
+        bytes32 solver,
+        bytes32 orderId,
+        address caller
+    ) external {
         vm.assume(solver != bytes32(0));
         vm.assume(orderId != bytes32(0));
         vm.assume(caller != address(0));
@@ -1447,7 +1523,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bytes32(uint256(uint160(address(this)))),
             settler: bitcoinOracleBytes32,
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
@@ -1464,11 +1542,7 @@ contract BitcoinOracleTest is Test {
         bitcoinOracle.claim(solver, orderId, output);
 
         BtcTxProof memory inclusionProof = BtcTxProof({
-            blockHeader: BLOCK_HEADER,
-            txId: TX_ID,
-            txIndex: TX_INDEX,
-            txMerkleProof: TX_MERKLE_PROOF,
-            rawTx: RAW_TX
+            blockHeader: BLOCK_HEADER, txId: TX_ID, txIndex: TX_INDEX, txMerkleProof: TX_MERKLE_PROOF, rawTx: RAW_TX
         });
 
         bitcoinOracle.verify(orderId, output, BLOCK_HEIGHT, inclusionProof, TX_OUTPUT_INDEX, PREV_BLOCK_HEADER);
@@ -1497,7 +1571,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bitcoinOracleBytes32,
             settler: bitcoinOracleBytes32,
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
@@ -1514,11 +1590,7 @@ contract BitcoinOracleTest is Test {
         bitcoinOracle.claim(solver, orderId, output);
 
         BtcTxProof memory inclusionProof = BtcTxProof({
-            blockHeader: BLOCK_HEADER,
-            txId: TX_ID,
-            txIndex: TX_INDEX,
-            txMerkleProof: TX_MERKLE_PROOF,
-            rawTx: RAW_TX
+            blockHeader: BLOCK_HEADER, txId: TX_ID, txIndex: TX_INDEX, txMerkleProof: TX_MERKLE_PROOF, rawTx: RAW_TX
         });
 
         vm.expectRevert();
@@ -1532,7 +1604,11 @@ contract BitcoinOracleTest is Test {
         );
     }
 
-    function test_verify_after_block_submission(bytes32 solver, bytes32 orderId, address caller) public {
+    function test_verify_after_block_submission(
+        bytes32 solver,
+        bytes32 orderId,
+        address caller
+    ) public {
         vm.assume(solver != bytes32(0));
         vm.assume(orderId != bytes32(0));
         vm.assume(caller != address(0));
@@ -1545,7 +1621,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bytes32(uint256(uint160(address(this)))),
             settler: bitcoinOracleBytes32,
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
@@ -1562,11 +1640,7 @@ contract BitcoinOracleTest is Test {
         bitcoinOracle.claim(solver, orderId, output);
 
         BtcTxProof memory inclusionProof = BtcTxProof({
-            blockHeader: BLOCK_HEADER,
-            txId: TX_ID,
-            txIndex: TX_INDEX,
-            txMerkleProof: TX_MERKLE_PROOF,
-            rawTx: RAW_TX
+            blockHeader: BLOCK_HEADER, txId: TX_ID, txIndex: TX_INDEX, txMerkleProof: TX_MERKLE_PROOF, rawTx: RAW_TX
         });
 
         bitcoinOracle.verify(orderId, output, BLOCK_HEIGHT, inclusionProof, TX_OUTPUT_INDEX);
@@ -1582,7 +1656,11 @@ contract BitcoinOracleTest is Test {
 
     /// --- Invalid test cases --- ///
 
-    function test_revert_bitcoin_transaction_too_old(bytes32 solver, bytes32 orderId, address caller) public {
+    function test_revert_bitcoin_transaction_too_old(
+        bytes32 solver,
+        bytes32 orderId,
+        address caller
+    ) public {
         vm.assume(solver != bytes32(0));
         vm.assume(orderId != bytes32(0));
         vm.assume(caller != address(0));
@@ -1596,7 +1674,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bitcoinOracleBytes32,
             settler: bitcoinOracleBytes32,
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
@@ -1613,18 +1693,19 @@ contract BitcoinOracleTest is Test {
         bitcoinOracle.claim(solver, orderId, output);
 
         BtcTxProof memory inclusionProof = BtcTxProof({
-            blockHeader: BLOCK_HEADER,
-            txId: TX_ID,
-            txIndex: TX_INDEX,
-            txMerkleProof: TX_MERKLE_PROOF,
-            rawTx: RAW_TX
+            blockHeader: BLOCK_HEADER, txId: TX_ID, txIndex: TX_INDEX, txMerkleProof: TX_MERKLE_PROOF, rawTx: RAW_TX
         });
 
         vm.expectRevert(abi.encodeWithSignature("TooLate()"));
         bitcoinOracle.verify(orderId, output, BLOCK_HEIGHT, inclusionProof, TX_OUTPUT_INDEX);
     }
 
-    function test_revert_bad_amount(bytes32 solver, bytes32 orderId, address caller, uint64 diffAmount) public {
+    function test_revert_bad_amount(
+        bytes32 solver,
+        bytes32 orderId,
+        address caller,
+        uint64 diffAmount
+    ) public {
         vm.assume(diffAmount != 0);
 
         vm.assume(solver != bytes32(0));
@@ -1639,7 +1720,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bitcoinOracleBytes32,
             settler: bitcoinOracleBytes32,
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT + diffAmount,
             chainId: uint32(block.chainid),
@@ -1656,18 +1739,18 @@ contract BitcoinOracleTest is Test {
         bitcoinOracle.claim(solver, orderId, output);
 
         BtcTxProof memory inclusionProof = BtcTxProof({
-            blockHeader: BLOCK_HEADER,
-            txId: TX_ID,
-            txIndex: TX_INDEX,
-            txMerkleProof: TX_MERKLE_PROOF,
-            rawTx: RAW_TX
+            blockHeader: BLOCK_HEADER, txId: TX_ID, txIndex: TX_INDEX, txMerkleProof: TX_MERKLE_PROOF, rawTx: RAW_TX
         });
 
         vm.expectRevert(abi.encodeWithSignature("BadAmount()"));
         bitcoinOracle.verify(orderId, output, BLOCK_HEIGHT, inclusionProof, TX_OUTPUT_INDEX);
     }
 
-    function test_revert_block_hash_mismatch(bytes32 solver, bytes32 orderId, address caller) public {
+    function test_revert_block_hash_mismatch(
+        bytes32 solver,
+        bytes32 orderId,
+        address caller
+    ) public {
         vm.assume(solver != bytes32(0));
         vm.assume(orderId != bytes32(0));
         vm.assume(caller != address(0));
@@ -1678,7 +1761,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bitcoinOracleBytes32,
             settler: bitcoinOracleBytes32,
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
@@ -1695,11 +1780,7 @@ contract BitcoinOracleTest is Test {
         bitcoinOracle.claim(solver, orderId, output);
 
         BtcTxProof memory inclusionProof = BtcTxProof({
-            blockHeader: BLOCK_HEADER,
-            txId: TX_ID,
-            txIndex: TX_INDEX,
-            txMerkleProof: TX_MERKLE_PROOF,
-            rawTx: RAW_TX
+            blockHeader: BLOCK_HEADER, txId: TX_ID, txIndex: TX_INDEX, txMerkleProof: TX_MERKLE_PROOF, rawTx: RAW_TX
         });
 
         bytes32 expectedBlockHash = this._getBlockHashFromHeader(NEXT_BLOCK_HEADER);
@@ -1745,11 +1826,7 @@ contract BitcoinOracleTest is Test {
         bitcoinOracle.claim(solver, orderId, output);
 
         BtcTxProof memory inclusionProof = BtcTxProof({
-            blockHeader: BLOCK_HEADER,
-            txId: TX_ID,
-            txIndex: TX_INDEX,
-            txMerkleProof: TX_MERKLE_PROOF,
-            rawTx: RAW_TX
+            blockHeader: BLOCK_HEADER, txId: TX_ID, txIndex: TX_INDEX, txMerkleProof: TX_MERKLE_PROOF, rawTx: RAW_TX
         });
 
         vm.expectRevert(abi.encodeWithSignature("BadTokenFormat()"));
@@ -1774,7 +1851,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bitcoinOracleBytes32,
             settler: bitcoinOracleBytes32,
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", wrongUTXOType)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", wrongUTXOType)
+            ),
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
@@ -1791,18 +1870,18 @@ contract BitcoinOracleTest is Test {
         bitcoinOracle.claim(solver, orderId, output);
 
         BtcTxProof memory inclusionProof = BtcTxProof({
-            blockHeader: BLOCK_HEADER,
-            txId: TX_ID,
-            txIndex: TX_INDEX,
-            txMerkleProof: TX_MERKLE_PROOF,
-            rawTx: RAW_TX
+            blockHeader: BLOCK_HEADER, txId: TX_ID, txIndex: TX_INDEX, txMerkleProof: TX_MERKLE_PROOF, rawTx: RAW_TX
         });
 
         vm.expectRevert();
         bitcoinOracle.verify(orderId, output, BLOCK_HEIGHT, inclusionProof, TX_OUTPUT_INDEX);
     }
 
-    function test_revert_wrong_utxo_type_P2WPKH(bytes32 solver, bytes32 orderId, address caller) public {
+    function test_revert_wrong_utxo_type_P2WPKH(
+        bytes32 solver,
+        bytes32 orderId,
+        address caller
+    ) public {
         bytes1 wrongUTXOType = 0x03;
 
         vm.assume(solver != bytes32(0));
@@ -1815,7 +1894,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bitcoinOracleBytes32,
             settler: bitcoinOracleBytes32,
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", wrongUTXOType)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", wrongUTXOType)
+            ),
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
@@ -1832,18 +1913,19 @@ contract BitcoinOracleTest is Test {
         bitcoinOracle.claim(solver, orderId, output);
 
         BtcTxProof memory inclusionProof = BtcTxProof({
-            blockHeader: BLOCK_HEADER,
-            txId: TX_ID,
-            txIndex: TX_INDEX,
-            txMerkleProof: TX_MERKLE_PROOF,
-            rawTx: RAW_TX
+            blockHeader: BLOCK_HEADER, txId: TX_ID, txIndex: TX_INDEX, txMerkleProof: TX_MERKLE_PROOF, rawTx: RAW_TX
         });
 
         vm.expectRevert();
         bitcoinOracle.verify(orderId, output, BLOCK_HEIGHT, inclusionProof, TX_OUTPUT_INDEX);
     }
 
-    function test_revert_no_block(bytes32 solver, bytes32 orderId, address caller, uint256 blockHeight) public {
+    function test_revert_no_block(
+        bytes32 solver,
+        bytes32 orderId,
+        address caller,
+        uint256 blockHeight
+    ) public {
         vm.assume(blockHeight > BLOCK_HEIGHT);
 
         vm.assume(solver != bytes32(0));
@@ -1856,7 +1938,9 @@ contract BitcoinOracleTest is Test {
         MandateOutput memory output = MandateOutput({
             oracle: bitcoinOracleBytes32,
             settler: bitcoinOracleBytes32,
-            token: bytes32(bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
@@ -1873,11 +1957,7 @@ contract BitcoinOracleTest is Test {
         bitcoinOracle.claim(solver, orderId, output);
 
         BtcTxProof memory inclusionProof = BtcTxProof({
-            blockHeader: BLOCK_HEADER,
-            txId: TX_ID,
-            txIndex: TX_INDEX,
-            txMerkleProof: TX_MERKLE_PROOF,
-            rawTx: RAW_TX
+            blockHeader: BLOCK_HEADER, txId: TX_ID, txIndex: TX_INDEX, txMerkleProof: TX_MERKLE_PROOF, rawTx: RAW_TX
         });
 
         vm.expectRevert(abi.encodeWithSignature("NoBlock(uint256,uint256)", BLOCK_HEIGHT, blockHeight));
@@ -1903,7 +1983,9 @@ contract BitcoinOracleTest is Test {
             oracle: bitcoinOracleBytes32,
             settler: bitcoinOracleBytes32,
             token: bytes32(
-                bytes.concat(hex"000000000000000000000000BC0000000000000000000000000000000000", confirmations, UTXO_TYPE)
+                bytes.concat(
+                    hex"000000000000000000000000BC0000000000000000000000000000000000", confirmations, UTXO_TYPE
+                )
             ),
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
@@ -1921,11 +2003,7 @@ contract BitcoinOracleTest is Test {
         bitcoinOracle.claim(solver, orderId, output);
 
         BtcTxProof memory inclusionProof = BtcTxProof({
-            blockHeader: BLOCK_HEADER,
-            txId: TX_ID,
-            txIndex: TX_INDEX,
-            txMerkleProof: TX_MERKLE_PROOF,
-            rawTx: RAW_TX
+            blockHeader: BLOCK_HEADER, txId: TX_ID, txIndex: TX_INDEX, txMerkleProof: TX_MERKLE_PROOF, rawTx: RAW_TX
         });
 
         vm.expectRevert(

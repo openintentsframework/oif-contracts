@@ -9,7 +9,10 @@ library BytesLib {
      * @param _bytes Calldata reference.
      * @param offset Offset for bytes array.
      */
-    function toBytes(bytes calldata _bytes, uint256 offset) internal pure returns (bytes calldata res) {
+    function toBytes(
+        bytes calldata _bytes,
+        uint256 offset
+    ) internal pure returns (bytes calldata res) {
         assembly ("memory-safe") {
             let lengthPtr := add(_bytes.offset, calldataload(add(_bytes.offset, offset)))
             res.offset := add(lengthPtr, 0x20)
@@ -38,7 +41,10 @@ library BytesLib {
      * @param offset index to select the bytes at
      * @return res bytes of bytes[] indexed at offset.
      */
-    function getBytesOfArray(bytes calldata _bytes, uint256 offset) internal pure returns (bytes calldata res) {
+    function getBytesOfArray(
+        bytes calldata _bytes,
+        uint256 offset
+    ) internal pure returns (bytes calldata res) {
         assembly ("memory-safe") {
             let pointerOfBytesArray := add(_bytes.offset, calldataload(_bytes.offset))
             let pointerOfBytes :=

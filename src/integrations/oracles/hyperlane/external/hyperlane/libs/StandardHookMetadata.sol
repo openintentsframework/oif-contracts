@@ -62,7 +62,10 @@ library StandardHookMetadata {
      * @param _default Default fallback value.
      * @return Value for the message as uint256.
      */
-    function msgValue(bytes calldata _metadata, uint256 _default) internal pure returns (uint256) {
+    function msgValue(
+        bytes calldata _metadata,
+        uint256 _default
+    ) internal pure returns (uint256) {
         if (_metadata.length < MSG_VALUE_OFFSET + 32) return _default;
         return uint256(bytes32(_metadata[MSG_VALUE_OFFSET:MSG_VALUE_OFFSET + 32]));
     }
@@ -73,7 +76,10 @@ library StandardHookMetadata {
      * @param _default Default fallback gas limit.
      * @return Gas limit for the message as uint256.
      */
-    function gasLimit(bytes calldata _metadata, uint256 _default) internal pure returns (uint256) {
+    function gasLimit(
+        bytes calldata _metadata,
+        uint256 _default
+    ) internal pure returns (uint256) {
         if (_metadata.length < GAS_LIMIT_OFFSET + 32) return _default;
         return uint256(bytes32(_metadata[GAS_LIMIT_OFFSET:GAS_LIMIT_OFFSET + 32]));
     }
@@ -93,7 +99,10 @@ library StandardHookMetadata {
      * @param _default Default fallback refund address.
      * @return Refund address for the message as address.
      */
-    function refundAddress(bytes calldata _metadata, address _default) internal pure returns (address) {
+    function refundAddress(
+        bytes calldata _metadata,
+        address _default
+    ) internal pure returns (address) {
         if (_metadata.length < REFUND_ADDRESS_OFFSET + 20) return _default;
         return address(bytes20(_metadata[REFUND_ADDRESS_OFFSET:REFUND_ADDRESS_OFFSET + 20]));
     }
@@ -176,7 +185,10 @@ library StandardHookMetadata {
         return formatMetadata(uint256(0), uint256(0), _refundAddress, "");
     }
 
-    function getRefundAddress(bytes memory _metadata, address _default) internal pure returns (address) {
+    function getRefundAddress(
+        bytes memory _metadata,
+        address _default
+    ) internal pure returns (address) {
         if (_metadata.length < REFUND_ADDRESS_OFFSET + 20) return _default;
         address result;
         assembly {

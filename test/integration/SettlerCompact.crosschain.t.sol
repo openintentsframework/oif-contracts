@@ -46,7 +46,10 @@ interface ImmutableCreate2Factory {
 event PackagePublished(uint32 nonce, bytes payload, uint8 consistencyLevel);
 
 contract ExportedMessages is Messages, Setters {
-    function storeGuardianSetPub(Structs.GuardianSet memory set, uint32 index) public {
+    function storeGuardianSetPub(
+        Structs.GuardianSet memory set,
+        uint32 index
+    ) public {
         return super.storeGuardianSet(set, index);
     }
 
@@ -250,7 +253,10 @@ contract InputSettlerCompactTestCrossChain is Test {
         return keccak256(abi.encodePacked(hashes));
     }
 
-    function encodeMessage(bytes32 remoteIdentifier, bytes[] calldata payloads) external pure returns (bytes memory) {
+    function encodeMessage(
+        bytes32 remoteIdentifier,
+        bytes[] calldata payloads
+    ) external pure returns (bytes memory) {
         return MessageEncodingLib.encodeMessage(remoteIdentifier, payloads);
     }
 
@@ -578,9 +584,8 @@ contract InputSettlerCompactTestCrossChain is Test {
                 InputSettlerBase.SolveParams({ solver: solverIdentifier, timestamp: uint32(block.timestamp) });
             solveParams[1] =
                 InputSettlerBase.SolveParams({ solver: solverIdentifier, timestamp: uint32(block.timestamp) });
-            IInputSettlerCompact(inputSettlerCompact).finalise(
-                order, signature, solveParams, solveParams[0].solver, hex""
-            );
+            IInputSettlerCompact(inputSettlerCompact)
+                .finalise(order, signature, solveParams, solveParams[0].solver, hex"");
         }
 
         {
@@ -600,8 +605,7 @@ contract InputSettlerCompactTestCrossChain is Test {
         );
 
         vm.prank(solver);
-        IInputSettlerCompact(inputSettlerCompact).finaliseWithSignature(
-            order, signature, solveParams, solverIdentifier, hex"", solverSignature
-        );
+        IInputSettlerCompact(inputSettlerCompact)
+            .finaliseWithSignature(order, signature, solveParams, solverIdentifier, hex"", solverSignature);
     }
 }

@@ -20,10 +20,9 @@ enum LightClientType {
     SimTestLightClient, // Note: not deployed on any mainnets
     OptimisticLightClient, // Our native opstack light client
     SequencerLightClient, // Our native sequencer light client, which does not check l1 origin check to cut down on
-    // latency
+        // latency
     ReOrgResistantSequencerLightClient // Our native sequencer light client, which checks for l1 origin checks to be
         // re-org resistant
-
 }
 
 interface IClientUpdates {
@@ -36,7 +35,11 @@ interface IClientUpdates {
      * interface.
      * @param appHash App hash (state root) to be verified
      */
-    function updateClient(bytes calldata proof, uint256 height, uint256 appHash) external;
+    function updateClient(
+        bytes calldata proof,
+        uint256 height,
+        uint256 appHash
+    ) external;
 
     /*
     * Returns the type of the light client, useful for relayers to know which light client implementation is at which

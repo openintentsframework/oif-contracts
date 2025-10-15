@@ -78,14 +78,15 @@ library RLPReader {
         uint256 offset = listOffset;
         while (offset < _in.length) {
             (uint256 itemOffset, uint256 itemLength,) = _decodeLength(
-                RLPItem({ length: _in.length - offset, ptr: MemoryPointer.wrap(MemoryPointer.unwrap(_in.ptr) + offset) })
+                RLPItem({
+                    length: _in.length - offset, ptr: MemoryPointer.wrap(MemoryPointer.unwrap(_in.ptr) + offset)
+                })
             );
 
             // We don't need to check itemCount < out.length explicitly because Solidity already
             // handles this check on our behalf, we'd just be wasting gas.
             out_[itemCount] = RLPItem({
-                length: itemLength + itemOffset,
-                ptr: MemoryPointer.wrap(MemoryPointer.unwrap(_in.ptr) + offset)
+                length: itemLength + itemOffset, ptr: MemoryPointer.wrap(MemoryPointer.unwrap(_in.ptr) + offset)
             });
 
             itemCount += 1;
@@ -240,7 +241,11 @@ library RLPReader {
     /// @param _offset Offset to start reading from.
     /// @param _length Number of bytes to read.
     /// @return out_ Copied bytes.
-    function _copy(MemoryPointer _src, uint256 _offset, uint256 _length) private pure returns (bytes memory out_) {
+    function _copy(
+        MemoryPointer _src,
+        uint256 _offset,
+        uint256 _length
+    ) private pure returns (bytes memory out_) {
         out_ = new bytes(_length);
         if (_length == 0) return out_;
 

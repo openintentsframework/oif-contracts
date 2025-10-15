@@ -104,9 +104,7 @@ contract CatsMulticallHandlerTest is Test {
         CatsMulticallHandler.Call[] memory calls = new CatsMulticallHandler.Call[](0);
 
         CatsMulticallHandler.Instructions memory instructions = CatsMulticallHandler.Instructions({
-            setApprovalsUsingInputsFor: address(0),
-            calls: calls,
-            fallbackRecipient: address(0)
+            setApprovalsUsingInputsFor: address(0), calls: calls, fallbackRecipient: address(0)
         });
 
         bytes memory remoteCallData = abi.encode(instructions);
@@ -157,9 +155,7 @@ contract CatsMulticallHandlerTest is Test {
         CatsMulticallHandler.Call[] memory calls = new CatsMulticallHandler.Call[](1);
 
         calls[0] = CatsMulticallHandler.Call({
-            target: fallbackRecipientWithCode,
-            callData: abi.encodeWithSignature("mockCall()"),
-            value: 0
+            target: fallbackRecipientWithCode, callData: abi.encodeWithSignature("mockCall()"), value: 0
         });
 
         CatsMulticallHandler.Instructions memory instructions = CatsMulticallHandler.Instructions({
@@ -217,15 +213,11 @@ contract CatsMulticallHandlerTest is Test {
         CatsMulticallHandler.Call[] memory calls = new CatsMulticallHandler.Call[](1);
 
         calls[0] = CatsMulticallHandler.Call({
-            target: fallbackRecipient,
-            callData: abi.encodeWithSignature("mockCall()"),
-            value: 0
+            target: fallbackRecipient, callData: abi.encodeWithSignature("mockCall()"), value: 0
         });
 
         CatsMulticallHandler.Instructions memory instructions = CatsMulticallHandler.Instructions({
-            setApprovalsUsingInputsFor: fallbackRecipient,
-            calls: calls,
-            fallbackRecipient: fallbackRecipient
+            setApprovalsUsingInputsFor: fallbackRecipient, calls: calls, fallbackRecipient: fallbackRecipient
         });
 
         bytes memory remoteCallData = abi.encode(instructions);
@@ -311,9 +303,7 @@ contract CatsMulticallHandlerTest is Test {
         CatsMulticallHandler.Call[] memory calls = new CatsMulticallHandler.Call[](0);
 
         CatsMulticallHandler.Instructions memory instructions = CatsMulticallHandler.Instructions({
-            setApprovalsUsingInputsFor: address(0),
-            calls: calls,
-            fallbackRecipient: address(0)
+            setApprovalsUsingInputsFor: address(0), calls: calls, fallbackRecipient: address(0)
         });
 
         bytes memory remoteCallData = abi.encode(instructions);
@@ -332,9 +322,8 @@ contract CatsMulticallHandlerTest is Test {
             )
         );
         vm.prank(solver);
-        IInputSettlerEscrow(inputSettlerEscrow).finalise(
-            order, solveParams, multicallHandlerAddress.toIdentifier(), remoteCallData
-        );
+        IInputSettlerEscrow(inputSettlerEscrow)
+            .finalise(order, solveParams, multicallHandlerAddress.toIdentifier(), remoteCallData);
 
         assertEq(token.balanceOf(multicallHandlerAddress), amount);
     }
@@ -388,9 +377,7 @@ contract CatsMulticallHandlerTest is Test {
         CatsMulticallHandler.Call[] memory calls = new CatsMulticallHandler.Call[](1);
 
         calls[0] = CatsMulticallHandler.Call({
-            target: fallbackRecipientWithCode,
-            callData: abi.encodeWithSignature("mockCall()"),
-            value: 0
+            target: fallbackRecipientWithCode, callData: abi.encodeWithSignature("mockCall()"), value: 0
         });
 
         CatsMulticallHandler.Instructions memory instructions = CatsMulticallHandler.Instructions({
@@ -415,9 +402,8 @@ contract CatsMulticallHandlerTest is Test {
             )
         );
         vm.prank(solver);
-        IInputSettlerEscrow(inputSettlerEscrow).finalise(
-            order, solveParams, multicallHandlerAddress.toIdentifier(), remoteCallData
-        );
+        IInputSettlerEscrow(inputSettlerEscrow)
+            .finalise(order, solveParams, multicallHandlerAddress.toIdentifier(), remoteCallData);
 
         assertEq(token.balanceOf(fallbackRecipientWithCode), amount);
     }
@@ -429,9 +415,7 @@ contract CatsMulticallHandlerTest is Test {
         CatsMulticallHandler.Call[] memory calls = new CatsMulticallHandler.Call[](0);
 
         CatsMulticallHandler.Instructions memory instructions = CatsMulticallHandler.Instructions({
-            setApprovalsUsingInputsFor: address(0),
-            calls: calls,
-            fallbackRecipient: address(0)
+            setApprovalsUsingInputsFor: address(0), calls: calls, fallbackRecipient: address(0)
         });
 
         bytes memory message = abi.encode(instructions);
@@ -447,9 +431,7 @@ contract CatsMulticallHandlerTest is Test {
         CatsMulticallHandler.Call[] memory calls = new CatsMulticallHandler.Call[](1);
 
         calls[0] = CatsMulticallHandler.Call({
-            target: fallbackRecipientWithCode,
-            callData: abi.encodeWithSignature("mockCall()"),
-            value: 0
+            target: fallbackRecipientWithCode, callData: abi.encodeWithSignature("mockCall()"), value: 0
         });
 
         CatsMulticallHandler.Instructions memory instructions = CatsMulticallHandler.Instructions({

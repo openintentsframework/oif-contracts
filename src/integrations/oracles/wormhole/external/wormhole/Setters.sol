@@ -18,7 +18,10 @@ contract Setters is State {
         _state.guardianSets[index].expirationTime = uint32(block.timestamp) + 86400;
     }
 
-    function storeGuardianSet(Structs.GuardianSet memory set, uint32 index) internal {
+    function storeGuardianSet(
+        Structs.GuardianSet memory set,
+        uint32 index
+    ) internal {
         uint256 setLength = set.keys.length;
         for (uint256 i = 0; i < setLength; i++) {
             require(set.keys[i] != address(0), "Invalid key");
@@ -62,7 +65,10 @@ contract Setters is State {
         _state.messageFee = newFee;
     }
 
-    function setNextSequence(address emitter, uint64 sequence) internal {
+    function setNextSequence(
+        address emitter,
+        uint64 sequence
+    ) internal {
         _state.sequences[emitter] = sequence;
     }
 
