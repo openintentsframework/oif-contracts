@@ -2,7 +2,6 @@
 pragma solidity ^0.8.26;
 
 import { TheCompact } from "the-compact/src/TheCompact.sol";
-import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 import { IdLib } from "the-compact/src/lib/IdLib.sol";
 import { BatchClaim } from "the-compact/src/types/BatchClaims.sol";
 import { BatchClaimComponent, Component } from "the-compact/src/types/Components.sol";

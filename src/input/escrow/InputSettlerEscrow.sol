@@ -7,8 +7,6 @@ import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 import { EIP712 } from "openzeppelin/utils/cryptography/EIP712.sol";
 import { ISignatureTransfer } from "permit2/src/interfaces/ISignatureTransfer.sol";
 
-import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
-
 import { IERC3009 } from "../../interfaces/IERC3009.sol";
 
 import { IInputCallback } from "../../interfaces/IInputCallback.sol";
