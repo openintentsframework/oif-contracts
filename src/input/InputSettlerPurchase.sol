@@ -39,7 +39,7 @@ import { InputSettlerBase } from "./InputSettlerBase.sol";
  * the first output (the owner) can delay the filling of other outputs, which could lead to worse prices for users.
  *    - Mitigation: Users should be cautious when opening orders whose outputs have variable output amounts. In general,
  * users SHOULD NOT open orders where any output other than the first has an order type whose output amount is
- * determined by a time based mechanism. Note that other mechanisms can also be used to manipulate prices.
+ * determined by, for example, a time based mechanism.
  *
  * Users should also consider opening orders with exclusivity for trusted solvers, especially when the order has
  * multiple outputs.
