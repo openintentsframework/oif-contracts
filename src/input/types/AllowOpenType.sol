@@ -26,7 +26,11 @@ library AllowOpenType {
      * @param call If set (!= "0x"), will execute an external orderFinalised call.
      * @return digest of hashAllowOpen.
      */
-    function hashAllowOpen(bytes32 orderId, bytes32 destination, bytes calldata call) internal pure returns (bytes32) {
+    function hashAllowOpen(
+        bytes32 orderId,
+        bytes32 destination,
+        bytes calldata call
+    ) internal pure returns (bytes32) {
         return keccak256(abi.encode(ALLOW_OPEN_TYPE_HASH, orderId, destination, keccak256(call)));
     }
 }

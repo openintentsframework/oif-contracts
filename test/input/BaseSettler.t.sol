@@ -114,7 +114,7 @@ contract BaseInputSettlerTest is Test {
                 token: keccak256(bytes("token")),
                 amount: 10 ** 18,
                 recipient: keccak256(bytes("recipient")),
-                call: hex"",
+                callbackData: hex"",
                 context: hex""
             })
         });
@@ -127,7 +127,7 @@ contract BaseInputSettlerTest is Test {
                 token: keccak256(bytes("token1")),
                 amount: 10 ** 12,
                 recipient: keccak256(bytes("recipient")),
-                call: hex"",
+                callbackData: hex"",
                 context: hex""
             })
         });
@@ -148,8 +148,7 @@ contract BaseInputSettlerTest is Test {
         MandateOutput[] memory MandateOutputs = new MandateOutput[](orderFulfillmentDescription.length);
         for (uint256 i; i < orderFulfillmentDescription.length; ++i) {
             solveParams[i] = InputSettlerBase.SolveParams({
-                solver: solverIdentifier,
-                timestamp: orderFulfillmentDescription[i].timestamp
+                solver: solverIdentifier, timestamp: orderFulfillmentDescription[i].timestamp
             });
             MandateOutputs[i] = orderFulfillmentDescription[i].MandateOutput;
 
@@ -201,7 +200,7 @@ contract BaseInputSettlerTest is Test {
                 token: keccak256(bytes("token")),
                 amount: 10 ** 18,
                 recipient: keccak256(bytes("recipient")),
-                call: hex"",
+                callbackData: hex"",
                 context: hex""
             })
         });
@@ -215,7 +214,7 @@ contract BaseInputSettlerTest is Test {
                 token: keccak256(bytes("token1")),
                 amount: 10 ** 12,
                 recipient: keccak256(bytes("recipient")),
-                call: hex"",
+                callbackData: hex"",
                 context: hex""
             })
         });
@@ -293,7 +292,7 @@ contract BaseInputSettlerTest is Test {
         bytes32 orderSolvedByIdentifier = solver.toIdentifier();
 
         OrderPurchase memory orderPurchase =
-            OrderPurchase({ orderId: orderId, destination: solver, call: hex"", discount: 0, timeToBuy: 1000 });
+            OrderPurchase({ orderId: orderId, destination: solver, callData: hex"", discount: 0, timeToBuy: 1000 });
         uint256 expiryTimestamp = type(uint256).max;
         bytes memory solverSignature = this.getOrderPurchaseSignature(solverPrivateKey, orderPurchase);
 
@@ -358,7 +357,7 @@ contract BaseInputSettlerTest is Test {
         bytes32 orderSolvedByIdentifier = solver.toIdentifier();
 
         OrderPurchase memory orderPurchase =
-            OrderPurchase({ orderId: orderId, destination: solver, call: hex"", discount: 0, timeToBuy: 1000 });
+            OrderPurchase({ orderId: orderId, destination: solver, callData: hex"", discount: 0, timeToBuy: 1000 });
         uint256 expiryTimestamp = type(uint256).max;
         bytes memory solverSignature = this.getOrderPurchaseSignature(solverPrivateKey, orderPurchase);
 
@@ -378,7 +377,10 @@ contract BaseInputSettlerTest is Test {
         );
     }
 
-    function test_error_purchase_order_validation(bytes32 orderId, bytes calldata solverSignature) external {
+    function test_error_purchase_order_validation(
+        bytes32 orderId,
+        bytes calldata solverSignature
+    ) external {
         uint256 amount = 10 ** 18;
 
         token.mint(purchaser, amount);
@@ -389,7 +391,7 @@ contract BaseInputSettlerTest is Test {
         bytes32 orderSolvedByIdentifier = solver.toIdentifier();
 
         OrderPurchase memory orderPurchase =
-            OrderPurchase({ orderId: orderId, destination: solver, call: hex"", discount: 0, timeToBuy: 1000 });
+            OrderPurchase({ orderId: orderId, destination: solver, callData: hex"", discount: 0, timeToBuy: 1000 });
         uint256 expiryTimestamp = type(uint256).max;
 
         uint32 currentTime = 10000;
@@ -402,7 +404,10 @@ contract BaseInputSettlerTest is Test {
         );
     }
 
-    function test_purchase_order_call(bytes32 orderId, bytes calldata call) external {
+    function test_purchase_order_call(
+        bytes32 orderId,
+        bytes calldata call
+    ) external {
         vm.assume(call.length > 0);
         uint256 amount = 10 ** 18;
 
@@ -417,8 +422,9 @@ contract BaseInputSettlerTest is Test {
 
         bytes32 orderSolvedByIdentifier = solver.toIdentifier();
 
-        OrderPurchase memory orderPurchase =
-            OrderPurchase({ orderId: orderId, destination: address(this), call: call, discount: 0, timeToBuy: 1000 });
+        OrderPurchase memory orderPurchase = OrderPurchase({
+            orderId: orderId, destination: address(this), callData: call, discount: 0, timeToBuy: 1000
+        });
         uint256 expiryTimestamp = type(uint256).max;
         bytes memory solverSignature = this.getOrderPurchaseSignature(solverPrivateKey, orderPurchase);
 
@@ -439,7 +445,10 @@ contract BaseInputSettlerTest is Test {
         assertEq(_executionData, call);
     }
 
-    function test_error_dependent_on_purchase_order_call(bytes32 orderId, bytes calldata call) external {
+    function test_error_dependent_on_purchase_order_call(
+        bytes32 orderId,
+        bytes calldata call
+    ) external {
         vm.assume(call.length > 0);
         uint256 amount = 10 ** 18;
 
@@ -451,8 +460,9 @@ contract BaseInputSettlerTest is Test {
 
         bytes32 orderSolvedByIdentifier = solver.toIdentifier();
 
-        OrderPurchase memory orderPurchase =
-            OrderPurchase({ orderId: orderId, destination: address(this), call: call, discount: 0, timeToBuy: 1000 });
+        OrderPurchase memory orderPurchase = OrderPurchase({
+            orderId: orderId, destination: address(this), callData: call, discount: 0, timeToBuy: 1000
+        });
         uint256 expiryTimestamp = type(uint256).max;
         bytes memory solverSignature = this.getOrderPurchaseSignature(solverPrivateKey, orderPurchase);
 
@@ -477,7 +487,10 @@ contract BaseInputSettlerTest is Test {
     uint256[2][] _inputs;
     bytes _executionData;
 
-    function orderFinalised(uint256[2][] calldata inputs, bytes calldata executionData) external {
+    function orderFinalised(
+        uint256[2][] calldata inputs,
+        bytes calldata executionData
+    ) external {
         if (failExternalCall) revert ExternalFail();
 
         _inputs = inputs;
@@ -500,7 +513,7 @@ contract BaseInputSettlerTest is Test {
         bytes32 orderSolvedByIdentifier = solver.toIdentifier();
 
         OrderPurchase memory orderPurchase =
-            OrderPurchase({ orderId: orderId, destination: solver, call: hex"", discount: 0, timeToBuy: 1000 });
+            OrderPurchase({ orderId: orderId, destination: solver, callData: hex"", discount: 0, timeToBuy: 1000 });
         uint256 expiryTimestamp = type(uint256).max;
         bytes memory solverSignature = this.getOrderPurchaseSignature(solverPrivateKey, orderPurchase);
 
@@ -543,11 +556,7 @@ contract BaseInputSettlerTest is Test {
         uint48 discount = 0;
         uint32 timeToBuy = 1000;
         OrderPurchase memory orderPurchase = OrderPurchase({
-            orderId: orderId,
-            destination: newDestination,
-            call: call,
-            discount: discount,
-            timeToBuy: timeToBuy
+            orderId: orderId, destination: newDestination, callData: call, discount: discount, timeToBuy: timeToBuy
         });
         bytes memory solverSignature = this.getOrderPurchaseSignature(solverPrivateKey, orderPurchase);
 
@@ -586,7 +595,7 @@ contract BaseInputSettlerTest is Test {
         bytes32 orderSolvedByIdentifier = solver.toIdentifier();
 
         OrderPurchase memory orderPurchase =
-            OrderPurchase({ orderId: orderId, destination: solver, call: hex"", discount: 0, timeToBuy: 1000 });
+            OrderPurchase({ orderId: orderId, destination: solver, callData: hex"", discount: 0, timeToBuy: 1000 });
         uint256 expiryTimestamp = type(uint256).max;
         bytes memory solverSignature = this.getOrderPurchaseSignature(solverPrivateKey, orderPurchase);
 
@@ -605,8 +614,7 @@ contract BaseInputSettlerTest is Test {
 
         InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](2);
         solveParams[0] = InputSettlerBase.SolveParams({
-            solver: solver.toIdentifier(),
-            timestamp: currentTime - orderPurchase.timeToBuy - 1
+            solver: solver.toIdentifier(), timestamp: currentTime - orderPurchase.timeToBuy - 1
         });
         solveParams[1] = InputSettlerBase.SolveParams({ solver: solver.toIdentifier(), timestamp: 0 });
 
@@ -614,7 +622,10 @@ contract BaseInputSettlerTest is Test {
         assertEq(collectedPurchaser, orderSolvedByIdentifier);
     }
 
-    function test_purchase_order_no_purchase(bytes32 orderId, bytes32 orderSolvedByIdentifier) external {
+    function test_purchase_order_no_purchase(
+        bytes32 orderId,
+        bytes32 orderSolvedByIdentifier
+    ) external {
         InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](2);
         solveParams[0] = InputSettlerBase.SolveParams({ solver: orderSolvedByIdentifier, timestamp: 0 });
         solveParams[1] = InputSettlerBase.SolveParams({ solver: orderSolvedByIdentifier, timestamp: 0 });

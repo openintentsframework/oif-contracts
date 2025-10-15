@@ -183,8 +183,8 @@ contract Messages is Getters {
         /*
         Hash the body
 
-        SECURITY: Do not change the way the hash of a VM is computed! 
-        Changing it could result into two different hashes for the same observation. 
+        SECURITY: Do not change the way the hash of a VM is computed!
+        Changing it could result into two different hashes for the same observation.
         But xDapps rely on the hash of an observation for replay protection.
         */
         bytes memory body = encodedVM.slice(index, encodedVM.length - index);

@@ -13,10 +13,12 @@ import { OutputSettlerSimple } from "../../../src/output/simple/OutputSettlerSim
 import { MockERC20 } from "../../mocks/MockERC20.sol";
 
 import { HyperlaneOracle } from "../../../src/integrations/oracles/hyperlane/HyperlaneOracle.sol";
-import { IPostDispatchHook } from
-    "../../../src/integrations/oracles/hyperlane/external/hyperlane/interfaces/hooks/IPostDispatchHook.sol";
-import { StandardHookMetadata } from
-    "../../../src/integrations/oracles/hyperlane/external/hyperlane/libs/StandardHookMetadata.sol";
+import {
+    IPostDispatchHook
+} from "../../../src/integrations/oracles/hyperlane/external/hyperlane/interfaces/hooks/IPostDispatchHook.sol";
+import {
+    StandardHookMetadata
+} from "../../../src/integrations/oracles/hyperlane/external/hyperlane/libs/StandardHookMetadata.sol";
 
 event OutputProven(uint256 chainid, bytes32 remoteIdentifier, bytes32 application, bytes32 payloadHash);
 
@@ -90,7 +92,7 @@ contract HyperlaneOracleTest is Test {
             token: bytes32(abi.encode(address(_token))),
             amount: amount,
             recipient: bytes32(abi.encode(recipient)),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -136,9 +138,9 @@ contract HyperlaneOracleTest is Test {
 
         // Fill without submitting
         vm.expectRevert(abi.encodeWithSignature("NotAllPayloadsValid()"));
-        _oracle.submit{ value: _gasPaymentQuote }(
-            _destination, _recipientOracle, _gasLimit, bytes("customMetadata"), address(_outputSettler), payloads
-        );
+        _oracle.submit{
+            value: _gasPaymentQuote
+        }(_destination, _recipientOracle, _gasLimit, bytes("customMetadata"), address(_outputSettler), payloads);
     }
 
     function test_fill_works_w() external {
@@ -188,9 +190,9 @@ contract HyperlaneOracleTest is Test {
             )
         );
 
-        _oracle.submit{ value: _gasPaymentQuote }(
-            _destination, _recipientOracle, _gasLimit, customMetadata, address(_outputSettler), payloads
-        );
+        _oracle.submit{
+            value: _gasPaymentQuote
+        }(_destination, _recipientOracle, _gasLimit, customMetadata, address(_outputSettler), payloads);
         vm.snapshotGasLastCall("oracle", "hyperlaneOracleSubmit");
     }
 
@@ -243,7 +245,9 @@ contract HyperlaneOracleTest is Test {
             )
         );
 
-        _oracle.submit{ value: _gasPaymentQuote }(
+        _oracle.submit{
+            value: _gasPaymentQuote
+        }(
             _destination,
             _recipientOracle,
             _gasLimit,
