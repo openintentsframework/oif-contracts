@@ -133,7 +133,7 @@ abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
         if (tokenIdentifier == bytes32(0)) Address.sendValue(payable(recipient), outputAmount);
         else SafeERC20.safeTransferFrom(IERC20(tokenIdentifier.fromIdentifier()), msg.sender, recipient, outputAmount);
 
-        bytes calldata callbackData = output.call;
+        bytes calldata callbackData = output.callbackData;
         if (callbackData.length > 0) {
             IOutputCallback(recipient).outputFilled(tokenIdentifier, outputAmount, callbackData);
         }
