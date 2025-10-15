@@ -66,17 +66,13 @@ If an order contains multiple outputs, the **selected** solver will be the one f
 **For Users:**
 - **DoS Risk**: First solver may refuse to fill remaining outputs, delaying execution until expiry
   - *Mitigation*: Make the first output the most valuable
-- **Price Manipulation**: First solver can optimize other outputs, potentially worsening prices
+- **Price Manipulation**: First solver can delay other outputs, potentially worsening prices
   - *Mitigation*: Avoid time-based mechanisms (e.g., Dutch auctions) on non-first outputs
 
 **For Solvers:**
 - **Completion Risk**: Must fill ALL outputs before `fillDeadline` and prove completion before `expiry`
 - **Callback Risk**: Arbitrary code execution during output filling may revert transactions
-  - *Mitigation*: Simulate all transactions and understand callback risks
-
-**Recommendations:**
-- Users: Use one output per chain, consider exclusivity for trusted solvers
-- Solvers: Thoroughly simulate multi-chain transactions and timing constraints
+  - *Mitigation*: Refuse orders with callbacks outside of the primary batch (that containing the first output) unless it's known that it can't possibly revert (considering that a successful off-chain simulation is not a guarantee of on-chain success)
 
 ###  Order Purchasing / Underwriting
 

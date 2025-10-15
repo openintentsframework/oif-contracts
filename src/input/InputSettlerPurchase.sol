@@ -36,13 +36,13 @@ import { InputSettlerBase } from "./InputSettlerBase.sol";
  * costly.
  * 2. Exploitation of different order types: When opening orders, users are able to set different rules for filling
  * them, i.e., output amounts could be determined by a dutch auction. If the order has multiple outputs, the solver of
- * the first output (the owner) can optimize the filling of other outputs, which could lead to worse prices for users.
- *    - Mitigation: In general, users SHOULD NOT open orders where any output other than the first has an order type
- * whose output amount is determined by a time based mechanism.
+ * the first output (the owner) can delay the filling of other outputs, which could lead to worse prices for users.
+ *    - Mitigation: Users should be cautios when openning orders whose outputs have variable output amounts. In general,
+ * users SHOULD NOT open orders where any output other than the first has an order type whose output amount is
+ * determined by a time based mechanism. Note that other mechanisms can also be used to manipulate prices.
  *
- * Users should be very careful when opening orders with multiple outputs. The general recommendation is that such
- * orders should have one output per output chain. Users should also consider opening orders with exclusivity for
- * trusted solvers, especially when the order has multiple outputs.
+ * Users should also consider opening orders with exclusivity for trusted solvers, especially when the order has
+ * multiple outputs.
  *
  * For Solvers:
  * 1. Multiple outputs risk: When filling an order, the solver MUST be aware that they will only be able to finalise the
@@ -52,13 +52,11 @@ import { InputSettlerBase } from "./InputSettlerBase.sol";
  *      - all outputs must be filled before `fillDeadline` and the proof of the filling transaction must be handled by
  * each oracle before `expiry` time.
  *      - Solvers should be aware that some outputs have callbacks, which is an arbitrary code that is executed during
- * the filling of the output.
+ * the filling of the output. They should refuse orders with callbacks outside of the primary batch (that containing the
+ * first output) unless it's known that it can't possibly revert (considering that a successful off-chain simulation is
+ * not a guarantee of on-chain success)
  *        They should understand the risks of each callback and the potential for them to revert the filling of the
  * output, which could lead to the solver not being able to finalise the order.
- *
- * Solvers should be very careful when filling orders with multiple outputs. The general recommendation is that solvers
- * should simulate all of the transactions and be sure that they understand the risks of callbacks, the timing of
- * filling and settling and are confident that they will be able to finalise the order in time.
  */
 abstract contract InputSettlerPurchase is InputSettlerBase {
     using LibAddress for address;
