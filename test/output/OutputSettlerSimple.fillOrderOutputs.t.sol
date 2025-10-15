@@ -69,7 +69,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
             token: bytes32(uint256(uint160(outputTokenAddress))),
             amount: amount,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -80,7 +80,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
             token: bytes32(uint256(uint160(outputTokenAddress))),
             amount: amount2,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -147,7 +147,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
             token: bytes32(uint256(uint160(outputTokenAddress))),
             amount: amount,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -192,7 +192,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
             token: bytes32(0), // native token
             amount: amount1,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -203,7 +203,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
             token: bytes32(0), // native token
             amount: amount2,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -248,7 +248,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
             token: bytes32(0), // native token
             amount: nativeAmount,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -260,7 +260,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
             token: bytes32(uint256(uint160(outputTokenAddress))),
             amount: tokenAmount,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -312,7 +312,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
             token: bytes32(0), // native token
             amount: amount1,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -323,7 +323,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
             token: bytes32(0), // native token
             amount: amount2,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -361,7 +361,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
             token: bytes32(0), // native token
             amount: amount1,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -372,7 +372,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
             token: bytes32(0), // native token
             amount: amount2,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 

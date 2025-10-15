@@ -72,6 +72,7 @@ import { BaseInputOracle } from "../oracles/BaseInputOracle.sol";
  */
 abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
     using LibAddress for bytes32;
+    using LibAddress for uint256;
 
     /// @dev Fill deadline has passed
     error FillDeadline();
@@ -165,10 +166,15 @@ abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
         bytes32 tokenIdentifier = output.token;
         address recipient = output.recipient.fromIdentifier();
 
-        if (tokenIdentifier == bytes32(0)) Address.sendValue(payable(recipient), outputAmount);
-        else SafeERC20.safeTransferFrom(IERC20(tokenIdentifier.fromIdentifier()), msg.sender, recipient, outputAmount);
+        if (tokenIdentifier == bytes32(0)) {
+            Address.sendValue(payable(recipient), outputAmount);
+        } else {
+            SafeERC20.safeTransferFrom(
+                IERC20(uint256(tokenIdentifier).validatedCleanAddress()), msg.sender, recipient, outputAmount
+            );
+        }
 
-        bytes calldata callbackData = output.call;
+        bytes calldata callbackData = output.callbackData;
         if (callbackData.length > 0) {
             IOutputCallback(recipient).outputFilled(tokenIdentifier, outputAmount, callbackData);
         }

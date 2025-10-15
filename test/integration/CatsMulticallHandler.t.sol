@@ -117,7 +117,7 @@ contract CatsMulticallHandlerTest is Test {
             token: bytes32(uint256(uint160(outputTokenAddress))),
             amount: amount,
             recipient: bytes32(uint256(uint160(multicallHandlerAddress))),
-            call: remoteCallData,
+            callbackData: remoteCallData,
             context: bytes("")
         });
         bytes memory fillerData = abi.encodePacked(filler);
@@ -176,7 +176,7 @@ contract CatsMulticallHandlerTest is Test {
             token: bytes32(uint256(uint160(outputTokenAddress))),
             amount: amount,
             recipient: bytes32(uint256(uint160(multicallHandlerAddress))),
-            call: remoteCallData,
+            callbackData: remoteCallData,
             context: bytes("")
         });
         bytes memory fillerData = abi.encodePacked(filler);
@@ -236,7 +236,7 @@ contract CatsMulticallHandlerTest is Test {
             token: bytes32(uint256(uint160(outputTokenAddress))),
             amount: amount,
             recipient: bytes32(uint256(uint160(multicallHandlerAddress))),
-            call: remoteCallData,
+            callbackData: remoteCallData,
             context: bytes("")
         });
         bytes memory fillerData = abi.encodePacked(filler);
@@ -273,7 +273,7 @@ contract CatsMulticallHandlerTest is Test {
             token: address(anotherToken).toIdentifier(),
             amount: amount,
             recipient: swapper.toIdentifier(),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
         uint256[2][] memory inputs = new uint256[2][](1);
@@ -350,7 +350,7 @@ contract CatsMulticallHandlerTest is Test {
             token: address(anotherToken).toIdentifier(),
             amount: amount,
             recipient: swapper.toIdentifier(),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
         uint256[2][] memory inputs = new uint256[2][](1);

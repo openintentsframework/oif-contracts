@@ -7,7 +7,6 @@ import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 
 import { SignatureChecker } from "openzeppelin/utils/cryptography/SignatureChecker.sol";
-import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
 import { IInputCallback } from "../interfaces/IInputCallback.sol";
 
@@ -197,15 +196,15 @@ abstract contract InputSettlerPurchase is InputSettlerBase {
                 uint256 amountAfterDiscount = (allocatedAmount * (DISCOUNT_DENOM - discount)) / DISCOUNT_DENOM;
                 // Throws if discount > DISCOUNT_DENOM => DISCOUNT_DENOM - discount < 0;
                 SafeERC20.safeTransferFrom(
-                    IERC20(tokenId.fromIdentifier()), msg.sender, newDestination, amountAfterDiscount
+                    IERC20(tokenId.validatedCleanAddress()), msg.sender, newDestination, amountAfterDiscount
                 );
             }
             // Emit the event now because of stack issues.
             emit OrderPurchased(orderPurchase.orderId, orderSolvedByIdentifier, purchaser);
         }
         {
-            bytes calldata call = orderPurchase.call;
-            if (call.length > 0) IInputCallback(newDestination).orderFinalised(inputs, call);
+            bytes calldata callData = orderPurchase.callData;
+            if (callData.length > 0) IInputCallback(newDestination).orderFinalised(inputs, callData);
         }
     }
 }
