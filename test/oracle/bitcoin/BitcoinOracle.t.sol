@@ -100,7 +100,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
 
@@ -148,7 +148,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
 
@@ -175,7 +175,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
 
@@ -202,7 +202,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
 
@@ -247,7 +247,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
         bytes32 outputId = bitcoinOracle.outputIdentifier(output);
@@ -312,7 +312,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
 
@@ -363,7 +363,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
 
@@ -408,7 +408,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
 
@@ -448,7 +448,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
 
@@ -507,7 +507,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
         bytes32 outputId = bitcoinOracle.outputIdentifier(output);
@@ -568,7 +568,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
 
@@ -620,7 +620,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
 
@@ -655,7 +655,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
 
@@ -707,7 +707,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
         bytes32 outputId = bitcoinOracle.outputIdentifier(output);
@@ -784,7 +784,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
 
@@ -835,7 +835,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: uint256(amount),
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
 
@@ -877,7 +877,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
 
@@ -949,7 +949,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
 
@@ -1028,7 +1028,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: bytes.concat(bytes1(0xB0), bytes32(uint256(custom_multiplier)))
         });
 
@@ -1096,7 +1096,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: bytes.concat(bytes1(0xB0), bytes32(uint256(custom_multiplier)))
         });
 
@@ -1159,7 +1159,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
 
@@ -1206,7 +1206,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
 
@@ -1245,7 +1245,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(EMBED_PHASH),
             amount: EMBED_SATS_AMOUNT,
             chainId: uint32(block.chainid),
-            call: EMBEDDED_DATA_RETURN,
+            callbackData: EMBEDDED_DATA_RETURN,
             context: hex""
         });
 
@@ -1300,7 +1300,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(EMBED_PHASH),
             amount: EMBED_SATS_AMOUNT,
             chainId: uint32(block.chainid),
-            call: EMBEDDED_DATA_RETURN,
+            callbackData: EMBEDDED_DATA_RETURN,
             context: hex""
         });
 
@@ -1360,7 +1360,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(EMBED_PHASH),
             amount: EMBED_SATS_AMOUNT,
             chainId: uint32(block.chainid),
-            call: remoteCall,
+            callbackData: remoteCall,
             context: hex""
         });
 
@@ -1412,7 +1412,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(EMBED_PHASH),
             amount: EMBED_SATS_AMOUNT,
             chainId: uint32(block.chainid),
-            call: remoteCall,
+            callbackData: remoteCall,
             context: hex""
         });
 
@@ -1451,7 +1451,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
 
@@ -1501,7 +1501,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
 
@@ -1549,7 +1549,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
 
@@ -1600,7 +1600,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
 
@@ -1643,7 +1643,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT + diffAmount,
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
 
@@ -1682,7 +1682,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
 
@@ -1732,7 +1732,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
 
@@ -1778,7 +1778,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
 
@@ -1819,7 +1819,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
 
@@ -1860,7 +1860,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
 
@@ -1908,7 +1908,7 @@ contract BitcoinOracleTest is Test {
             recipient: bytes32(PHASH),
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
 

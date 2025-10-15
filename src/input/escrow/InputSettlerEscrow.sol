@@ -7,8 +7,6 @@ import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 import { EIP712 } from "openzeppelin/utils/cryptography/EIP712.sol";
 import { ISignatureTransfer } from "permit2/src/interfaces/ISignatureTransfer.sol";
 
-import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
-
 import { IERC3009 } from "../../interfaces/IERC3009.sol";
 
 import { IInputCallback } from "../../interfaces/IInputCallback.sol";
@@ -303,7 +301,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
                 (signer, address(this), input[1], 0, fillDeadline, orderId, _signature_)
             );
             // The above calldata encoding is equivalent to:
-            // IERC3009(input[0].fromIdentifier().receiveWithAuthorization({
+            // IERC3009(input[0].validatedCleanAddress().receiveWithAuthorization({
             //     from: signer,
             //     to: address(this),
             //     value: input[1],
@@ -312,7 +310,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
             //     nonce: orderId,
             //     signature: _signature_
             // })
-            address token = input[0].fromIdentifier();
+            address token = input[0].validatedCleanAddress();
             IsContractLib.validateContainsCode(token); // Ensure called contract has code.
             (bool success,) = token.call(callData);
             if (success) return;
@@ -325,7 +323,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         for (uint256 i; i < numInputs; ++i) {
             uint256[2] calldata input = inputs[i];
             bytes calldata signature = BytesLib.getBytesOfArray(_signature_, i);
-            IERC3009(input[0].fromIdentifier()).receiveWithAuthorization({
+            IERC3009(input[0].validatedCleanAddress()).receiveWithAuthorization({
                 from: signer,
                 to: address(this),
                 value: input[1],
@@ -467,7 +465,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         uint256 numInputs = inputs.length;
         for (uint256 i; i < numInputs; ++i) {
             uint256[2] calldata input = inputs[i];
-            IERC20 token = IERC20(input[0].fromIdentifier());
+            IERC20 token = IERC20(input[0].validatedCleanAddress());
             uint256 amount = input[1];
 
             SafeERC20.safeTransfer(token, destination, amount);

@@ -7,8 +7,6 @@ import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 import { ReentrancyGuard } from "openzeppelin/utils/ReentrancyGuard.sol";
 
-import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
-
 import { IInputCallback } from "../interfaces/IInputCallback.sol";
 import { IOutputCallback } from "../interfaces/IOutputCallback.sol";
 
@@ -100,7 +98,7 @@ contract CatsMulticallHandler is IInputCallback, IOutputCallback, ReentrancyGuar
 
         // Set approvals base on inputs if requested.
         if (instructions.setApprovalsUsingInputsFor != address(0)) {
-            _setApproval(token.fromIdentifier(), amount, instructions.setApprovalsUsingInputsFor);
+            _setApproval(uint256(token).validatedCleanAddress(), amount, instructions.setApprovalsUsingInputsFor);
         }
 
         // Execute attached instructions
@@ -108,7 +106,7 @@ contract CatsMulticallHandler is IInputCallback, IOutputCallback, ReentrancyGuar
 
         if (instructions.fallbackRecipient == address(0)) return;
         // If there are leftover tokens, send them to the fallback recipient regardless of execution success.
-        _drainRemainingTokens(token.fromIdentifier(), payable(instructions.fallbackRecipient));
+        _drainRemainingTokens(uint256(token).validatedCleanAddress(), payable(instructions.fallbackRecipient));
     }
 
     /**
@@ -130,7 +128,9 @@ contract CatsMulticallHandler is IInputCallback, IOutputCallback, ReentrancyGuar
         // If there are leftover tokens, send them to the fallback recipient regardless of execution success.
         uint256 numInputs = inputs.length;
         for (uint256 i; i < numInputs; ++i) {
-            _drainRemainingTokens(inputs[i][0].fromIdentifier(), payable(instructions.fallbackRecipient));
+            _drainRemainingTokens(
+                uint256(inputs[i][0]).validatedCleanAddress(), payable(instructions.fallbackRecipient)
+            );
         }
     }
 
@@ -169,7 +169,7 @@ contract CatsMulticallHandler is IInputCallback, IOutputCallback, ReentrancyGuar
             uint256[2] calldata input = inputs[i];
             uint256 token = input[0];
             uint256 amount = input[1];
-            SafeERC20.forceApprove(IERC20(token.fromIdentifier()), to, amount);
+            SafeERC20.forceApprove(IERC20(uint256(token).validatedCleanAddress()), to, amount);
         }
     }
 

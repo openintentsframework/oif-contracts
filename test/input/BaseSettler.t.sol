@@ -114,7 +114,7 @@ contract BaseInputSettlerTest is Test {
                 token: keccak256(bytes("token")),
                 amount: 10 ** 18,
                 recipient: keccak256(bytes("recipient")),
-                call: hex"",
+                callbackData: hex"",
                 context: hex""
             })
         });
@@ -127,7 +127,7 @@ contract BaseInputSettlerTest is Test {
                 token: keccak256(bytes("token1")),
                 amount: 10 ** 12,
                 recipient: keccak256(bytes("recipient")),
-                call: hex"",
+                callbackData: hex"",
                 context: hex""
             })
         });
@@ -201,7 +201,7 @@ contract BaseInputSettlerTest is Test {
                 token: keccak256(bytes("token")),
                 amount: 10 ** 18,
                 recipient: keccak256(bytes("recipient")),
-                call: hex"",
+                callbackData: hex"",
                 context: hex""
             })
         });
@@ -215,7 +215,7 @@ contract BaseInputSettlerTest is Test {
                 token: keccak256(bytes("token1")),
                 amount: 10 ** 12,
                 recipient: keccak256(bytes("recipient")),
-                call: hex"",
+                callbackData: hex"",
                 context: hex""
             })
         });
@@ -293,7 +293,7 @@ contract BaseInputSettlerTest is Test {
         bytes32 orderSolvedByIdentifier = solver.toIdentifier();
 
         OrderPurchase memory orderPurchase =
-            OrderPurchase({ orderId: orderId, destination: solver, call: hex"", discount: 0, timeToBuy: 1000 });
+            OrderPurchase({ orderId: orderId, destination: solver, callData: hex"", discount: 0, timeToBuy: 1000 });
         uint256 expiryTimestamp = type(uint256).max;
         bytes memory solverSignature = this.getOrderPurchaseSignature(solverPrivateKey, orderPurchase);
 
@@ -358,7 +358,7 @@ contract BaseInputSettlerTest is Test {
         bytes32 orderSolvedByIdentifier = solver.toIdentifier();
 
         OrderPurchase memory orderPurchase =
-            OrderPurchase({ orderId: orderId, destination: solver, call: hex"", discount: 0, timeToBuy: 1000 });
+            OrderPurchase({ orderId: orderId, destination: solver, callData: hex"", discount: 0, timeToBuy: 1000 });
         uint256 expiryTimestamp = type(uint256).max;
         bytes memory solverSignature = this.getOrderPurchaseSignature(solverPrivateKey, orderPurchase);
 
@@ -389,7 +389,7 @@ contract BaseInputSettlerTest is Test {
         bytes32 orderSolvedByIdentifier = solver.toIdentifier();
 
         OrderPurchase memory orderPurchase =
-            OrderPurchase({ orderId: orderId, destination: solver, call: hex"", discount: 0, timeToBuy: 1000 });
+            OrderPurchase({ orderId: orderId, destination: solver, callData: hex"", discount: 0, timeToBuy: 1000 });
         uint256 expiryTimestamp = type(uint256).max;
 
         uint32 currentTime = 10000;
@@ -417,8 +417,13 @@ contract BaseInputSettlerTest is Test {
 
         bytes32 orderSolvedByIdentifier = solver.toIdentifier();
 
-        OrderPurchase memory orderPurchase =
-            OrderPurchase({ orderId: orderId, destination: address(this), call: call, discount: 0, timeToBuy: 1000 });
+        OrderPurchase memory orderPurchase = OrderPurchase({
+            orderId: orderId,
+            destination: address(this),
+            callData: call,
+            discount: 0,
+            timeToBuy: 1000
+        });
         uint256 expiryTimestamp = type(uint256).max;
         bytes memory solverSignature = this.getOrderPurchaseSignature(solverPrivateKey, orderPurchase);
 
@@ -451,8 +456,13 @@ contract BaseInputSettlerTest is Test {
 
         bytes32 orderSolvedByIdentifier = solver.toIdentifier();
 
-        OrderPurchase memory orderPurchase =
-            OrderPurchase({ orderId: orderId, destination: address(this), call: call, discount: 0, timeToBuy: 1000 });
+        OrderPurchase memory orderPurchase = OrderPurchase({
+            orderId: orderId,
+            destination: address(this),
+            callData: call,
+            discount: 0,
+            timeToBuy: 1000
+        });
         uint256 expiryTimestamp = type(uint256).max;
         bytes memory solverSignature = this.getOrderPurchaseSignature(solverPrivateKey, orderPurchase);
 
@@ -500,7 +510,7 @@ contract BaseInputSettlerTest is Test {
         bytes32 orderSolvedByIdentifier = solver.toIdentifier();
 
         OrderPurchase memory orderPurchase =
-            OrderPurchase({ orderId: orderId, destination: solver, call: hex"", discount: 0, timeToBuy: 1000 });
+            OrderPurchase({ orderId: orderId, destination: solver, callData: hex"", discount: 0, timeToBuy: 1000 });
         uint256 expiryTimestamp = type(uint256).max;
         bytes memory solverSignature = this.getOrderPurchaseSignature(solverPrivateKey, orderPurchase);
 
@@ -545,7 +555,7 @@ contract BaseInputSettlerTest is Test {
         OrderPurchase memory orderPurchase = OrderPurchase({
             orderId: orderId,
             destination: newDestination,
-            call: call,
+            callData: call,
             discount: discount,
             timeToBuy: timeToBuy
         });
@@ -586,7 +596,7 @@ contract BaseInputSettlerTest is Test {
         bytes32 orderSolvedByIdentifier = solver.toIdentifier();
 
         OrderPurchase memory orderPurchase =
-            OrderPurchase({ orderId: orderId, destination: solver, call: hex"", discount: 0, timeToBuy: 1000 });
+            OrderPurchase({ orderId: orderId, destination: solver, callData: hex"", discount: 0, timeToBuy: 1000 });
         uint256 expiryTimestamp = type(uint256).max;
         bytes memory solverSignature = this.getOrderPurchaseSignature(solverPrivateKey, orderPurchase);
 

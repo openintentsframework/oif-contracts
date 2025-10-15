@@ -86,7 +86,7 @@ contract WormholeOracleTestSubmit is Test {
             token: bytes32(abi.encode(address(token))),
             amount: amount,
             recipient: bytes32(abi.encode(recipient)),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 

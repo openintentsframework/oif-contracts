@@ -76,7 +76,7 @@ contract OutputSettlerBaseTest is Test {
             token: bytes32(uint256(uint160(outputTokenAddress))),
             amount: amount,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -115,7 +115,7 @@ contract OutputSettlerBaseTest is Test {
             token: bytes32(uint256(uint160(outputTokenAddress))),
             amount: amount,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -154,7 +154,7 @@ contract OutputSettlerBaseTest is Test {
             token: bytes32(uint256(uint160(outputTokenAddress))),
             amount: amount,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -187,7 +187,7 @@ contract OutputSettlerBaseTest is Test {
             token: bytes32(uint256(uint160(outputTokenAddress))),
             amount: amount,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
