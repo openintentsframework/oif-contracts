@@ -17,7 +17,7 @@ import { IRouterClient } from "./external/interfaces/IRouterClient.sol";
 
 /**
  * @notice Chainlink Cross-Chain Interoperability Protocol
- * Implement interfaces for receving and sending Chainlink CCIP messages.
+ * Implement interfaces for receiving and sending Chainlink CCIP messages.
  */
 contract ChainlinkCCIPOracle is BaseInputOracle, ChainMap, CCIPReceiver {
     using LibAddress for address;
@@ -137,7 +137,7 @@ contract ChainlinkCCIPOracle is BaseInputOracle, ChainMap, CCIPReceiver {
             // Collect tokens from caller.
             SafeERC20.safeTransferFrom(IERC20(feeToken), msg.sender, address(this), fees);
 
-            // Aprove router client.
+            // Approve router client.
             uint256 currentAllowance = IERC20(feeToken).allowance(address(this), getRouter());
             if (currentAllowance < fees) SafeERC20.forceApprove(IERC20(feeToken), getRouter(), type(uint256).max);
         }
