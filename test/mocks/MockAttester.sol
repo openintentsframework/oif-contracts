@@ -18,7 +18,10 @@ contract MockAttester is IAttester {
         }
     }
 
-    function setAttested(bool status, bytes calldata payload) external {
+    function setAttested(
+        bool status,
+        bytes calldata payload
+    ) external {
         _hasAttest[payload] = status;
     }
 }

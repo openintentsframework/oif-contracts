@@ -5,7 +5,8 @@ pragma solidity ^0.8.4;
 /// https://github.com/smartcontractkit/chainlink-ccip/blob/632b2acd4f2b203fe4cdd3e93ac0e1303a10ff56/chains/evm/contracts/libraries/MerkleMultiProof.sol
 library MerkleMultiProof {
     /// @notice Leaf domain separator, should be used as the first 32 bytes of a leaf's preimage.
-    bytes32 internal constant LEAF_DOMAIN_SEPARATOR = 0x0000000000000000000000000000000000000000000000000000000000000000;
+    bytes32 internal constant LEAF_DOMAIN_SEPARATOR =
+        0x0000000000000000000000000000000000000000000000000000000000000000;
     /// @notice Internal domain separator, should be used as the first 32 bytes of an internal node's preimage.
     bytes32 internal constant INTERNAL_DOMAIN_SEPARATOR =
         0x0000000000000000000000000000000000000000000000000000000000000001;
@@ -15,7 +16,7 @@ library MerkleMultiProof {
     error InvalidProof();
     error LeavesCannotBeEmpty();
 
-    /// @notice Computes the root based on provided pre-hashed leaf nodes in leaves, internal nodes  in proofs, and
+    /// @notice Computes the root based on provided pre-hashed leaf nodes in leaves, internal nodes in proofs, and
     /// using
     /// proofFlagBits' i-th bit to determine if an element of proofs or one of the previously computed leafs or internal
     /// nodes will be used for the i-th hash.
@@ -93,12 +94,18 @@ library MerkleMultiProof {
     }
 
     /// @notice Hashes two bytes32 objects in their given order, prepended by the INTERNAL_DOMAIN_SEPARATOR.
-    function _hashInternalNode(bytes32 left, bytes32 right) private pure returns (bytes32 hash) {
+    function _hashInternalNode(
+        bytes32 left,
+        bytes32 right
+    ) private pure returns (bytes32 hash) {
         return keccak256(abi.encode(INTERNAL_DOMAIN_SEPARATOR, left, right));
     }
 
     /// @notice Hashes two bytes32 objects. The order is taken into account, using the lower value first.
-    function _hashPair(bytes32 a, bytes32 b) private pure returns (bytes32) {
+    function _hashPair(
+        bytes32 a,
+        bytes32 b
+    ) private pure returns (bytes32) {
         return a < b ? _hashInternalNode(a, b) : _hashInternalNode(b, a);
     }
 }

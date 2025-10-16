@@ -40,10 +40,10 @@ library CallWithExactGas {
             let g := gas()
             // Compute g -= gasForCallExactCheck and check for underflow
             // The gas actually passed to the callee is _min(gasAmount, 63//64*gas available).
-            // We want to ensure that we revert if gasAmount >  63//64*gas available
+            // We want to ensure that we revert if gasAmount > 63//64*gas available
             // as we do not want to provide them with less, however that check itself costs
             // gas. gasForCallExactCheck ensures we have at least enough gas to be able
-            // to revert if gasAmount >  63//64*gas available.
+            // to revert if gasAmount > 63//64*gas available.
             if lt(g, gasForCallExactCheck) {
                 mstore(0x0, NO_GAS_FOR_CALL_EXACT_CHECK_SIG)
                 revert(0x0, 0x4)
@@ -94,10 +94,10 @@ library CallWithExactGas {
             let g := gas()
             // Compute g -= gasForCallExactCheck and check for underflow
             // The gas actually passed to the callee is _min(gasAmount, 63//64*gas available).
-            // We want to ensure that we revert if gasAmount >  63//64*gas available
+            // We want to ensure that we revert if gasAmount > 63//64*gas available
             // as we do not want to provide them with less, however that check itself costs
             // gas. gasForCallExactCheck ensures we have at least enough gas to be able
-            // to revert if gasAmount >  63//64*gas available.
+            // to revert if gasAmount > 63//64*gas available.
             if lt(g, gasForCallExactCheck) {
                 mstore(0x0, NO_GAS_FOR_CALL_EXACT_CHECK_SIG)
                 revert(0x0, 0x4)

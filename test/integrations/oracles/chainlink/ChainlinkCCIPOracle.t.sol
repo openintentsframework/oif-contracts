@@ -55,9 +55,9 @@ contract ChainlinkCCIPOracleTest is Test {
         bytes32[] memory receivers = new bytes32[](1);
         receivers[0] = address(chainlinkCCIPOracle).toIdentifier();
 
-        uint256 refund = chainlinkCCIPOracle.submitBatch{ value: fee }(
-            destinationChainSelectors, receivers, new bytes(0), address(attester), payloads, address(0)
-        );
+        uint256 refund = chainlinkCCIPOracle.submitBatch{
+            value: fee
+        }(destinationChainSelectors, receivers, new bytes(0), address(attester), payloads, address(0));
         vm.snapshotGasLastCall("oracle", "CCIPSubmitNativeBatchOfOne");
         assertEq(refund, 0);
     }
@@ -95,7 +95,9 @@ contract ChainlinkCCIPOracleTest is Test {
         payloads[0] = abi.encodePacked(keccak256("payload"));
         attester.setAttested(true, payloads[0]);
 
-        uint256 refund = chainlinkCCIPOracle.submit{ value: fee }(
+        uint256 refund = chainlinkCCIPOracle.submit{
+            value: fee
+        }(
             15971525489660198786,
             address(chainlinkCCIPOracle).toIdentifier(),
             new bytes(0),
@@ -104,7 +106,7 @@ contract ChainlinkCCIPOracleTest is Test {
             address(0)
         );
         vm.snapshotGasLastCall("oracle", "CCIPSubmitNativeSingle");
-        
+
         assertEq(refund, 0);
     }
 
@@ -140,9 +142,9 @@ contract ChainlinkCCIPOracleTest is Test {
         bytes32[] memory receivers = new bytes32[](1);
         receivers[0] = address(chainlinkCCIPOracle).toIdentifier();
 
-        chainlinkCCIPOracle.submitBatch{ value: fee * 2 }(
-            destinationChainSelectors, receivers, new bytes(0), address(attester), payloads, address(0)
-        );
+        chainlinkCCIPOracle.submitBatch{
+            value: fee * 2
+        }(destinationChainSelectors, receivers, new bytes(0), address(attester), payloads, address(0));
     }
 
     function test_submit_batch_refund() external {
@@ -157,9 +159,9 @@ contract ChainlinkCCIPOracleTest is Test {
         receivers[0] = address(chainlinkCCIPOracle).toIdentifier();
 
         vm.prank(sender);
-        uint256 refund = chainlinkCCIPOracle.submitBatch{ value: fee * 2 }(
-            destinationChainSelectors, receivers, new bytes(0), address(attester), payloads, address(0)
-        );
+        uint256 refund = chainlinkCCIPOracle.submitBatch{
+            value: fee * 2
+        }(destinationChainSelectors, receivers, new bytes(0), address(attester), payloads, address(0));
         assertEq(refund, fee);
 
         assertEq(sender.balance, fee);
@@ -172,7 +174,9 @@ contract ChainlinkCCIPOracleTest is Test {
         attester.setAttested(true, payloads[0]);
 
         vm.prank(sender);
-        uint256 refund = chainlinkCCIPOracle.submit{ value: fee * 2 }(
+        uint256 refund = chainlinkCCIPOracle.submit{
+            value: fee * 2
+        }(
             15971525489660198786,
             address(chainlinkCCIPOracle).toIdentifier(),
             new bytes(0),
@@ -196,9 +200,9 @@ contract ChainlinkCCIPOracleTest is Test {
         receivers[0] = address(chainlinkCCIPOracle).toIdentifier();
 
         vm.expectRevert();
-        uint256 refund = chainlinkCCIPOracle.submitBatch{ value: fee - 1 }(
-            destinationChainSelectors, receivers, new bytes(0), address(attester), payloads, address(0)
-        );
+        uint256 refund = chainlinkCCIPOracle.submitBatch{
+            value: fee - 1
+        }(destinationChainSelectors, receivers, new bytes(0), address(attester), payloads, address(0));
         assertEq(refund, 0);
     }
 
@@ -215,9 +219,9 @@ contract ChainlinkCCIPOracleTest is Test {
 
         // This contract has no receive function for the refund.
         vm.expectRevert();
-        chainlinkCCIPOracle.submitBatch{ value: fee * 2 }(
-            destinationChainSelectors, receivers, new bytes(0), address(attester), payloads, address(0)
-        );
+        chainlinkCCIPOracle.submitBatch{
+            value: fee * 2
+        }(destinationChainSelectors, receivers, new bytes(0), address(attester), payloads, address(0));
     }
 
     function test_submit_batch_no_receivers() external {
@@ -230,9 +234,9 @@ contract ChainlinkCCIPOracleTest is Test {
         bytes32[] memory receivers = new bytes32[](0);
 
         vm.expectRevert(abi.encodeWithSignature("NoReceivers()"));
-        chainlinkCCIPOracle.submitBatch{ value: fee }(
-            destinationChainSelectors, receivers, new bytes(0), address(attester), payloads, address(0)
-        );
+        chainlinkCCIPOracle.submitBatch{
+            value: fee
+        }(destinationChainSelectors, receivers, new bytes(0), address(attester), payloads, address(0));
     }
 
     function test_submit_batch_not_validated() external {
@@ -280,12 +284,12 @@ contract ChainlinkCCIPOracleTest is Test {
                 );
             }
 
-            chainlinkCCIPOracle.submit{ value: fee }(
+            chainlinkCCIPOracle.submit{
+                value: fee
+            }(
                 15971525489660198786,
                 address(chainlinkCCIPOracle).toIdentifier(),
-                Client._argsToBytes(Client.EVMExtraArgsV1({
-                  gasLimit: 200_000_000
-                })), // we need to give extra gas.
+                Client._argsToBytes(Client.EVMExtraArgsV1({ gasLimit: 200_000_000 })), // we need to give extra gas.
                 address(attester),
                 payloads,
                 address(0)

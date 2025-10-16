@@ -2,9 +2,12 @@
 pragma solidity ^0.8.4;
 
 import { IRouter } from "../../../../../src//integrations/oracles/chainlink/external/interfaces/IRouter.sol";
-import { IRouterClient } from "../../../../../src//integrations/oracles/chainlink/external/interfaces/IRouterClient.sol";
-import { IAny2EVMMessageReceiver } from
-    "../../../../../src/integrations/oracles/chainlink/external/interfaces/IAny2EVMMessageReceiver.sol";
+import {
+    IRouterClient
+} from "../../../../../src//integrations/oracles/chainlink/external/interfaces/IRouterClient.sol";
+import {
+    IAny2EVMMessageReceiver
+} from "../../../../../src/integrations/oracles/chainlink/external/interfaces/IAny2EVMMessageReceiver.sol";
 
 import { Client } from "../../../../../src/integrations/oracles/chainlink/external/Client.sol";
 
@@ -31,7 +34,7 @@ contract MockRouter is IRouter, IRouterClient {
     uint16 public constant GAS_FOR_CALL_EXACT_CHECK = 5_000;
     uint32 public constant DEFAULT_GAS_LIMIT = 200_000;
 
-    uint256 internal s_mockFeeTokenAmount; //use setFee() to change to non-zero to test fees
+    uint256 internal s_mockFeeTokenAmount; // use setFee() to change to non-zero to test fees
 
     function routeMessage(
         Client.Any2EVMMessage calldata message,
@@ -50,9 +53,9 @@ contract MockRouter is IRouter, IRouterClient {
     ) internal returns (bool success, bytes memory retData, uint256 gasUsed) {
         // There are three cases in which we skip calling the receiver:
         // 1. If the message data is empty AND the gas limit is 0.
-        //          This indicates a message that only transfers tokens. It is valid to only send tokens to a contract
-        //          that supports the IAny2EVMMessageReceiver interface, but without this first check we would call the
-        //          receiver without any gas, which would revert the transaction.
+        // This indicates a message that only transfers tokens. It is valid to only send tokens to a contract
+        // that supports the IAny2EVMMessageReceiver interface, but without this first check we would call the
+        // receiver without any gas, which would revert the transaction.
         // 2. If the receiver is not a contract.
         // 3. If the receiver is a contract but it does not support the IAny2EVMMessageReceiver interface.
         //
@@ -133,8 +136,7 @@ contract MockRouter is IRouter, IRouterClient {
             return abi.decode(extraArgs[4:], (Client.GenericExtraArgsV2));
         } else if (extraArgsTag == Client.EVM_EXTRA_ARGS_V1_TAG) {
             return Client.GenericExtraArgsV2({
-                gasLimit: abi.decode(extraArgs[4:], (uint256)),
-                allowOutOfOrderExecution: false
+                gasLimit: abi.decode(extraArgs[4:], (uint256)), allowOutOfOrderExecution: false
             });
         }
 
@@ -156,7 +158,10 @@ contract MockRouter is IRouter, IRouterClient {
     }
 
     /// @notice Returns 0 as the fee is not supported in this mock contract.
-    function getFee(uint64, Client.EVM2AnyMessage memory) public view returns (uint256) {
+    function getFee(
+        uint64,
+        Client.EVM2AnyMessage memory
+    ) public view returns (uint256) {
         return s_mockFeeTokenAmount;
     }
 
@@ -175,7 +180,11 @@ contract MockRouter is IRouter, IRouterClient {
     }
 
     /// @notice Always returns true
-    function isOffRamp(uint64, /* sourceChainSelector */ address /* offRamp */ ) external pure returns (bool) {
+    function isOffRamp(
+        uint64,
+        /* sourceChainSelector */
+        address /* offRamp */
+    ) external pure returns (bool) {
         return true;
     }
 }

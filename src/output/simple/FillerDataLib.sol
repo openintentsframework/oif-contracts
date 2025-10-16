@@ -9,7 +9,7 @@ pragma solidity ^0.8.26;
  * @dev Bytes Layout
  * The serialized filler data follows this exact byte layout:
  *
- * PROPOSED_SOLVER       0               (32 bytes)  - bytes32: proposed solver address
+ * PROPOSED_SOLVER 0 (32 bytes) - bytes32: proposed solver address
  */
 library FillerDataLib {
     /**

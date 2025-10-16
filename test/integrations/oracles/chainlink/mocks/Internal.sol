@@ -114,7 +114,10 @@ library Internal {
     /// @param original OffRamp message to hash.
     /// @param metadataHash Hash preimage to ensure global uniqueness.
     /// @return hashedMessage hashed message as a keccak256.
-    function _hash(Any2EVMRampMessage memory original, bytes32 metadataHash) internal pure returns (bytes32) {
+    function _hash(
+        Any2EVMRampMessage memory original,
+        bytes32 metadataHash
+    ) internal pure returns (bytes32) {
         // Fixed-size message fields are included in nested hash to reduce stack pressure.
         // This hashing scheme is also used by RMN. If changing it, please notify the RMN maintainers.
         return keccak256(
@@ -137,7 +140,10 @@ library Internal {
         );
     }
 
-    function _hash(EVM2AnyRampMessage memory original, bytes32 metadataHash) internal pure returns (bytes32) {
+    function _hash(
+        EVM2AnyRampMessage memory original,
+        bytes32 metadataHash
+    ) internal pure returns (bytes32) {
         // Fixed-size message fields are included in nested hash to reduce stack pressure.
         // This hashing scheme is also used by RMN. If changing it, please notify the RMN maintainers.
         return keccak256(
@@ -188,7 +194,10 @@ library Internal {
 
     /// @notice This methods provides validation for parsing abi encoded addresses by ensuring the address is within the
     /// bounds of [minValue, uint256.max]. If it isn't it will revert with an Invalid32ByteAddress error.
-    function _validate32ByteAddress(bytes memory encodedAddress, uint256 minValue) internal pure {
+    function _validate32ByteAddress(
+        bytes memory encodedAddress,
+        uint256 minValue
+    ) internal pure {
         if (encodedAddress.length != 32) revert Invalid32ByteAddress(encodedAddress);
         if (minValue > 0) {
             if (abi.decode(encodedAddress, (uint256)) < minValue) revert Invalid32ByteAddress(encodedAddress);
@@ -239,9 +248,10 @@ library Internal {
         bytes32 messageId; // Unique identifier for the message, generated with the source chain's encoding scheme (i.e.
             // not necessarily abi.encoded).
         uint64 sourceChainSelector; // ─╮ the chain selector of the source chain, note: not chainId.
-        uint64 destChainSelector; //    │ the chain selector of the destination chain, note: not chainId.
-        uint64 sequenceNumber; //       │ sequence number, not unique across lanes.
-        uint64 nonce; // ───────────────╯ nonce for this lane for this sender, not unique across senders/lanes.
+        uint64 destChainSelector; // │ the chain selector of the destination chain, note: not chainId.
+        uint64 sequenceNumber; // │ sequence number, not unique across lanes.
+        uint64 nonce; // ───────────────╯ nonce for this lane for this sender, not
+            // unique across senders/lanes.
     }
 
     struct EVM2AnyTokenTransfer {
@@ -256,9 +266,10 @@ library Internal {
         // has to be set for the specific token.
         bytes extraData;
         uint256 amount; // Amount of tokens.
-        // Destination chain data used to execute the token transfer on the destination chain. For an EVM destination,
-        // it
-        // consists of the amount of gas available for the releaseOrMint and transfer calls made by the offRamp.
+            // Destination chain data used to execute the token transfer on the destination chain. For an EVM
+            // destination,
+            //it
+            // consists of the amount of gas available for the releaseOrMint and transfer calls made by the offRamp.
         bytes destExecData;
     }
 
@@ -270,9 +281,10 @@ library Internal {
         address destTokenAddress; // ─╮ Address of destination token
         uint32 destGasAmount; // ─────╯ The amount of gas available for the releaseOrMint and transfer calls
             // on the offRamp.
-        // Optional pool data to be transferred to the destination chain. Be default this is capped at
-        // CCIP_LOCK_OR_BURN_V1_RET_BYTES bytes. If more data is required, the TokenTransferFeeConfig.destBytesOverhead
-        // has to be set for the specific token.
+            // Optional pool data to be transferred to the destination chain. Be default this is capped at
+            // CCIP_LOCK_OR_BURN_V1_RET_BYTES bytes. If more data is required, the
+            // TokenTransferFeeConfig.destBytesOverhead
+            // has to be set for the specific token.
         bytes extraData;
         uint256 amount; // Amount of tokens.
     }
@@ -328,9 +340,9 @@ library Internal {
     // solhint-disable-next-line gas-struct-packing
     struct MerkleRoot {
         uint64 sourceChainSelector; // Remote source chain selector that the Merkle Root is scoped to
-        bytes onRampAddress; //        Generic onRamp address, to support arbitrary sources; for EVM, use abi.encode
+        bytes onRampAddress; // Generic onRamp address, to support arbitrary sources; for EVM, use abi.encode
         uint64 minSeqNr; // ─────────╮ Minimum sequence number, inclusive
         uint64 maxSeqNr; // ─────────╯ Maximum sequence number, inclusive
-        bytes32 merkleRoot; //         Merkle root covering the interval & source chain messages
+        bytes32 merkleRoot; // Merkle root covering the interval & source chain messages
     }
 }

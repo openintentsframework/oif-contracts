@@ -30,7 +30,7 @@ library RLPReader {
 
     /// @notice Struct representing an RLP item.
     /// @custom:field length Length of the RLP item.
-    /// @custom:field ptr    Pointer to the RLP item in memory.
+    /// @custom:field ptr Pointer to the RLP item in memory.
     struct RLPItem {
         uint256 length;
         MemoryPointer ptr;
@@ -237,7 +237,7 @@ library RLPReader {
     }
 
     /// @notice Copies the bytes from a memory location.
-    /// @param _src    Pointer to the location to read from.
+    /// @param _src Pointer to the location to read from.
     /// @param _offset Offset to start reading from.
     /// @param _length Number of bytes to read.
     /// @return out_ Copied bytes.

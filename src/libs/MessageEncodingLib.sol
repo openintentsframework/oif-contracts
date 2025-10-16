@@ -10,12 +10,12 @@ pragma solidity ^0.8.26;
  * --- Data Structure ---
  *
  *  Common Structure (Repeated 0 times)
- *      SENDER_IDENTIFIER       0       (32 bytes)
- *      + NUM_PAYLOADS          32      (2 bytes)
+ *      SENDER_IDENTIFIER 0 (32 bytes)
+ *      + NUM_PAYLOADS 32 (2 bytes)
  *
  *  Payloads (repeated NUM_PAYLOADS times)
- *      PAYLOAD_LENGTH          M_i+0   (2 bytes)
- *      PAYLOAD                 M_i+2   (PAYLOAD_LENGTH bytes)
+ *      PAYLOAD_LENGTH M_i+0 (2 bytes)
+ *      PAYLOAD M_i+2 (PAYLOAD_LENGTH bytes)
  *
  * where M_i = the byte offset of the ith payload, calculated as the sum of previous payload lengths plus their 2-byte
  * size prefixes, starting from byte 34 (32 + 2)

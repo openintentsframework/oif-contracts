@@ -26,9 +26,15 @@ contract ChainlinkCCIPOracle is BaseInputOracle, ChainMap, CCIPReceiver {
     error RefundFailed();
     error NoReceivers();
 
-    constructor(address _owner, address router) payable ChainMap(_owner) CCIPReceiver(router) { }
+    constructor(
+        address _owner,
+        address router
+    ) payable ChainMap(_owner) CCIPReceiver(router) { }
 
-    modifier validatePayloads(address source, bytes[] calldata payloads) {
+    modifier validatePayloads(
+        address source,
+        bytes[] calldata payloads
+    ) {
         if (!IAttester(source).hasAttested(payloads)) revert NotAllPayloadsValid();
         _;
     }
@@ -136,9 +142,8 @@ contract ChainlinkCCIPOracle is BaseInputOracle, ChainMap, CCIPReceiver {
             if (currentAllowance < fees) SafeERC20.forceApprove(IERC20(feeToken), getRouter(), type(uint256).max);
         }
 
-        IRouterClient(getRouter()).ccipSend{ value: feeToken == address(0) ? fees : 0 }(
-            destinationChainSelector, evm2AnyMessage
-        );
+        IRouterClient(getRouter())
+        .ccipSend{ value: feeToken == address(0) ? fees : 0 }(destinationChainSelector, evm2AnyMessage);
     }
 
     function _ccipReceive(

@@ -35,5 +35,8 @@ interface IRouter {
     /// @notice Return true if the given offRamp is a configured offRamp for the given source chain.
     /// @param sourceChainSelector The source chain selector to check.
     /// @param offRamp The address of the offRamp to check.
-    function isOffRamp(uint64 sourceChainSelector, address offRamp) external view returns (bool isOffRamp);
+    function isOffRamp(
+        uint64 sourceChainSelector,
+        address offRamp
+    ) external view returns (bool isOffRamp);
 }
