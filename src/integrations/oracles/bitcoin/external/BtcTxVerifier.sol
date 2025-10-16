@@ -79,11 +79,9 @@ contract BtcTxVerifier is IBtcTxVerifier {
 
         bytes32 blockHash = prism.getBlockHash(blockNum);
 
-        if (
-            !BtcProof.validateOrdinalTransfer(
+        if (!BtcProof.validateOrdinalTransfer(
                 blockHash, inclusionProof, txInId, txInPrevTxIndex, outputScript, amountSats
-            )
-        ) revert InvalidProof();
+            )) revert InvalidProof();
 
         return true;
     }
@@ -97,8 +95,9 @@ contract BtcTxVerifier is IBtcTxVerifier {
         bytes calldata outputScript,
         uint256 amountSats
     ) external view returns (bool) {
-        return _verifyOrdinal(
-            minConfirmations, blockNum, inclusionProof, txInId, txInPrevTxIndex, outputScript, amountSats
-        );
+        return
+            _verifyOrdinal(
+                minConfirmations, blockNum, inclusionProof, txInId, txInPrevTxIndex, outputScript, amountSats
+            );
     }
 }

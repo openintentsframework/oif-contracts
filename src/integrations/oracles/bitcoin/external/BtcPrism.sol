@@ -107,7 +107,10 @@ contract BtcPrism is IBtcPrism {
      * Submits a new Bitcoin chain segment. Must be heavier (not necessarily
      * longer) than the chain rooted at getBlockHash(getLatestBlockHeight()).
      */
-    function submit(uint256 blockHeight, bytes calldata blockHeaders) public {
+    function submit(
+        uint256 blockHeight,
+        bytes calldata blockHeaders
+    ) public {
         unchecked {
             require(blockHeight > 2016); // Is needed for unchecked math.
 
@@ -128,7 +131,7 @@ contract BtcPrism is IBtcPrism {
             if (newPeriod > parentPeriod) {
                 require(newPeriod == parentPeriod + 1); // unchecked: parentPeriod is max uint256/2016 <
                     // type(uint256).max
-                // the submitted chain segment contains a difficulty retarget.
+                    // the submitted chain segment contains a difficulty retarget.
                 if (newPeriod == oldPeriod) {
                     // the old canonical chain is past the retarget
                     // we cannot compare length, we must compare total work
@@ -191,7 +194,10 @@ contract BtcPrism is IBtcPrism {
         }
     }
 
-    function getWorkInPeriod(uint256 period, uint256 height) private view returns (uint256) {
+    function getWorkInPeriod(
+        uint256 period,
+        uint256 height
+    ) private view returns (uint256) {
         unchecked {
             uint256 target = periodToTarget[period];
             // unchecked: The maximum target is around 2^224 < 2**256
@@ -210,7 +216,10 @@ contract BtcPrism is IBtcPrism {
         }
     }
 
-    function submitBlock(uint256 blockHeight, bytes calldata blockHeader) private {
+    function submitBlock(
+        uint256 blockHeight,
+        bytes calldata blockHeader
+    ) private {
         unchecked {
             require(blockHeight > 2016);
 
@@ -243,9 +252,9 @@ contract BtcPrism is IBtcPrism {
                 // add any security. We keep the heaviest chain, not the longest.
                 uint256 lastTarget = periodToTarget[period - 1]; // blockHeight > 2016 => blockHeight / 2016 > 1 =>
                     // fine.
-                // ignore difficulty update rules on testnet.
-                // Bitcoin testnet has some clown hacks regarding difficulty, see
-                // https://blog.lopp.net/the-block-storms-of-bitcoins-testnet/
+                    // ignore difficulty update rules on testnet.
+                    // Bitcoin testnet has some clown hacks regarding difficulty, see
+                    // https://blog.lopp.net/the-block-storms-of-bitcoins-testnet/
                 if (!isTestnet) {
                     if (target >> 2 >= lastTarget) revert DifficultyRetargetLT25();
                     if (target << 2 <= lastTarget) revert DifficultyRetargetLT25();

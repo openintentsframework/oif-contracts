@@ -46,7 +46,10 @@ interface ImmutableCreate2Factory {
 event PackagePublished(uint32 nonce, bytes payload, uint8 consistencyLevel);
 
 contract ExportedMessages is Messages, Setters {
-    function storeGuardianSetPub(Structs.GuardianSet memory set, uint32 index) public {
+    function storeGuardianSetPub(
+        Structs.GuardianSet memory set,
+        uint32 index
+    ) public {
         return super.storeGuardianSet(set, index);
     }
 
@@ -102,7 +105,7 @@ contract InputSettlerCompactTestCrossChain is Test {
         uint96 signAllocatorId = theCompact.__registerAllocator(address(simpleAllocator), "");
         signAllocatorLockTag = bytes12(signAllocatorId);
 
-        DOMAIN_SEPARATOR = EIP712(address(theCompact)).DOMAIN_SEPARATOR();
+        DOMAIN_SEPARATOR = theCompact.DOMAIN_SEPARATOR();
 
         inputSettlerCompact = address(new InputSettlerCompact(address(theCompact)));
         outputSettlerCoin = new OutputSettlerSimple();
@@ -222,12 +225,12 @@ contract InputSettlerCompactTestCrossChain is Test {
                 ),
                 order.fillDeadline,
                 order.inputOracle,
-                outputsHash(order.outputs)
+                hashOutputsForMemory(order.outputs)
             )
         );
     }
 
-    function outputsHash(
+    function hashOutputsForMemory(
         MandateOutput[] memory outputs
     ) internal pure returns (bytes32) {
         bytes32[] memory hashes = new bytes32[](outputs.length);
@@ -235,18 +238,14 @@ contract InputSettlerCompactTestCrossChain is Test {
             MandateOutput memory output = outputs[i];
             hashes[i] = keccak256(
                 abi.encode(
-                    keccak256(
-                        bytes(
-                            "MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
-                        )
-                    ),
+                    MandateOutputType.MANDATE_OUTPUT_TYPE_HASH,
                     output.oracle,
                     output.settler,
                     output.chainId,
                     output.token,
                     output.amount,
                     output.recipient,
-                    keccak256(output.call),
+                    keccak256(output.callbackData),
                     keccak256(output.context)
                 )
             );
@@ -254,7 +253,10 @@ contract InputSettlerCompactTestCrossChain is Test {
         return keccak256(abi.encodePacked(hashes));
     }
 
-    function encodeMessage(bytes32 remoteIdentifier, bytes[] calldata payloads) external pure returns (bytes memory) {
+    function encodeMessage(
+        bytes32 remoteIdentifier,
+        bytes[] calldata payloads
+    ) external pure returns (bytes memory) {
         return MessageEncodingLib.encodeMessage(remoteIdentifier, payloads);
     }
 
@@ -264,7 +266,7 @@ contract InputSettlerCompactTestCrossChain is Test {
         bytes32 destination,
         bytes calldata call
     ) external view returns (bytes memory sig) {
-        bytes32 domainSeparator = EIP712(inputSettlerCompact).DOMAIN_SEPARATOR();
+        bytes32 domainSeparator = InputSettlerBase(inputSettlerCompact).DOMAIN_SEPARATOR();
         bytes32 msgHash = keccak256(
             abi.encodePacked("\x19\x01", domainSeparator, AllowOpenType.hashAllowOpen(orderId, destination, call))
         );
@@ -285,8 +287,8 @@ contract InputSettlerCompactTestCrossChain is Test {
             output.token, // token
             output.amount, // amount
             output.recipient, // recipient
-            uint16(output.call.length), // call length
-            output.call, // call
+            uint16(output.callbackData.length), // call length
+            output.callbackData, // call
             uint16(output.context.length), // context length
             output.context // context
         );
@@ -312,7 +314,7 @@ contract InputSettlerCompactTestCrossChain is Test {
             token: bytes32(tokenId),
             amount: amount,
             recipient: swapper.toIdentifier(),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
         StandardOrder memory order = StandardOrder({
@@ -382,7 +384,7 @@ contract InputSettlerCompactTestCrossChain is Test {
             token: address(anotherToken).toIdentifier(),
             amount: amount,
             recipient: swapper.toIdentifier(),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
         StandardOrder memory order = StandardOrder({
@@ -490,7 +492,7 @@ contract InputSettlerCompactTestCrossChain is Test {
             token: address(anotherToken).toIdentifier(),
             amount: amount,
             recipient: swapper.toIdentifier(),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
         outputs[1] = MandateOutput({
@@ -500,7 +502,7 @@ contract InputSettlerCompactTestCrossChain is Test {
             token: address(token).toIdentifier(),
             amount: amount,
             recipient: swapper.toIdentifier(),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
         StandardOrder memory order = StandardOrder({
@@ -548,7 +550,7 @@ contract InputSettlerCompactTestCrossChain is Test {
                 outputs[0].token,
                 outputs[0].amount,
                 outputs[0].recipient,
-                outputs[0].call,
+                outputs[0].callbackData,
                 outputs[0].context
             );
             payloads[1] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
@@ -558,7 +560,7 @@ contract InputSettlerCompactTestCrossChain is Test {
                 outputs[1].token,
                 outputs[1].amount,
                 outputs[1].recipient,
-                outputs[1].call,
+                outputs[1].callbackData,
                 outputs[1].context
             );
 
@@ -582,9 +584,8 @@ contract InputSettlerCompactTestCrossChain is Test {
                 InputSettlerBase.SolveParams({ solver: solverIdentifier, timestamp: uint32(block.timestamp) });
             solveParams[1] =
                 InputSettlerBase.SolveParams({ solver: solverIdentifier, timestamp: uint32(block.timestamp) });
-            IInputSettlerCompact(inputSettlerCompact).finalise(
-                order, signature, solveParams, solveParams[0].solver, hex""
-            );
+            IInputSettlerCompact(inputSettlerCompact)
+                .finalise(order, signature, solveParams, solveParams[0].solver, hex"");
         }
 
         {
@@ -604,8 +605,7 @@ contract InputSettlerCompactTestCrossChain is Test {
         );
 
         vm.prank(solver);
-        IInputSettlerCompact(inputSettlerCompact).finaliseWithSignature(
-            order, signature, solveParams, solverIdentifier, hex"", solverSignature
-        );
+        IInputSettlerCompact(inputSettlerCompact)
+            .finaliseWithSignature(order, signature, solveParams, solverIdentifier, hex"", solverSignature);
     }
 }

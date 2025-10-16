@@ -11,11 +11,13 @@ import { AlwaysOKAllocator } from "the-compact/src/test/AlwaysOKAllocator.sol";
 import { ResetPeriod } from "the-compact/src/types/ResetPeriod.sol";
 import { Scope } from "the-compact/src/types/Scope.sol";
 
+import { InputSettlerBase } from "../../../src/input/InputSettlerBase.sol";
 import { InputSettlerCompact } from "../../../src/input/compact/InputSettlerCompact.sol";
 import { AllowOpenType } from "../../../src/input/types/AllowOpenType.sol";
-import { MandateOutput } from "../../../src/input/types/MandateOutputType.sol";
+import { MandateOutput, MandateOutputType } from "../../../src/input/types/MandateOutputType.sol";
 import { OrderPurchase, OrderPurchaseType } from "../../../src/input/types/OrderPurchaseType.sol";
 import { StandardOrder } from "../../../src/input/types/StandardOrderType.sol";
+import { IInputSettlerCompact } from "../../../src/interfaces/IInputSettlerCompact.sol";
 
 import { WormholeOracle } from "../../../src/integrations/oracles/wormhole/WormholeOracle.sol";
 import { Messages } from "../../../src/integrations/oracles/wormhole/external/wormhole/Messages.sol";
@@ -34,7 +36,10 @@ interface EIP712 {
 event PackagePublished(uint32 nonce, bytes payload, uint8 consistencyLevel);
 
 contract ExportedMessages is Messages, Setters {
-    function storeGuardianSetPub(Structs.GuardianSet memory set, uint32 index) public {
+    function storeGuardianSetPub(
+        Structs.GuardianSet memory set,
+        uint32 index
+    ) public {
         return super.storeGuardianSet(set, index);
     }
 
@@ -88,7 +93,7 @@ contract InputSettlerCompactTestBase is Test {
         uint96 signAllocatorId = theCompact.__registerAllocator(address(simpleAllocator), "");
         signAllocatorLockTag = bytes12(signAllocatorId);
 
-        DOMAIN_SEPARATOR = EIP712(address(theCompact)).DOMAIN_SEPARATOR();
+        DOMAIN_SEPARATOR = theCompact.DOMAIN_SEPARATOR();
 
         inputSettlerCompact = address(new InputSettlerCompact(address(theCompact)));
         outputSettlerCoin = new OutputSettlerSimple();
@@ -193,12 +198,12 @@ contract InputSettlerCompactTestBase is Test {
                 ),
                 order.fillDeadline,
                 order.inputOracle,
-                outputsHash(order.outputs)
+                hashOutputsForMemory(order.outputs)
             )
         );
     }
 
-    function outputsHash(
+    function hashOutputsForMemory(
         MandateOutput[] memory outputs
     ) internal pure returns (bytes32) {
         bytes32[] memory hashes = new bytes32[](outputs.length);
@@ -206,18 +211,14 @@ contract InputSettlerCompactTestBase is Test {
             MandateOutput memory output = outputs[i];
             hashes[i] = keccak256(
                 abi.encode(
-                    keccak256(
-                        bytes(
-                            "MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
-                        )
-                    ),
+                    MandateOutputType.MANDATE_OUTPUT_TYPE_HASH,
                     output.oracle,
                     output.settler,
                     output.chainId,
                     output.token,
                     output.amount,
                     output.recipient,
-                    keccak256(output.call),
+                    keccak256(output.callbackData),
                     keccak256(output.context)
                 )
             );
@@ -225,7 +226,10 @@ contract InputSettlerCompactTestBase is Test {
         return keccak256(abi.encodePacked(hashes));
     }
 
-    function encodeMessage(bytes32 remoteIdentifier, bytes[] calldata payloads) external pure returns (bytes memory) {
+    function encodeMessage(
+        bytes32 remoteIdentifier,
+        bytes[] calldata payloads
+    ) external pure returns (bytes memory) {
         return MessageEncodingLib.encodeMessage(remoteIdentifier, payloads);
     }
 
@@ -253,9 +257,10 @@ contract InputSettlerCompactTestBase is Test {
         uint256 privateKey,
         OrderPurchase calldata orderPurchase
     ) external view returns (bytes memory sig) {
-        bytes32 domainSeparator = EIP712(inputSettlerCompact).DOMAIN_SEPARATOR();
-        bytes32 msgHash =
-            keccak256(abi.encodePacked("\x19\x01", domainSeparator, OrderPurchaseType.hashOrderPurchase(orderPurchase)));
+        bytes32 domainSeparator = InputSettlerBase(inputSettlerCompact).DOMAIN_SEPARATOR();
+        bytes32 msgHash = keccak256(
+            abi.encodePacked("\x19\x01", domainSeparator, OrderPurchaseType.hashOrderPurchase(orderPurchase))
+        );
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
         return bytes.concat(r, s, bytes1(v));
@@ -267,7 +272,7 @@ contract InputSettlerCompactTestBase is Test {
         bytes32 destination,
         bytes calldata call
     ) external view returns (bytes memory sig) {
-        bytes32 domainSeparator = EIP712(inputSettlerCompact).DOMAIN_SEPARATOR();
+        bytes32 domainSeparator = InputSettlerBase(inputSettlerCompact).DOMAIN_SEPARATOR();
         bytes32 msgHash = keccak256(
             abi.encodePacked("\x19\x01", domainSeparator, AllowOpenType.hashAllowOpen(orderId, destination, call))
         );
@@ -286,10 +291,8 @@ contract InputSettlerCompactTestBase is Test {
         uint96 allocatorId = IdLib.toAllocatorId(alloca);
 
         // Derive resource lock ID (pack scope, reset period, allocator ID, & token).
-        id = (
-            (EfficiencyLib.asUint256(scope) << 255) | (EfficiencyLib.asUint256(resetPeriod) << 252)
-                | (EfficiencyLib.asUint256(allocatorId) << 160) | EfficiencyLib.asUint256(tkn)
-        );
+        id = ((EfficiencyLib.asUint256(scope) << 255) | (EfficiencyLib.asUint256(resetPeriod) << 252)
+                | (EfficiencyLib.asUint256(allocatorId) << 160) | EfficiencyLib.asUint256(tkn));
     }
 
     function hashOrderPurchase(

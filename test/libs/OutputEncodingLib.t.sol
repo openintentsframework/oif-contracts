@@ -76,7 +76,7 @@ contract MandateOutputEncodingLibTest is Test {
             token: keccak256(bytes("token")),
             amount: uint256(keccak256(bytes("amount"))),
             recipient: keccak256(bytes("recipient")),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
 
@@ -88,7 +88,7 @@ contract MandateOutputEncodingLibTest is Test {
             hex"4f9c60d16f18ede78fc0a6cfbe7ef0072cdda8cbb9b0b90c5d3578541cb3c1616aa1b29f675730a3d41062603d83a385b254be1e9338406698f9ea0702586f9e8ed9144e2f2122812934305f889c544efe55db33a5fd4b235aaab787c3f913d49b9b0454cadcb5884dd3faa6ba975da4d2459aa3f11d31291a25a8358f84946d89c4783cb6cc307f98e95f2d5d5d8647bdb3d4bdd087209374f187b38e098895811085f5b5d1b29598e73ca51de3d712f5d3103ad50e22dc1f4d3ff1559d511500000000"
         );
 
-        output.call = abi.encodePacked(keccak256(hex""), keccak256(hex"01"), bytes3(0x010203));
+        output.callbackData = abi.encodePacked(keccak256(hex""), keccak256(hex"01"), bytes3(0x010203));
         output.context = abi.encodePacked(
             keccak256(hex"02"), keccak256(hex"03"), keccak256(hex"04"), keccak256(hex"05"), bytes4(0x01020304)
         );
@@ -110,14 +110,14 @@ contract MandateOutputEncodingLibTest is Test {
             token: keccak256(bytes("token")),
             amount: uint256(keccak256(bytes("amount"))),
             recipient: keccak256(bytes("recipient")),
-            call: new bytes(65535 - 1),
+            callbackData: new bytes(65535 - 1),
             context: new bytes(0)
         });
 
         this.encodeMandateOutputHarness(output);
         this.encodeMandateOutputMemoryHarness(output);
 
-        output.call = new bytes(65536);
+        output.callbackData = new bytes(65536);
 
         vm.expectRevert(abi.encodeWithSignature("CallOutOfRange()"));
         this.encodeMandateOutputHarness(output);
@@ -133,7 +133,7 @@ contract MandateOutputEncodingLibTest is Test {
             token: keccak256(bytes("token")),
             amount: uint256(keccak256(bytes("amount"))),
             recipient: keccak256(bytes("recipient")),
-            call: new bytes(0),
+            callbackData: new bytes(0),
             context: new bytes(65535 - 1)
         });
 
@@ -167,7 +167,7 @@ contract MandateOutputEncodingLibTest is Test {
             token: token,
             amount: amount,
             recipient: recipient,
-            call: call,
+            callbackData: call,
             context: context
         });
 
@@ -176,8 +176,9 @@ contract MandateOutputEncodingLibTest is Test {
             this.encodeFillDescriptionMemoryHarness(solver, orderId, timestamp, output);
         bytes memory encodedOutput =
             this.encodeFillDescriptionHarness(solver, orderId, timestamp, token, amount, recipient, call, context);
-        bytes memory encodedOutputMemory =
-            this.encodeFillDescriptionMemoryHarness(solver, orderId, timestamp, token, amount, recipient, call, context);
+        bytes memory encodedOutputMemory = this.encodeFillDescriptionMemoryHarness(
+            solver, orderId, timestamp, token, amount, recipient, call, context
+        );
         assertEq(encodedOutputFromOutput, encodedOutputFromOutputMemory);
         assertEq(encodedOutputFromOutput, encodedOutput);
         assertEq(encodedOutput, encodedOutputMemory);
@@ -187,7 +188,7 @@ contract MandateOutputEncodingLibTest is Test {
         );
 
         call = abi.encodePacked(keccak256(hex""), keccak256(hex"01"), bytes3(0x010203));
-        output.call = call;
+        output.callbackData = call;
         context = abi.encodePacked(
             keccak256(hex"02"), keccak256(hex"03"), keccak256(hex"04"), keccak256(hex"05"), bytes4(0x01020304)
         );
@@ -197,8 +198,9 @@ contract MandateOutputEncodingLibTest is Test {
         encodedOutputFromOutputMemory = this.encodeFillDescriptionMemoryHarness(solver, orderId, timestamp, output);
         encodedOutput =
             this.encodeFillDescriptionHarness(solver, orderId, timestamp, token, amount, recipient, call, context);
-        encodedOutputMemory =
-            this.encodeFillDescriptionMemoryHarness(solver, orderId, timestamp, token, amount, recipient, call, context);
+        encodedOutputMemory = this.encodeFillDescriptionMemoryHarness(
+            solver, orderId, timestamp, token, amount, recipient, call, context
+        );
         assertEq(encodedOutputFromOutput, encodedOutputFromOutputMemory);
         assertEq(encodedOutputFromOutput, encodedOutput);
         assertEq(encodedOutput, encodedOutputMemory);
@@ -225,7 +227,7 @@ contract MandateOutputEncodingLibTest is Test {
             token: token,
             amount: amount,
             recipient: recipient,
-            call: call,
+            callbackData: call,
             context: context
         });
 
@@ -235,7 +237,7 @@ contract MandateOutputEncodingLibTest is Test {
         this.encodeFillDescriptionMemoryHarness(solver, orderId, timestamp, token, amount, recipient, call, context);
 
         call = new bytes(65536);
-        output.call = call;
+        output.callbackData = call;
 
         vm.expectRevert(abi.encodeWithSignature("CallOutOfRange()"));
         this.encodeFillDescriptionHarness(solver, orderId, timestamp, output);
@@ -264,7 +266,7 @@ contract MandateOutputEncodingLibTest is Test {
             token: token,
             amount: amount,
             recipient: recipient,
-            call: call,
+            callbackData: call,
             context: context
         });
 

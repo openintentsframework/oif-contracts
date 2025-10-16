@@ -7,7 +7,6 @@ import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 
 import { SignatureChecker } from "openzeppelin/utils/cryptography/SignatureChecker.sol";
-import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
 import { IInputCallback } from "../interfaces/IInputCallback.sol";
 
@@ -25,6 +24,39 @@ import { InputSettlerBase } from "./InputSettlerBase.sol";
  * purchaser upon successful purchase. It includes a discount-based pricing mechanism where purchasers pay a reduced
  * amount, EIP712 signature verification for purchase authorization, reentry protection and purchase state tracking, and
  * integration with IInputCallback for post-purchase execution.
+ *
+ * **IMPORTANT SECURITY NOTE - FIRST SOLVER ORDER OWNERSHIP:**
+ * By default, the owner (address able to claim funds after and order is settled) is the solver of the first output, in
+ * case of an order with multiple outputs.
+ * This leads to some security considerations:
+ * For Users:
+ * 1. Denial of Service Risk: The solver of the first output may refuse to fill the other outputs, delaying the order
+ * execution until expiry (when user can be refunded).
+ *    - Mitigation: Users should ensure that the first output is the most important/valuable, making this attack more
+ * costly.
+ * 2. Exploitation of different order types: When opening orders, users are able to set different rules for filling
+ * them, i.e., output amounts could be determined by a dutch auction. If the order has multiple outputs, the solver of
+ * the first output (the owner) can delay the filling of other outputs, which could lead to worse prices for users.
+ *    - Mitigation: Users should be cautious when opening orders whose outputs have variable output amounts. In general,
+ * users SHOULD NOT open orders where any output other than the first has an order type whose output amount is
+ * determined by, for example, a time based mechanism.
+ *
+ * Users should also consider opening orders with exclusivity for trusted solvers, especially when the order has
+ * multiple outputs.
+ *
+ * For Solvers:
+ * 1. Multiple outputs risk: When filling an order, the solver MUST be aware that they will only be able to finalise the
+ * order (i.e., claim funds) after filling all of the outputs (potentially in multiple chains).
+ * If the solver is unable to do so, the user will be refunded and the order will be considered as not filled.
+ *    - Mitigation: Solvers should be aware of all of the risks and variables, such as:
+ *      - all outputs must be filled before `fillDeadline` and the proof of the filling transaction must be handled by
+ * each oracle before `expiry` time.
+ *      - Solvers should be aware that some outputs have callbacks, which is an arbitrary code that is executed during
+ * the filling of the output. They should refuse orders with callbacks outside of the primary batch (that containing the
+ * first output) unless it's known that it can't possibly revert (considering that a successful off-chain simulation is
+ * not a guarantee of on-chain success)
+ *        They should understand the risks of each callback and the potential for them to revert the filling of the
+ * output, which could lead to the solver not being able to finalise the order.
  */
 abstract contract InputSettlerPurchase is InputSettlerBase {
     using LibAddress for address;
@@ -162,15 +194,15 @@ abstract contract InputSettlerPurchase is InputSettlerBase {
                 uint256 amountAfterDiscount = (allocatedAmount * (DISCOUNT_DENOM - discount)) / DISCOUNT_DENOM;
                 // Throws if discount > DISCOUNT_DENOM => DISCOUNT_DENOM - discount < 0;
                 SafeERC20.safeTransferFrom(
-                    IERC20(tokenId.fromIdentifier()), msg.sender, newDestination, amountAfterDiscount
+                    IERC20(tokenId.validatedCleanAddress()), msg.sender, newDestination, amountAfterDiscount
                 );
             }
             // Emit the event now because of stack issues.
             emit OrderPurchased(orderPurchase.orderId, orderSolvedByIdentifier, purchaser);
         }
         {
-            bytes calldata call = orderPurchase.call;
-            if (call.length > 0) IInputCallback(newDestination).orderFinalised(inputs, call);
+            bytes calldata callData = orderPurchase.callData;
+            if (callData.length > 0) IInputCallback(newDestination).orderFinalised(inputs, callData);
         }
     }
 }
