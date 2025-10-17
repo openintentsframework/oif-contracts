@@ -19,7 +19,9 @@ import {
     MessagingReceipt,
     Origin
 } from "../../../src/integrations/oracles/layerzero/external/layerzero-v2/interfaces/ILayerZeroEndpointV2.sol";
-import { SetConfigParam } from "../../../src/integrations/oracles/layerzero/external/layerzero-v2/interfaces/IMessageLibManager.sol";
+import {
+    SetConfigParam
+} from "../../../src/integrations/oracles/layerzero/external/layerzero-v2/interfaces/IMessageLibManager.sol";
 
 event OutputProven(uint256 chainid, bytes32 remoteIdentifier, bytes32 application, bytes32 payloadHash);
 
@@ -33,7 +35,10 @@ contract LayerZeroEndpointV2Mock {
     // Store configs: oapp => lib => eid => configType => config
     mapping(address => mapping(address => mapping(uint32 => mapping(uint32 => bytes)))) private configs;
 
-    function quote(MessagingParams calldata, address) external pure returns (MessagingFee memory fee) {
+    function quote(
+        MessagingParams calldata,
+        address
+    ) external pure returns (MessagingFee memory fee) {
         return MessagingFee({ nativeFee: 0.5 ether, lzTokenFee: 0 });
     }
 
@@ -64,7 +69,11 @@ contract LayerZeroEndpointV2Mock {
         lzToken = _lzToken;
     }
 
-    function setConfig(address _oapp, address _lib, SetConfigParam[] calldata _params) external {
+    function setConfig(
+        address _oapp,
+        address _lib,
+        SetConfigParam[] calldata _params
+    ) external {
         for (uint256 i = 0; i < _params.length; i++) {
             configs[_oapp][_lib][_params[i].eid][_params[i].configType] = _params[i].config;
         }

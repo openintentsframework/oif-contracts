@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 /// @notice This file is copied from
-/// https://github.com/LayerZero-Labs/LayerZero-v2/blob/c09287a8b1f236fcc057f474d8a773a0fb7758df/packages/layerzero-v2/evm/protocol/contracts/interfaces/IMessageLibManager.sol
+///
+// https://github.com/LayerZero-Labs/LayerZero-v2/blob/c09287a8b1f236fcc057f474d8a773a0fb7758df/packages/layerzero-v2/evm/protocol/contracts/interfaces/IMessageLibManager.sol
 pragma solidity >=0.8.0;
 
 struct SetConfigParam {
@@ -33,19 +34,30 @@ interface IMessageLibManager {
 
     function getRegisteredLibraries() external view returns (address[] memory);
 
-    function setDefaultSendLibrary(uint32 _eid, address _newLib) external;
+    function setDefaultSendLibrary(
+        uint32 _eid,
+        address _newLib
+    ) external;
 
     function defaultSendLibrary(
         uint32 _eid
     ) external view returns (address);
 
-    function setDefaultReceiveLibrary(uint32 _eid, address _newLib, uint256 _timeout) external;
+    function setDefaultReceiveLibrary(
+        uint32 _eid,
+        address _newLib,
+        uint256 _timeout
+    ) external;
 
     function defaultReceiveLibrary(
         uint32 _eid
     ) external view returns (address);
 
-    function setDefaultReceiveLibraryTimeout(uint32 _eid, address _lib, uint256 _expiry) external;
+    function setDefaultReceiveLibraryTimeout(
+        uint32 _eid,
+        address _lib,
+        uint256 _expiry
+    ) external;
 
     function defaultReceiveLibraryTimeout(
         uint32 _eid
@@ -55,27 +67,58 @@ interface IMessageLibManager {
         uint32 _eid
     ) external view returns (bool);
 
-    function isValidReceiveLibrary(address _receiver, uint32 _eid, address _lib) external view returns (bool);
+    function isValidReceiveLibrary(
+        address _receiver,
+        uint32 _eid,
+        address _lib
+    ) external view returns (bool);
 
     /// ------------------- OApp interfaces -------------------
-    function setSendLibrary(address _oapp, uint32 _eid, address _newLib) external;
+    function setSendLibrary(
+        address _oapp,
+        uint32 _eid,
+        address _newLib
+    ) external;
 
-    function getSendLibrary(address _sender, uint32 _eid) external view returns (address lib);
+    function getSendLibrary(
+        address _sender,
+        uint32 _eid
+    ) external view returns (address lib);
 
-    function isDefaultSendLibrary(address _sender, uint32 _eid) external view returns (bool);
+    function isDefaultSendLibrary(
+        address _sender,
+        uint32 _eid
+    ) external view returns (bool);
 
-    function setReceiveLibrary(address _oapp, uint32 _eid, address _newLib, uint256 _gracePeriod) external;
+    function setReceiveLibrary(
+        address _oapp,
+        uint32 _eid,
+        address _newLib,
+        uint256 _gracePeriod
+    ) external;
 
-    function getReceiveLibrary(address _receiver, uint32 _eid) external view returns (address lib, bool isDefault);
+    function getReceiveLibrary(
+        address _receiver,
+        uint32 _eid
+    ) external view returns (address lib, bool isDefault);
 
-    function setReceiveLibraryTimeout(address _oapp, uint32 _eid, address _lib, uint256 _gracePeriod) external;
+    function setReceiveLibraryTimeout(
+        address _oapp,
+        uint32 _eid,
+        address _lib,
+        uint256 _gracePeriod
+    ) external;
 
     function receiveLibraryTimeout(
         address _receiver,
         uint32 _eid
     ) external view returns (address lib, uint256 expiry);
 
-    function setConfig(address _oapp, address _lib, SetConfigParam[] calldata _params) external;
+    function setConfig(
+        address _oapp,
+        address _lib,
+        SetConfigParam[] calldata _params
+    ) external;
 
     function getConfig(
         address _oapp,

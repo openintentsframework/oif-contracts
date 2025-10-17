@@ -98,11 +98,14 @@ abstract contract MinimalOApp {
         uint256 messageValue = _payNative(fee.nativeFee);
         if (fee.lzTokenFee > 0) _payLzToken(fee.lzTokenFee);
 
-        return endpoint
+        return endpoint.
             // solhint-disable-next-line check-send-result
-            .send{ value: messageValue }(
-            MessagingParams(dstEid, recipientOracle.toIdentifier(), message, options, fee.lzTokenFee > 0), refundAddress
-        );
+            send{
+                value: messageValue
+            }(
+                MessagingParams(dstEid, recipientOracle.toIdentifier(), message, options, fee.lzTokenFee > 0),
+                refundAddress
+            );
     }
 
     /**

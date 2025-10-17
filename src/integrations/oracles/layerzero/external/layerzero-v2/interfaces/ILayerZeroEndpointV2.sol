@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 /// @notice This file copied from
-/// https://github.com/LayerZero-Labs/LayerZero-v2/blob/c09287a8b1f236fcc057f474d8a773a0fb7758df/packages/layerzero-v2/evm/protocol/contracts/interfaces/ILayerZeroEndpointV2.sol
+///
+// https://github.com/LayerZero-Labs/LayerZero-v2/blob/c09287a8b1f236fcc057f474d8a773a0fb7758df/packages/layerzero-v2/evm/protocol/contracts/interfaces/ILayerZeroEndpointV2.sol
 pragma solidity >=0.8.0;
 
 import { IMessageLibManager } from "./IMessageLibManager.sol";
@@ -57,18 +58,31 @@ interface ILayerZeroEndpointV2 is IMessageLibManager, IMessagingComposer, IMessa
 
     event DelegateSet(address sender, address delegate);
 
-    function quote(MessagingParams calldata _params, address _sender) external view returns (MessagingFee memory);
+    function quote(
+        MessagingParams calldata _params,
+        address _sender
+    ) external view returns (MessagingFee memory);
 
     function send(
         MessagingParams calldata _params,
         address _refundAddress
     ) external payable returns (MessagingReceipt memory);
 
-    function verify(Origin calldata _origin, address _receiver, bytes32 _payloadHash) external;
+    function verify(
+        Origin calldata _origin,
+        address _receiver,
+        bytes32 _payloadHash
+    ) external;
 
-    function verifiable(Origin calldata _origin, address _receiver) external view returns (bool);
+    function verifiable(
+        Origin calldata _origin,
+        address _receiver
+    ) external view returns (bool);
 
-    function initializable(Origin calldata _origin, address _receiver) external view returns (bool);
+    function initializable(
+        Origin calldata _origin,
+        address _receiver
+    ) external view returns (bool);
 
     function lzReceive(
         Origin calldata _origin,
@@ -80,7 +94,12 @@ interface ILayerZeroEndpointV2 is IMessageLibManager, IMessagingComposer, IMessa
 
     // oapp can burn messages partially by calling this function with its own business logic if messages are verified in
     // order
-    function clear(address _oapp, Origin calldata _origin, bytes32 _guid, bytes calldata _message) external;
+    function clear(
+        address _oapp,
+        Origin calldata _origin,
+        bytes32 _guid,
+        bytes calldata _message
+    ) external;
 
     function setLzToken(
         address _lzToken

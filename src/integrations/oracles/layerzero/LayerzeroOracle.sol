@@ -37,14 +37,10 @@ contract LayerzeroOracle is ChainMap, BaseInputOracle, MinimalOApp {
         SetConfigParam[] memory _receiveConfig
     ) MinimalOApp(_endpoint) ChainMap(_owner) {
         // Set send configuration (ULN + Executor) if provided
-        if (_sendConfig.length > 0) {
-            endpoint.setConfig(address(this), _sendLibrary, _sendConfig);
-        }
+        if (_sendConfig.length > 0) endpoint.setConfig(address(this), _sendLibrary, _sendConfig);
 
         // Set receive configuration (ULN only) if provided
-        if (_receiveConfig.length > 0) {
-            endpoint.setConfig(address(this), _receiveLibrary, _receiveConfig);
-        }
+        if (_receiveConfig.length > 0) endpoint.setConfig(address(this), _receiveLibrary, _receiveConfig);
     }
 
     /**
@@ -116,7 +112,11 @@ contract LayerzeroOracle is ChainMap, BaseInputOracle, MinimalOApp {
      * @param _configType The config type (1 = Executor, 2 = ULN/DVN)
      * @return config The configuration bytes (needs to be decoded based on configType)
      */
-    function getConfig(address _lib, uint32 _eid, uint32 _configType) external view returns (bytes memory config) {
+    function getConfig(
+        address _lib,
+        uint32 _eid,
+        uint32 _configType
+    ) external view returns (bytes memory config) {
         return endpoint.getConfig(address(this), _lib, _eid, _configType);
     }
 

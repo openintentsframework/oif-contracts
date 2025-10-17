@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 /// @notice this file is copied from
-/// https://github.com/LayerZero-Labs/LayerZero-v2/blob/c09287a8b1f236fcc057f474d8a773a0fb7758df/packages/layerzero-v2/evm/protocol/contracts/interfaces/IMessagingComposer.sol
+///
+// https://github.com/LayerZero-Labs/LayerZero-v2/blob/c09287a8b1f236fcc057f474d8a773a0fb7758df/packages/layerzero-v2/evm/protocol/contracts/interfaces/IMessagingComposer.sol
 pragma solidity >=0.8.0;
 
 interface IMessagingComposer {
@@ -26,7 +27,12 @@ interface IMessagingComposer {
         uint16 _index
     ) external view returns (bytes32 messageHash);
 
-    function sendCompose(address _to, bytes32 _guid, uint16 _index, bytes calldata _message) external;
+    function sendCompose(
+        address _to,
+        bytes32 _guid,
+        uint16 _index,
+        bytes calldata _message
+    ) external;
 
     function lzCompose(
         address _from,
