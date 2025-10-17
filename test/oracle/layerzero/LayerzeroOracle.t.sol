@@ -362,5 +362,57 @@ contract LayerzeroOracleTest is Test {
         }
     }
 
+    // --- Configuration Tests --- //
+
+    function test_constructor_withCustomConfig() external {
+        address sendLibrary = makeAddr("sendLibrary");
+        address receiveLibrary = makeAddr("receiveLibrary");
+
+        // Create custom configs
+        SetConfigParam[] memory customSendConfig = new SetConfigParam[](1);
+        customSendConfig[0] = SetConfigParam({
+            eid: _dstEid,
+            configType: 2, // ULN/DVN config
+            config: abi.encode(uint64(15), uint8(2), uint8(1), uint8(0), new address[](2), new address[](0))
+        });
+
+        SetConfigParam[] memory customReceiveConfig = new SetConfigParam[](1);
+        customReceiveConfig[0] = SetConfigParam({
+            eid: _srcEid,
+            configType: 2, // ULN/DVN config
+            config: abi.encode(uint64(20), uint8(2), uint8(1), uint8(0), new address[](2), new address[](0))
+        });
+
+        // Deploy oracle with custom configs
+        LayerzeroOracle oracleWithConfig = new LayerzeroOracle(
+            address(_endpoint), _owner, sendLibrary, receiveLibrary, customSendConfig, customReceiveConfig
+        );
+
+        // Verify the oracle was created successfully
+        assertEq(address(oracleWithConfig.endpoint()), address(_endpoint));
+    }
+
+    function test_getConfig_works() external {
+        address sendLibrary = makeAddr("sendLibrary");
+        uint32 eid = _dstEid;
+        uint32 configType = 2; // ULN/DVN config
+
+        // Create and set a config
+        SetConfigParam[] memory customSendConfig = new SetConfigParam[](1);
+        bytes memory configData =
+            abi.encode(uint64(15), uint8(2), uint8(1), uint8(0), new address[](2), new address[](0));
+        customSendConfig[0] = SetConfigParam({ eid: eid, configType: configType, config: configData });
+
+        LayerzeroOracle oracleWithConfig = new LayerzeroOracle(
+            address(_endpoint), _owner, sendLibrary, address(0), customSendConfig, new SetConfigParam[](0)
+        );
+
+        // Retrieve the config
+        bytes memory retrievedConfig = oracleWithConfig.getConfig(sendLibrary, eid, configType);
+
+        // Verify config was stored correctly
+        assertEq(keccak256(retrievedConfig), keccak256(configData));
+    }
+
     receive() external payable { }
 }
