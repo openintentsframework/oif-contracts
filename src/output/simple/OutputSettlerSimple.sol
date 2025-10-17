@@ -46,6 +46,12 @@ contract OutputSettlerSimple is OutputSettlerBase {
      * - Dutch auctions: Calculates time-based price using slope
      * - Exclusive orders: Validates solver permissions and returns appropriate amount
      * - Reverts with NotImplemented() for unsupported order types
+     *
+     * SECURITY WARNING: When orders have multiple outputs, the solver of the first output (the owner) can optimize the
+     * filling of the other outputs, which could lead to worse prices for users. The dutch auction order type is
+     * vulnerable to this attack.
+     * Users should be aware of this risk and avoid this order type in multiple output orders or consider opening
+     * orders with exclusivity for trusted solvers.
      */
     function _resolveOutput(
         MandateOutput calldata output,
@@ -67,7 +73,7 @@ contract OutputSettlerSimple is OutputSettlerBase {
         if (orderType == FulfilmentLib.DUTCH_AUCTION) {
             if (fulfillmentLength != 41) revert FulfilmentLib.InvalidContextDataLength();
             (uint32 startTime, uint32 stopTime, uint256 slope) = fulfilmentData.getDutchAuctionData();
-            return (solver, _dutchAuctionSlope(amount, slope, startTime, stopTime));
+            return (solver, _dutchAuctionPrice(amount, slope, startTime, stopTime));
         }
         if (orderType == FulfilmentLib.EXCLUSIVE_LIMIT_ORDER) {
             if (fulfillmentLength != 37) revert FulfilmentLib.InvalidContextDataLength();
@@ -80,13 +86,13 @@ contract OutputSettlerSimple is OutputSettlerBase {
             (bytes32 exclusiveFor, uint32 startTime, uint32 stopTime, uint256 slope) =
                 fulfilmentData.getExclusiveDutchAuctionData();
             if (startTime > block.timestamp && exclusiveFor != solver) revert ExclusiveTo(exclusiveFor);
-            return (solver, _dutchAuctionSlope(amount, slope, startTime, stopTime));
+            return (solver, _dutchAuctionPrice(amount, slope, startTime, stopTime));
         }
         revert NotImplemented();
     }
 
     /**
-     * @dev Computes a dutch auction slope.
+     * @dev Computes the current price of a dutch auction.
      * @dev The auction function is fixed until x=startTime at y=minimumAmount + slope · (stopTime - startTime) then it
      * linearly decreases until x=stopTime at y=minimumAmount which it remains at.
      *  If stopTime <= startTime return minimumAmount.
@@ -96,7 +102,7 @@ contract OutputSettlerSimple is OutputSettlerBase {
      * @param stopTime Timestamp when the slope stops counting and returns minimumAmount perpetually.
      * @return currentAmount Computed dutch auction amount.
      */
-    function _dutchAuctionSlope(
+    function _dutchAuctionPrice(
         uint256 minimumAmount,
         uint256 slope,
         uint32 startTime,

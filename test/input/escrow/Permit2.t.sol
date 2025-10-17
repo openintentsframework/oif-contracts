@@ -17,8 +17,11 @@ contract Permit2Test is Test {
         vm.deal(permit2DeployerDeployer, 1e18);
         vm.prank(permit2DeployerDeployer);
         assembly ("memory-safe") {
-            deployedPermit2Deployer :=
-                create(0, add(permit2DeployerCreationCode, 0x20), mload(permit2DeployerCreationCode))
+            deployedPermit2Deployer := create(
+                0,
+                add(permit2DeployerCreationCode, 0x20),
+                mload(permit2DeployerCreationCode)
+            )
         }
 
         require(deployedPermit2Deployer != permit2Deployer, "Contract deployment failed");

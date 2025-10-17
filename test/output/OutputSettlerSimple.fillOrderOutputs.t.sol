@@ -69,7 +69,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
             token: bytes32(uint256(uint160(outputTokenAddress))),
             amount: amount,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -80,7 +80,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
             token: bytes32(uint256(uint160(outputTokenAddress))),
             amount: amount2,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -128,7 +128,10 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
         outputSettlerCoin.fillOrderOutputs(orderId, outputs, type(uint48).max, fillerData);
     }
 
-    function test_revert_fill_batch_fillDeadline(uint24 fillDeadline, uint24 excess) public {
+    function test_revert_fill_batch_fillDeadline(
+        uint24 fillDeadline,
+        uint24 excess
+    ) public {
         bytes32 orderId = keccak256(bytes("orderId"));
         address sender = makeAddr("sender");
         bytes32 filler = keccak256(bytes("filler"));
@@ -147,7 +150,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
             token: bytes32(uint256(uint160(outputTokenAddress))),
             amount: amount,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -192,7 +195,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
             token: bytes32(0), // native token
             amount: amount1,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -203,7 +206,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
             token: bytes32(0), // native token
             amount: amount2,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -248,7 +251,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
             token: bytes32(0), // native token
             amount: nativeAmount,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -260,7 +263,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
             token: bytes32(uint256(uint160(outputTokenAddress))),
             amount: tokenAmount,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -312,7 +315,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
             token: bytes32(0), // native token
             amount: amount1,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -323,7 +326,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
             token: bytes32(0), // native token
             amount: amount2,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -361,7 +364,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
             token: bytes32(0), // native token
             amount: amount1,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -372,7 +375,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
             token: bytes32(0), // native token
             amount: amount2,
             recipient: bytes32(uint256(uint160(swapper))),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 

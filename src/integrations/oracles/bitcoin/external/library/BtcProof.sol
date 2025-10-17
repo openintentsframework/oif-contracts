@@ -151,7 +151,10 @@ library BtcProof {
     /**
      * @dev Compare 2 scripts, if they are less than 32 bytes directly compare otherwise by hash.
      */
-    function compareScriptsCC(bytes calldata a, bytes calldata b) internal pure returns (bool) {
+    function compareScriptsCC(
+        bytes calldata a,
+        bytes calldata b
+    ) internal pure returns (bool) {
         if (a.length <= 32 && b.length <= 32) return bytes32(a) == bytes32(b);
         else return keccak256(a) == keccak256(b);
     }
@@ -159,7 +162,10 @@ library BtcProof {
     /**
      * @dev Compare 2 scripts, if they are less than 32 bytes directly compare otherwise by hash.
      */
-    function compareScripts(bytes memory a, bytes memory b) internal pure returns (bool) {
+    function compareScripts(
+        bytes memory a,
+        bytes memory b
+    ) internal pure returns (bool) {
         if (a.length <= 32 && b.length <= 32) return bytes32(a) == bytes32(b);
         else return keccak256(a) == keccak256(b);
     }
@@ -167,7 +173,10 @@ library BtcProof {
     /**
      * @dev Compare 2 scripts, if they are less than 32 bytes directly compare otherwise by hash.
      */
-    function compareScriptsCM(bytes calldata a, bytes memory b) internal pure returns (bool) {
+    function compareScriptsCM(
+        bytes calldata a,
+        bytes memory b
+    ) internal pure returns (bool) {
         if (a.length <= 32 && b.length <= 32) return bytes32(a) == bytes32(b);
         else return keccak256(a) == keccak256(b);
     }
@@ -210,7 +219,11 @@ library BtcProof {
      * to less than 8)
      * These 2 contains adds 127755 invalid options so the total is 3/140468108006395125 => ≈0% chance
      */
-    function getTxMerkleRoot(bytes32 txId, uint256 txIndex, bytes calldata siblings) internal pure returns (bytes32) {
+    function getTxMerkleRoot(
+        bytes32 txId,
+        uint256 txIndex,
+        bytes calldata siblings
+    ) internal pure returns (bytes32) {
         unchecked {
             bytes32 ret = bytes32(Endian.reverse256(uint256(txId)));
             uint256 len = siblings.length / 32;
@@ -329,7 +342,7 @@ library BtcProof {
 
         uint256 version = uint8(bytes1(rawTx[0]));
         if (version < 1 || version > 2) return false; // invalid version
-        // Then check that the next 3 bytes are 0.
+            // Then check that the next 3 bytes are 0.
         if (bytes1(rawTx[1]) != bytes1(0)) return false;
         if (bytes1(rawTx[2]) != bytes1(0)) return false;
         if (bytes1(rawTx[3]) != bytes1(0)) return false;
@@ -351,7 +364,7 @@ library BtcProof {
             uint256 nInScriptBytes = uint8(bytes1(rawTx[offset]));
             if (nInScriptBytes + offset > size) return false;
             offset += nInScriptBytes + 1; // (+1 from varInt)
-            // seqNo doesn't matter
+                // seqNo doesn't matter
             offset += 4;
         }
 
@@ -377,7 +390,10 @@ library BtcProof {
     /**
      * Reads a Bitcoin-serialized varint = a u256 serialized in 1-9 bytes.
      */
-    function readVarInt(bytes calldata buf, uint256 offset) internal pure returns (uint256 val, uint256 newOffset) {
+    function readVarInt(
+        bytes calldata buf,
+        uint256 offset
+    ) internal pure returns (uint256 val, uint256 newOffset) {
         // The offset is bounded in size.
         unchecked {
             uint8 pivot = uint8(buf[offset]);

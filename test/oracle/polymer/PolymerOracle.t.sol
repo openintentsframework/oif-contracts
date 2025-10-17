@@ -83,7 +83,7 @@ contract PolymerOracleTest is Test {
             token: makeAddr("token").toIdentifier(),
             amount: 1000000000000000000,
             recipient: makeAddr("recipient").toIdentifier(),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -125,7 +125,7 @@ contract PolymerOracleTest is Test {
             token: makeAddr("token").toIdentifier(),
             amount: 1000000000000000000,
             recipient: makeAddr("recipient").toIdentifier(),
-            call: bytes(""),
+            callbackData: bytes(""),
             context: bytes("")
         });
 
@@ -199,7 +199,7 @@ contract PolymerOracleTest is Test {
             token: address(anotherToken).toIdentifier(),
             amount: amount,
             recipient: swapper.toIdentifier(),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
         uint256[2][] memory inputs = new uint256[2][](1);

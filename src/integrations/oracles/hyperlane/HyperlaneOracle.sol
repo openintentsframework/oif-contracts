@@ -29,7 +29,11 @@ contract HyperlaneOracle is BaseInputOracle, MailboxClient, IMessageRecipient {
      * @param customHook The address of the custom hook.
      * @param ism The address of the local ISM contract.
      */
-    constructor(address mailbox, address customHook, address ism) MailboxClient(mailbox, customHook, ism) { }
+    constructor(
+        address mailbox,
+        address customHook,
+        address ism
+    ) MailboxClient(mailbox, customHook, ism) { }
 
     /**
      * @notice Handles incoming Hyperlane messages.
@@ -195,8 +199,8 @@ contract HyperlaneOracle is BaseInputOracle, MailboxClient, IMessageRecipient {
 
         bytes memory message = MessageEncodingLib.encodeMessage(source.toIdentifier(), payloads);
 
-        MAILBOX.dispatch{ value: msg.value }(
-            destinationDomain, recipientOracle.toIdentifier(), message, hookMetadata, customHook
-        );
+        MAILBOX.dispatch{
+            value: msg.value
+        }(destinationDomain, recipientOracle.toIdentifier(), message, hookMetadata, customHook);
     }
 }
