@@ -19,6 +19,7 @@ import {
     MessagingReceipt,
     Origin
 } from "../../../src/integrations/oracles/layerzero/external/layerzero-v2/interfaces/ILayerZeroEndpointV2.sol";
+import { SetConfigParam } from "../../../src/integrations/oracles/layerzero/external/layerzero-v2/interfaces/IMessageLibManager.sol";
 
 event OutputProven(uint256 chainid, bytes32 remoteIdentifier, bytes32 application, bytes32 payloadHash);
 
@@ -28,6 +29,9 @@ event OutputProven(uint256 chainid, bytes32 remoteIdentifier, bytes32 applicatio
 contract LayerZeroEndpointV2Mock {
     uint64 public nonce;
     address public lzToken;
+
+    // Store configs: oapp => lib => eid => configType => config
+    mapping(address => mapping(address => mapping(uint32 => mapping(uint32 => bytes)))) private configs;
 
     function quote(MessagingParams calldata, address) external pure returns (MessagingFee memory fee) {
         return MessagingFee({ nativeFee: 0.5 ether, lzTokenFee: 0 });
@@ -59,6 +63,21 @@ contract LayerZeroEndpointV2Mock {
     ) external {
         lzToken = _lzToken;
     }
+
+    function setConfig(address _oapp, address _lib, SetConfigParam[] calldata _params) external {
+        for (uint256 i = 0; i < _params.length; i++) {
+            configs[_oapp][_lib][_params[i].eid][_params[i].configType] = _params[i].config;
+        }
+    }
+
+    function getConfig(
+        address _oapp,
+        address _lib,
+        uint32 _eid,
+        uint32 _configType
+    ) external view returns (bytes memory) {
+        return configs[_oapp][_lib][_eid][_configType];
+    }
 }
 
 contract LayerzeroOracleTest is Test {
@@ -80,7 +99,19 @@ contract LayerzeroOracleTest is Test {
         _token = new MockERC20("TEST", "TEST", 18);
 
         _endpoint = new LayerZeroEndpointV2Mock();
-        _oracle = new LayerzeroOracle(address(_endpoint), _owner);
+
+        // Create empty config arrays to use LayerZero defaults
+        SetConfigParam[] memory emptySendConfig = new SetConfigParam[](0);
+        SetConfigParam[] memory emptyReceiveConfig = new SetConfigParam[](0);
+
+        _oracle = new LayerzeroOracle(
+            address(_endpoint),
+            _owner,
+            address(0), // sendLibrary (not needed for default config)
+            address(0), // receiveLibrary (not needed for default config)
+            emptySendConfig,
+            emptyReceiveConfig
+        );
 
         // Set up chain mapping: srcEid -> chainId
         vm.prank(_owner);

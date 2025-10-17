@@ -14,7 +14,7 @@
   "hyperlaneOracleHandle": "25901",
   "hyperlaneOracleSubmit": "37425",
   "hyperlaneOracleSubmitCustomHook": "37421",
-  "layerzeroOracleLzReceive": "28317",
-  "layerzeroOracleSubmit": "46219",
+  "layerzeroOracleLzReceive": "28347",
+  "layerzeroOracleSubmit": "46249",
   "wormholeOracleSubmit": "13837"
 }

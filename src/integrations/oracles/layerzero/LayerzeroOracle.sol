@@ -7,6 +7,7 @@ import { MessageEncodingLib } from "../../../libs/MessageEncodingLib.sol";
 import { BaseInputOracle } from "../../../oracles/BaseInputOracle.sol";
 import { ChainMap } from "../../../oracles/ChainMap.sol";
 import { MessagingFee, MinimalOApp, Origin } from "./external/layerzero-v2/MinimalOApp.sol";
+import { SetConfigParam } from "./external/layerzero-v2/interfaces/IMessageLibManager.sol";
 
 /**
  * @notice Layerzero Oracle.
@@ -19,11 +20,32 @@ contract LayerzeroOracle is ChainMap, BaseInputOracle, MinimalOApp {
     error NotAllPayloadsValid();
 
     /**
-     * @notice Initialize with Endpoint V2 and owner address
+     * @notice Initialize with Endpoint V2, owner address, and optional configurations
      * @param _endpoint The local chain's LayerZero Endpoint V2 address
-     * @param _owner    The address permitted to configure the oracle chain mapping
+     * @param _owner The address permitted to configure the oracle chain mapping
+     * @param _sendLibrary The send library address to configure (if configuring send)
+     * @param _receiveLibrary The receive library address to configure (if configuring receive)
+     * @param _sendConfig Send configuration params (ULN + Executor config). Pass empty array to use defaults.
+     * @param _receiveConfig Receive configuration params (ULN config only). Pass empty array to use defaults.
      */
-    constructor(address _endpoint, address _owner) MinimalOApp(_endpoint) ChainMap(_owner) { }
+    constructor(
+        address _endpoint,
+        address _owner,
+        address _sendLibrary,
+        address _receiveLibrary,
+        SetConfigParam[] memory _sendConfig,
+        SetConfigParam[] memory _receiveConfig
+    ) MinimalOApp(_endpoint) ChainMap(_owner) {
+        // Set send configuration (ULN + Executor) if provided
+        if (_sendConfig.length > 0) {
+            endpoint.setConfig(address(this), _sendLibrary, _sendConfig);
+        }
+
+        // Set receive configuration (ULN only) if provided
+        if (_receiveConfig.length > 0) {
+            endpoint.setConfig(address(this), _receiveLibrary, _receiveConfig);
+        }
+    }
 
     /**
      * @notice Returns the estimated messaging fee for sending a message
@@ -85,6 +107,17 @@ contract LayerzeroOracle is ChainMap, BaseInputOracle, MinimalOApp {
         bytes memory message = MessageEncodingLib.encodeMessage(source.toIdentifier(), payloads);
 
         _lzSend(dstEid, recipientOracle, message, options, MessagingFee(msg.value, 0), payable(msg.sender));
+    }
+
+    /**
+     * @notice Get the configuration for a specific library, endpoint, and config type
+     * @param _lib The message library address
+     * @param _eid The endpoint ID
+     * @param _configType The config type (1 = Executor, 2 = ULN/DVN)
+     * @return config The configuration bytes (needs to be decoded based on configType)
+     */
+    function getConfig(address _lib, uint32 _eid, uint32 _configType) external view returns (bytes memory config) {
+        return endpoint.getConfig(address(this), _lib, _eid, _configType);
     }
 
     function _lzReceive(
