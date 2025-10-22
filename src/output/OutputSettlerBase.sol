@@ -34,6 +34,39 @@ import { BaseInputOracle } from "../oracles/BaseInputOracle.sol";
  *    - Reverts if first output already filled by different solver
  *    - Ensures atomic all-or-nothing batch filling
  *    - Use when you need to atomically claim an entire multi-output order
+ *
+ * **IMPORTANT SECURITY NOTE - FIRST SOLVER ORDER OWNERSHIP:**
+ * By default, the owner (address able to claim funds after and order is settled) is the solver of the first output, in
+ * case of an order with multiple outputs.
+ * This leads to some security considerations:
+ * For Users:
+ * 1. Denial of Service Risk: The solver of the first output may refuse to fill the other outputs, delaying the order
+ * execution until expiry (when user can be refunded).
+ *    - Mitigation: Users should ensure that the first output is the most important/valuable, making this attack more
+ * costly.
+ * 2. Exploitation of different order types: When opening orders, users are able to set different rules for filling
+ * them, i.e., output amounts could be determined by a dutch auction. If the order has multiple outputs, the solver of
+ * the first output (the owner) can delay the filling of other outputs, which could lead to worse prices for users.
+ *    - Mitigation: Users should be cautious when opening orders whose outputs have variable output amounts. In general,
+ * users SHOULD NOT open orders where any output other than the first has an order type whose output amount is
+ * determined by a time based mechanism. Note that other mechanisms can also be used to manipulate prices.
+ *
+ * Users should also consider opening orders with exclusivity for trusted solvers, especially when the order has
+ * multiple outputs.
+ *
+ * For Solvers:
+ * 1. Multiple outputs risk: When filling an order, the solver MUST be aware that they will only be able to finalise the
+ * order (i.e., claim funds) after filling all of the outputs (potentially in multiple chains).
+ * If the solver is unable to do so, the user will be refunded and the order will be considered as not filled.
+ *    - Mitigation: Solvers should be aware of all of the risks and variables, such as:
+ *      - all outputs must be filled before `fillDeadline` and the proof of the filling transaction must be handled by
+ * each oracle before `expiry` time.
+ *      - Solvers should be aware that some outputs have callbacks, which is an arbitrary code that is executed during
+ * the filling of the output. They should refuse orders with callbacks outside of the primary batch (that containing the
+ * first output) unless it's known that it can't possibly revert (considering that a successful off-chain simulation is
+ * not a guarantee of on-chain success)
+ *        They should understand the risks of each callback and the potential for them to revert the filling of the
+ * output, which could lead to the solver not being able to finalise the order.
  */
 abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
     using LibAddress for bytes32;
