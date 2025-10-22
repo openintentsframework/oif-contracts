@@ -32,7 +32,7 @@ library BtcScript {
     error ScriptTooLong(uint256 length);
     error NotImplemented();
 
-    //--- Bitcoin Script Decode Helpers ---//
+    // --- Bitcoin Script Decode Helpers ---//
 
     /**
      * @notice Global helper for decoding Bitcoin addresses
@@ -131,7 +131,7 @@ library BtcScript {
         return (version = -1, witnessLength = 0, bytes32(script[0:0]));
     }
 
-    //--- Bitcoin Script Encoding Helpers ---//
+    // --- Bitcoin Script Encoding Helpers ---//
 
     /**
      * @notice Global helper for encoding Bitcoin scripts

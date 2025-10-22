@@ -194,7 +194,7 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
         if (call.length > 0) IInputCallback(destination.fromIdentifier()).orderFinalised(order.inputs, call);
     }
 
-    //--- The Compact & Resource Locks ---//
+    // --- The Compact & Resource Locks ---//
 
     /**
      * @notice Resolves a Compact Claim for a Standard Order.

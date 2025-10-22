@@ -11,25 +11,25 @@ pragma solidity ^0.8.26;
  * The context data encodes different order types with different fixed-length layouts.
  *
  * Limit Order - Length: 1 byte
- * ORDER_TYPE           0               (1 byte)    - bytes1: 0x00
+ * ORDER_TYPE 0 (1 byte) - bytes1: 0x00
  *
  * Non Exclusive Dutch Auction - Length: 41 bytes
- * ORDER_TYPE           0               (1 byte)    - bytes1: 0x01
- * + START_TIME         1               (4 bytes)   - uint32: auction start timestamp
- * + STOP_TIME          5               (4 bytes)   - uint32: auction stop timestamp
- * + SLOPE              9               (32 bytes)  - uint256: price decay slope
+ * ORDER_TYPE 0 (1 byte) - bytes1: 0x01
+ * + START_TIME 1 (4 bytes) - uint32: auction start timestamp
+ * + STOP_TIME 5 (4 bytes) - uint32: auction stop timestamp
+ * + SLOPE 9 (32 bytes) - uint256: price decay slope
  *
  * Exclusive Limit Order - Length: 37 bytes
- * ORDER_TYPE           0               (1 byte)    - bytes1: 0xe0
- * + EXCLUSIVE_FOR      1               (32 bytes)  - bytes32: exclusive solver address
- * + START_TIME         33              (4 bytes)   - uint32: order start timestamp
+ * ORDER_TYPE 0 (1 byte) - bytes1: 0xe0
+ * + EXCLUSIVE_FOR 1 (32 bytes) - bytes32: exclusive solver address
+ * + START_TIME 33 (4 bytes) - uint32: order start timestamp
  *
  * Exclusive Dutch Auction - Length: 73 bytes
- * ORDER_TYPE           0               (1 byte)    - bytes1: 0xe1
- * + EXCLUSIVE_FOR      1               (32 bytes)  - bytes32: exclusive solver address
- * + START_TIME         33              (4 bytes)   - uint32: auction start timestamp
- * + STOP_TIME          37              (4 bytes)   - uint32: auction stop timestamp
- * + SLOPE              41              (32 bytes)  - uint256: price decay slope
+ * ORDER_TYPE 0 (1 byte) - bytes1: 0xe1
+ * + EXCLUSIVE_FOR 1 (32 bytes) - bytes32: exclusive solver address
+ * + START_TIME 33 (4 bytes) - uint32: auction start timestamp
+ * + STOP_TIME 37 (4 bytes) - uint32: auction stop timestamp
+ * + SLOPE 41 (32 bytes) - uint256: price decay slope
  */
 library FulfilmentLib {
     /// @dev Order type for standard limit orders

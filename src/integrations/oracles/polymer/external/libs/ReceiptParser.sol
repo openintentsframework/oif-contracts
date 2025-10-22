@@ -63,12 +63,12 @@ library ReceiptParser {
 
         // Each log itself is an rlp encoded datatype of 3 properties:
         // type Log struct {
-        //         senderAddress bytes // contract address where this log was emitted from
-        //         topics bytes        // Array of indexed topics. The first element is the 32-byte selector of the
-        // event (can use TransmitToHouston.selector), and the following  elements in this array are the abi encoded
+        // senderAddress bytes // contract address where this log was emitted from
+        // topics bytes // Array of indexed topics. The first element is the 32-byte selector of the
+        // event (can use TransmitToHouston.selector), and the following elements in this array are the abi encoded
         // arguments individually
-        //         topics data         // abi encoded raw bytes of unindexed data
-        // }
+        // topics data // abi encoded raw bytes of unindexed data
+        //}
         RLPReader.RLPItem[] memory log = RLPReader.readList(RLPReader.readList(receipt[3])[logIndex]);
 
         emittingContract = bytesToAddr(RLPReader.readBytes(log[0]));

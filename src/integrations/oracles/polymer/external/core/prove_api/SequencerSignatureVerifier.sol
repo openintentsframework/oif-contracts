@@ -28,7 +28,7 @@ import { ECDSA } from "openzeppelin/utils/cryptography/ECDSA.sol";
  */
 contract SequencerSignatureVerifier is ISignatureVerifier {
     address public immutable SEQUENCER; // The trusted sequencer address that polymer p2p signer holds the private key
-        // to
+        //to
     bytes32 public immutable CHAIN_ID; // Chain ID of the L2 chain for which the sequencer signs over
 
     constructor(
@@ -67,7 +67,7 @@ contract SequencerSignatureVerifier is ISignatureVerifier {
         bytes calldata signature
     ) internal view {
         // Signature will be the keccak256 hash of a + b, where:
-        // a =  (empty bytes 32 corresponding to the Domain) + ( peptide chain Id )
+        // a = (empty bytes 32 corresponding to the Domain) + ( peptide chain Id )
         // b = keccak((l2 block number ) + ( l2 apphash) + ( l1 origin hash))
         if (
             ECDSA.recover(

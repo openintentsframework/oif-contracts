@@ -14,25 +14,25 @@ import { MandateOutput } from "../input/types/MandateOutputType.sol";
  * bytes.
  *
  * Serialised MandateOutput
- *      OUTPUT_ORACLE           0               (32 bytes)
- *      + OUTPUT_SETTLER        32              (32 bytes)
- *      + CHAIN_ID              64              (32 bytes)
- *      + COMMON_PAYLOAD        96
+ *      OUTPUT_ORACLE 0 (32 bytes)
+ *      + OUTPUT_SETTLER 32 (32 bytes)
+ *      + CHAIN_ID 64 (32 bytes)
+ *      + COMMON_PAYLOAD 96
  *
  * Serialised FillDescription
- *      SOLVER                  0               (32 bytes)
- *      + ORDERID               32              (32 bytes)
- *      + TIMESTAMP             64              (4 bytes)
- *      + COMMON_PAYLOAD        68
+ *      SOLVER 0 (32 bytes)
+ *      + ORDERID 32 (32 bytes)
+ *      + TIMESTAMP 64 (4 bytes)
+ *      + COMMON_PAYLOAD 68
  *
  * Common Payload. Is identical between both schemes
- *      + TOKEN                 Y               (32 bytes)
- *      + AMOUNT                Y+32            (32 bytes)
- *      + RECIPIENT             Y+64            (32 bytes)
- *      + CALL_LENGTH           Y+96            (2 bytes)
- *      + CALL                  Y+98            (LENGTH bytes)
- *      + CONTEXT_LENGTH        Y+98+RC_LENGTH  (2 bytes)
- *      + CONTEXT               Y+100+RC_LENGTH (LENGTH bytes)
+ *      + TOKEN Y (32 bytes)
+ *      + AMOUNT Y+32 (32 bytes)
+ *      + RECIPIENT Y+64 (32 bytes)
+ *      + CALL_LENGTH Y+96 (2 bytes)
+ *      + CALL Y+98 (LENGTH bytes)
+ *      + CONTEXT_LENGTH Y+98+RC_LENGTH (2 bytes)
+ *      + CONTEXT Y+100+RC_LENGTH (LENGTH bytes)
  *
  * where Y is the offset from the specific encoding (either 68 or 96)
  */

@@ -13,7 +13,7 @@ struct BtcTxProof {
      * @notice Bitcoin transaction ID, equal to SHA256(SHA256(rawTx))
      */
     // This is not gas-optimized--we could omit it and compute from rawTx. But
-    //s the cost is minimal, and keeping it allows better revert messages.
+    // s the cost is minimal, and keeping it allows better revert messages.
     bytes32 txId;
     /**
      * @notice Index of transaction within the block.

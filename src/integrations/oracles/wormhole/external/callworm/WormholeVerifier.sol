@@ -57,7 +57,7 @@ contract WormholeVerifier is GettersGetter {
         /**
          * @dev Checks whether the guardianSet has zero keys
          * WARNING: This keys check is critical to ensure the guardianSet has keys present AND to ensure
-         * that guardianSet key size doesn't fall to zero and negatively impact quorum assessment.  If guardianSet
+         * that guardianSet key size doesn't fall to zero and negatively impact quorum assessment. If guardianSet
          * key length is 0 and vm.signatures length is 0, this could compromise the integrity of both vm and
          * signature verification.
          */
@@ -190,16 +190,16 @@ contract WormholeVerifier is GettersGetter {
             index += 1 + signersLen * (1 + 32 + 32 + 1);
             // signatures = new Structs.Signature[](signersLen);
             // for (uint i = 0; i < signersLen; ++i) {
-            //     signatures[i].guardianIndex = uint8(bytes1(encodedVM[index:index+1]));
-            //     index += 1;
+            // signatures[i].guardianIndex = uint8(bytes1(encodedVM[index:index+1]));
+            // index += 1;
 
-            //     signatures[i].r = bytes32(encodedVM[index:index+32]);
-            //     index += 32;
-            //     signatures[i].s = bytes32(encodedVM[index:index+32]);
-            //     index += 32;
-            //     signatures[i].v = uint8(bytes1(encodedVM[index:index+1])) + 27;
-            //     index += 1;
-            // }
+            // signatures[i].r = bytes32(encodedVM[index:index+32]);
+            // index += 32;
+            // signatures[i].s = bytes32(encodedVM[index:index+32]);
+            // index += 32;
+            // signatures[i].v = uint8(bytes1(encodedVM[index:index+1])) + 27;
+            // index += 1;
+            //}
 
             /*
             Hash the body

@@ -146,7 +146,7 @@ contract BitcoinOracle is BaseInputOracle {
         DEFAULT_COLLATERAL_MULTIPLIER = collateralMultiplier;
     }
 
-    //--- Light Client Helpers ---//
+    // --- Light Client Helpers ---//
     // Helper functions to aid integration of other light clients.
     // These functions are the only external calls needed to prove Bitcoin transactions.
     // If you are adding support for another light client, inherit this contract and
@@ -209,7 +209,7 @@ contract BitcoinOracle is BaseInputOracle {
         return multiplier != 0 ? multiplier : DEFAULT_COLLATERAL_MULTIPLIER;
     }
 
-    //--- Bitcoin Helpers ---//
+    // --- Bitcoin Helpers ---//
 
     /**
      * @notice Slices the timestamp from a Bitcoin block header.

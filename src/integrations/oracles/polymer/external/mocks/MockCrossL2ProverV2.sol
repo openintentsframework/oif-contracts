@@ -155,9 +155,9 @@ contract MockCrossL2ProverV2 is CrossL2ProverV2 {
 
         // - receiptIndex proof[117-118] dummy avlue of 1
         proof[118] = bytes1(uint8(1));
-        // eventIndex proof[119]: dummy  value of 0
+        // eventIndex proof[119]: dummy value of 0
         proof[119] = bytes1(0);
-        // numTopics proof[120]  dummy value of num topics
+        // numTopics proof[120] dummy value of num topics
         proof[120] = bytes1(numTopics);
 
         // eventDataEnd (2 bytes)
