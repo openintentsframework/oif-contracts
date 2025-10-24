@@ -73,7 +73,7 @@ contract Messages is Getters {
         /**
          * @dev Checks whether the guardianSet has zero keys
          * WARNING: This keys check is critical to ensure the guardianSet has keys present AND to ensure
-         * that guardianSet key size doesn't fall to zero and negatively impact quorum assessment.  If guardianSet
+         * that guardianSet key size doesn't fall to zero and negatively impact quorum assessment. If guardianSet
          * key length is 0 and vm.signatures length is 0, this could compromise the integrity of both vm and
          * signature verification.
          */

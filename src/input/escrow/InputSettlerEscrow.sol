@@ -181,8 +181,8 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
      * @param order StandardOrder representing the intent.
      * @param sponsor Address to collect tokens from.
      * @param signature Allowance signature from sponsor with a signature type encoded as:
-     * - SIGNATURE_TYPE_PERMIT2:  b1:0x00 | bytes:signature
-     * - SIGNATURE_TYPE_3009:     b1:0x01 | bytes:signature OR abi.encode(bytes[]:signatures)
+     * - SIGNATURE_TYPE_PERMIT2: b1:0x00 | bytes:signature
+     * - SIGNATURE_TYPE_3009: b1:0x01 | bytes:signature OR abi.encode(bytes[]:signatures)
      */
     function openFor(
         StandardOrder calldata order,
@@ -304,14 +304,14 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
             );
             // The above calldata encoding is equivalent to:
             // IERC3009(input[0].validatedCleanAddress().receiveWithAuthorization({
-            //     from: signer,
-            //     to: address(this),
-            //     value: input[1],
-            //     validAfter: 0,
-            //     validBefore: fillDeadline,
-            //     nonce: orderId,
-            //     signature: _signature_
-            // })
+            // from: signer,
+            // to: address(this),
+            // value: input[1],
+            // validAfter: 0,
+            // validBefore: fillDeadline,
+            // nonce: orderId,
+            // signature: _signature_
+            //})
             address token = input[0].validatedCleanAddress();
             IsContractLib.validateContainsCode(token); // Ensure called contract has code.
             (bool success,) = token.call(callData);
@@ -442,7 +442,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         if (call.length > 0) IInputCallback(destination.fromIdentifier()).orderFinalised(order.inputs, call);
     }
 
-    //--- Asset Lock & Escrow ---//
+    // --- Asset Lock & Escrow ---//
 
     /**
      * @dev This function employs a local reentry guard: we check the order status and then we update it afterwards.
