@@ -18,7 +18,7 @@ library MerkleMultiProof {
 
     /// @notice Computes the root based on provided pre-hashed leaf nodes in leaves, internal nodes in proofs, and
     /// using
-    /// proofFlagBits' i-th bit to determine if an element of proofs or one of the previously computed leafs or internal
+    /// proofFlagBits' i-th bit to determine if an element of proofs or one of the previously computed leaves or internal
     /// nodes will be used for the i-th hash.
     /// @param leaves Should be pre-hashed and the first 32 bytes of a leaf's preimage should match
     /// LEAF_DOMAIN_SEPARATOR.
