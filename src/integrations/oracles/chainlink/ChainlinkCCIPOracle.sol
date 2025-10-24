@@ -47,6 +47,28 @@ contract ChainlinkCCIPOracle is BaseInputOracle, ChainMap, CCIPReceiver {
         }
     }
 
+    /**
+     * @notice Get the chainlink fee for broadcasting a set of payloads.
+     * @dev For multiple destinations this endpoints have to be called individually for each destination.
+     */
+    function getFee(
+        uint64 destinationChainSelector,
+        bytes32 receiver,
+        bytes calldata extraArgs,
+        address source,
+        bytes[] calldata payloads,
+        address feeToken
+    ) external view returns (uint256 fees) {
+        Client.EVM2AnyMessage memory evm2AnyMessage = Client.EVM2AnyMessage({
+            receiver: abi.encodePacked(receiver), // We will set the receiver in the for loop.
+            data: MessageEncodingLib.encodeMessage(source.toIdentifier(), payloads),
+            tokenAmounts: new Client.EVMTokenAmount[](0),
+            extraArgs: extraArgs,
+            feeToken: feeToken
+        });
+        fees = IRouterClient(getRouter()).getFee(destinationChainSelector, evm2AnyMessage);
+    }
+
     // --- Sending Proofs --- //
 
     /**
@@ -95,7 +117,6 @@ contract ChainlinkCCIPOracle is BaseInputOracle, ChainMap, CCIPReceiver {
             feeToken: feeToken
         });
 
-        // TODO: Should chain ids be translated from chainlink to erc20?
         uint256 numDestinationChains = destinationChainSelectors.length;
         if (receivers.length == 0) revert NoReceivers();
 
@@ -149,7 +170,6 @@ contract ChainlinkCCIPOracle is BaseInputOracle, ChainMap, CCIPReceiver {
     function _ccipReceive(
         Client.Any2EVMMessage calldata message
     ) internal override {
-        // TODO: Verify when more than 32 bytes are used.
         bytes32 remoteSenderIdentifier = bytes32(message.sender);
 
         (bytes32 application, bytes32[] memory payloadHashes) =

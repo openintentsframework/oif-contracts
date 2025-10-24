@@ -2,9 +2,8 @@
 pragma solidity ^0.8.0;
 
 // End consumer library.
-// / @notice
-// /
-// https://github.com/smartcontractkit/chainlink-ccip/blob/632b2acd4f2b203fe4cdd3e93ac0e1303a10ff56/chains/evm/contracts/libraries/Client.sol
+/// @notice
+/// https://github.com/smartcontractkit/chainlink-ccip/blob/632b2acd4f2b203fe4cdd3e93ac0e1303a10ff56/chains/evm/contracts/libraries/Client.sol
 library Client {
     /// @dev RMN depends on this struct, if changing, please notify the RMN maintainers.
     struct EVMTokenAmount {
