@@ -138,9 +138,9 @@ contract HyperlaneOracleTest is Test {
 
         // Fill without submitting
         vm.expectRevert(abi.encodeWithSignature("NotAllPayloadsValid()"));
-        _oracle.submit{
-            value: _gasPaymentQuote
-        }(_destination, _recipientOracle, _gasLimit, bytes("customMetadata"), address(_outputSettler), payloads);
+        _oracle.submit{ value: _gasPaymentQuote }(
+            _destination, _recipientOracle, _gasLimit, bytes("customMetadata"), address(_outputSettler), payloads
+        );
     }
 
     function test_fill_works_w() external {
@@ -190,9 +190,9 @@ contract HyperlaneOracleTest is Test {
             )
         );
 
-        _oracle.submit{
-            value: _gasPaymentQuote
-        }(_destination, _recipientOracle, _gasLimit, customMetadata, address(_outputSettler), payloads);
+        _oracle.submit{ value: _gasPaymentQuote }(
+            _destination, _recipientOracle, _gasLimit, customMetadata, address(_outputSettler), payloads
+        );
         vm.snapshotGasLastCall("oracle", "hyperlaneOracleSubmit");
     }
 
@@ -245,9 +245,7 @@ contract HyperlaneOracleTest is Test {
             )
         );
 
-        _oracle.submit{
-            value: _gasPaymentQuote
-        }(
+        _oracle.submit{ value: _gasPaymentQuote }(
             _destination,
             _recipientOracle,
             _gasLimit,
