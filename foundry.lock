@@ -2,6 +2,9 @@
   "lib/bitcoinprism-evm": {
     "rev": "158ff5e6361ba6813f37135c3635d6a88c6b3407"
   },
+  "lib/broadcaster": {
+    "rev": "a3f6e0d8fa9dccbb0ac57e8780becd9c6e441e0d"
+  },
   "lib/forge-std": {
     "rev": "77041d2ce690e692d6e03cc812b57d1ddaa4d505"
   },

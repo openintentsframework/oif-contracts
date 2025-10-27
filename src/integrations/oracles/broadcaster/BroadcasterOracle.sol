@@ -7,27 +7,63 @@ import { MessageEncodingLib } from "../../../libs/MessageEncodingLib.sol";
 import { BaseInputOracle } from "../../../oracles/BaseInputOracle.sol";
 import { ChainMap } from "../../../oracles/ChainMap.sol";
 
+import { IBroadcaster } from "broadcaster/interfaces/IBroadcaster.sol";
 import { IReceiver } from "broadcaster/interfaces/IReceiver.sol";
 
+/**
+ * @notice Broadcaster Oracle
+ * Implements a transparent oracle that allows both for broadcasting messages and verifying them at the destination,
+ * relying on storage proofs. This oracle only works for communication between chains that are in the Ethereum
+ * ecosystem, i.e., Ethereum and its rollups.
+ */
 contract BroadcasterOracle is BaseInputOracle, ChainMap {
     using LibAddress for address;
 
+    /// @dev The receiver contract that will be used to verify the messages. ERC 7888 compliant.
     IReceiver private immutable _receiver;
+    /// @dev The broadcaster contract that will be used to broadcast the messages. ERC 7888 compliant.
+    IBroadcaster private immutable _broadcaster;
 
+    /// @dev Error thrown when the payloads are not valid.
+    error NotAllPayloadsValid();
+    /// @dev Error thrown when the payloads are empty.
+    error EmptyPayloads();
+    /// @dev Error thrown when the broadcaster id is invalid.
     error InvalidBroadcasterId();
 
     constructor(
         IReceiver receiver_,
+        IBroadcaster broadcaster_,
         address owner_
     ) ChainMap(owner_) {
         _receiver = receiver_;
+        _broadcaster = broadcaster_;
     }
 
+    /**
+     * @notice Returns the receiver contract.
+     * @return The receiver contract.
+     */
     function receiver() public view returns (IReceiver) {
         return _receiver;
     }
 
-    function handle(
+    /**
+     * @notice Returns the broadcaster contract.
+     * @return The broadcaster contract.
+     */
+    function broadcaster() public view returns (IBroadcaster) {
+        return _broadcaster;
+    }
+
+    /**
+     * @notice Verifies a message broadcasted in a remote chain.
+     * @param broadcasterReadArgs The arguments required to read the broadcaster's account on the remote chain.
+     * @param remoteChainId The chain id of the remote chain.
+     * @param remoteOracle The address of the remote oracle.
+     * @param messageData The data of the message to verify.
+     */
+    function verifyMessage(
         IReceiver.RemoteReadArgs calldata broadcasterReadArgs,
         uint256 remoteChainId,
         address remoteOracle, // publisher
@@ -51,6 +87,38 @@ contract BroadcasterOracle is BaseInputOracle, ChainMap {
 
             emit OutputProven(remoteChainId, remoteOracle.toIdentifier(), application, payloadHash);
         }
+    }
+
+    /**
+     * @notice Submits a proof of filled payloads as a message to the broadcaster.
+     * @param source The address of the application that has attested the payloads.
+     * @param payloads The payloads to submit.
+     */
+    function submit(
+        address source,
+        bytes[] calldata payloads
+    ) public {
+        if (payloads.length == 0) revert EmptyPayloads();
+        if (!IAttester(source).hasAttested(payloads)) revert NotAllPayloadsValid();
+
+        bytes32 message = _getMessage(payloads);
+
+        broadcaster().broadcastMessage(message);
+    }
+
+    /**
+     * @notice Generates a message from the payloads.
+     * @param payloads The payloads to generate the message from.
+     * @return message The message generated from the payloads.
+     */
+    function _getMessage(
+        bytes[] calldata payloads
+    ) internal pure returns (bytes32 message) {
+        bytes32[] memory payloadHashes = new bytes32[](payloads.length);
+        for (uint256 i = 0; i < payloads.length; i++) {
+            payloadHashes[i] = keccak256(payloads[i]);
+        }
+        return keccak256(abi.encodePacked(payloadHashes));
     }
 }
 
