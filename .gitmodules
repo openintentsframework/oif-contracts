@@ -14,3 +14,4 @@
 [submodule "lib/broadcaster"]
 	path = lib/broadcaster
 	url = https://github.com/openintentsframework/broadcaster
+	branch = main
