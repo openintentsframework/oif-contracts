@@ -10,6 +10,8 @@ import { OutputSettlerSimple } from "../../../src/output/simple/OutputSettlerSim
 import { MockERC20 } from "../../../test/mocks/MockERC20.sol";
 import { BlockHeaders } from "broadcaster-test/utils/BlockHeaders.sol";
 import { BlockHashProverPointer } from "broadcaster/BlockHashProverPointer.sol";
+import { Broadcaster } from "broadcaster/Broadcaster.sol";
+import { Receiver } from "broadcaster/Receiver.sol";
 import { IReceiver } from "broadcaster/interfaces/IReceiver.sol";
 import { ChildToParentProver as ArbChildToParentProver } from "broadcaster/provers/arbitrum/ChildToParentProver.sol";
 import { Test, console } from "forge-std/Test.sol";
@@ -28,6 +30,32 @@ interface IBuffer {
     ) external view returns (bytes32);
 }
 
+contract MockBuffer is IBuffer {
+    mapping(uint256 => bytes32) public parentChainBlockHashes;
+
+    function receiveHashes(
+        uint256 firstBlockNumber,
+        bytes32[] memory blockHashes
+    ) external {
+        // Implementation
+        for (uint256 i = 0; i < blockHashes.length; i++) {
+            parentChainBlockHashes[firstBlockNumber + i] = blockHashes[i];
+        }
+    }
+
+    function parentChainBlockHash(
+        uint256 parentChainBlockNumber
+    ) external view returns (bytes32) {
+        // Implementation
+
+        if (parentChainBlockHashes[parentChainBlockNumber] == bytes32(0)) {
+            revert UnknownParentChainBlockHash(parentChainBlockNumber);
+        }
+
+        return parentChainBlockHashes[parentChainBlockNumber];
+    }
+}
+
 contract BroadcasterOracleTest is Test {
     using LibAddress for address;
 
@@ -41,15 +69,13 @@ contract BroadcasterOracleTest is Test {
 
     address owner = makeAddr("owner");
 
+    IBuffer public buffer;
+
     function setUp() public {
-        ethereumForkId = vm.createFork(vm.envString("ETHEREUM_RPC_URL"));
-        arbitrumForkId = vm.createFork(vm.envString("ARBITRUM_RPC_URL"));
+        address bufferAddress = 0x0000000048C4Ed10cF14A02B9E0AbDDA5227b071;
+        deployCodeTo("MockBuffer", bufferAddress);
 
-        vm.selectFork(ethereumForkId);
-        parentChainId = block.chainid;
-
-        vm.selectFork(arbitrumForkId);
-        childChainId = block.chainid;
+        buffer = IBuffer(bufferAddress);
     }
 
     function encodeMessageCalldata(
@@ -59,12 +85,15 @@ contract BroadcasterOracleTest is Test {
         return MessageEncodingLib.encodeMessage(identifier, payloads);
     }
 
-    function test_verifyMessage_from_Ethereum_into_Arbitrum() public {
-        vm.selectFork(arbitrumForkId);
+    function test_verifyMessage() public {
+        //vm.selectFork(arbitrumForkId);
+        Receiver receiver = new Receiver();
 
         ArbChildToParentProver childToParentProver = new ArbChildToParentProver(block.chainid);
 
         BlockHashProverPointer blockHashProverPointer = new BlockHashProverPointer(owner);
+
+        broadcasterOracle = new BroadcasterOracle(receiver, new Broadcaster(), owner);
 
         vm.prank(owner);
         blockHashProverPointer.setImplementationAddress(address(childToParentProver));
@@ -111,8 +140,6 @@ contract BroadcasterOracleTest is Test {
         bytes32 expectedBlockHash = 0xf5823c7b8d8cca94817b68fc7d1ecfa24ce36803cfdf714f8002add2eb1854ea;
 
         assertEq(blockHash, expectedBlockHash);
-
-        IBuffer buffer = IBuffer(0x0000000048C4Ed10cF14A02B9E0AbDDA5227b071);
 
         address aliasedPusher = 0x6B6D4f3d0f0eFAeED2aeC9B59b67Ec62a4667e99;
         bytes32[] memory blockHashes = new bytes32[](1);
@@ -173,11 +200,9 @@ contract BroadcasterOracleTest is Test {
         IReceiver.RemoteReadArgs memory remoteReadArgs =
             IReceiver.RemoteReadArgs({ route: route, bhpInputs: bhpInputs, storageProof: storageProofToLastProver });
 
-        // Construct the message
-
-        BroadcasterOracle broadcasterOracleSubmitter = BroadcasterOracle(0x8Dc3812f911383e6320D036e35Db8dF3774C4eE1);
-        OutputSettlerSimple outputSettler = OutputSettlerSimple(0xBBaf87dA3F1c1B3c119E389590108830a1e89829);
-        MockERC20 token = MockERC20(0x871ea89101BbE55C8c3dDbAA0890C128E828A339);
+        BroadcasterOracle broadcasterOracleSubmitter = BroadcasterOracle(0x11e14F08Bd326521A3C1f59eE4Be0EB64C04908D);
+        OutputSettlerSimple outputSettler = OutputSettlerSimple(0x674Cd8B4Bec9b6e9767FAa8d897Fd6De0729dd66);
+        MockERC20 token = MockERC20(0x287E1E51Dad0736Dc5de7dEaC0751C21b3d88d6e);
 
         uint256 amount = 0.01 ether;
 
@@ -201,7 +226,7 @@ contract BroadcasterOracleTest is Test {
         bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionMemory(
             filler.toIdentifier(),
             orderId,
-            uint32(1761575375),
+            uint32(1761574848),
             output.token,
             output.amount,
             output.recipient,
@@ -214,6 +239,23 @@ contract BroadcasterOracleTest is Test {
 
         bytes memory messageData = this.encodeMessageCalldata(address(outputSettler).toIdentifier(), payloads);
 
-        //broadcasterOracle.verifyMessage(broadcasterReadArgs, parentChainId, remoteOracle, messageData);
+        uint256 broadcasterRemoteAccountId = uint256(
+            keccak256(
+                abi.encode(
+                    keccak256(
+                        abi.encode(
+                            bytes32(0x0000000000000000000000000000000000000000000000000000000000000000),
+                            address(blockHashProverPointer)
+                        )
+                    ),
+                    knownAccount
+                )
+            )
+        );
+
+        vm.prank(owner);
+        broadcasterOracle.setChainMap(broadcasterRemoteAccountId, 1);
+
+        broadcasterOracle.verifyMessage(remoteReadArgs, 1, address(broadcasterOracleSubmitter), messageData);
     }
 }
