@@ -28,8 +28,6 @@ contract BroadcasterOracle is BaseInputOracle, ChainMap {
 
     /// @dev Error thrown when the payloads are not valid.
     error NotAllPayloadsValid();
-    /// @dev Error thrown when the payloads are empty.
-    error EmptyPayloads();
     /// @dev Error thrown when the broadcaster id is invalid.
     error InvalidBroadcasterId();
 
@@ -74,7 +72,7 @@ contract BroadcasterOracle is BaseInputOracle, ChainMap {
         (bytes32 application, bytes32[] memory payloadHashes) =
             MessageEncodingLib.getHashesOfEncodedPayloads(messageData);
 
-        bytes32 message = keccak256(abi.encodePacked(payloadHashes));
+        bytes32 message = _hashPayloadHashes(payloadHashes);
 
         bytes32 broadcasterId = bytes32(reverseChainIdMap[remoteChainId]);
 
@@ -100,12 +98,33 @@ contract BroadcasterOracle is BaseInputOracle, ChainMap {
         address source,
         bytes[] calldata payloads
     ) public {
-        if (payloads.length == 0) revert EmptyPayloads();
         if (!IAttester(source).hasAttested(payloads)) revert NotAllPayloadsValid();
 
         bytes32 message = _getMessage(payloads);
 
         broadcaster().broadcastMessage(message);
+    }
+
+    /**
+     * @notice Hashes an array of payload hashes.
+     * @param payloadHashes The payload hashes to hash.
+     * @return digest The hashed payload hashes.
+     */
+    function _hashPayloadHashes(
+        bytes32[] memory payloadHashes
+    ) internal pure returns (bytes32) {
+        bytes32 digest;
+        assembly {
+            // len = payloadHashes.length
+            let len := mload(payloadHashes)
+            // pointer to first element (skip the length word)
+            let start := add(payloadHashes, 0x20)
+            // total bytes = len * 32
+            let size := mul(len, 0x20)
+            // keccak256 over the packed elements
+            digest := keccak256(start, size)
+        }
+        return digest;
     }
 
     /**
@@ -120,7 +139,7 @@ contract BroadcasterOracle is BaseInputOracle, ChainMap {
         for (uint256 i = 0; i < payloads.length; i++) {
             payloadHashes[i] = keccak256(payloads[i]);
         }
-        return keccak256(abi.encodePacked(payloadHashes));
+        return _hashPayloadHashes(payloadHashes);
     }
 }
 
