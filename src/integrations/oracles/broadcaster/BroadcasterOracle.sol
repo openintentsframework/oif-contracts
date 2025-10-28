@@ -10,8 +10,6 @@ import { ChainMap } from "../../../oracles/ChainMap.sol";
 import { IBroadcaster } from "broadcaster/interfaces/IBroadcaster.sol";
 import { IReceiver } from "broadcaster/interfaces/IReceiver.sol";
 
-import { console } from "forge-std/console.sol";
-
 /**
  * @notice Broadcaster Oracle
  * Implements a transparent oracle that allows both for broadcasting messages and verifying them at the destination,
