@@ -28,12 +28,18 @@ contract BroadcasterOracle is BaseInputOracle, ChainMap {
     error NotAllPayloadsValid();
     /// @dev Error thrown when the broadcaster id is invalid.
     error InvalidBroadcasterId();
+    /// @dev Error thrown when the broadcaster is invalid.
+    error InvalidBroadcaster();
+    /// @dev Error thrown when the receiver is invalid.
+    error InvalidReceiver();
 
     constructor(
         IReceiver receiver_,
         IBroadcaster broadcaster_,
         address owner_
     ) ChainMap(owner_) {
+        if (address(receiver_) == address(0)) revert InvalidReceiver();
+        if (address(broadcaster_) == address(0)) revert InvalidBroadcaster();
         _receiver = receiver_;
         _broadcaster = broadcaster_;
     }
