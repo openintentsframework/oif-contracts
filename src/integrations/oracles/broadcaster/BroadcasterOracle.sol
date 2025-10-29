@@ -110,8 +110,7 @@ contract BroadcasterOracle is BaseInputOracle, ChainMap {
      */
     function _hashPayloadHashes(
         bytes32[] memory payloadHashes
-    ) internal pure returns (bytes32) {
-        bytes32 digest;
+    ) internal pure returns (bytes32 digest) {
         assembly {
             // len = payloadHashes.length
             let len := mload(payloadHashes)
