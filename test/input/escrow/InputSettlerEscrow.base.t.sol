@@ -125,7 +125,7 @@ contract InputSettlerEscrowTestBase is Permit2Test {
                     output.token,
                     output.amount,
                     output.recipient,
-                    keccak256(output.call),
+                    keccak256(output.callbackData),
                     keccak256(output.context)
                 )
             );
@@ -169,7 +169,7 @@ contract InputSettlerEscrowTestBase is Permit2Test {
                 keccak256(
                     abi.encode(
                         keccak256(
-                            "PermitBatchWitnessTransferFrom(TokenPermissions[] permitted,address spender,uint256 nonce,uint256 deadline,Permit2Witness witness)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)TokenPermissions(address token,uint256 amount)Permit2Witness(uint32 expires,address inputOracle,MandateOutput[] outputs)"
+                            "PermitBatchWitnessTransferFrom(TokenPermissions[] permitted,address spender,uint256 nonce,uint256 deadline,Permit2Witness witness)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)Permit2Witness(uint32 expires,address inputOracle,MandateOutput[] outputs)TokenPermissions(address token,uint256 amount)"
                         ),
                         keccak256(abi.encodePacked(tokenPermissionsHashes)),
                         inputSettlerEscrow,

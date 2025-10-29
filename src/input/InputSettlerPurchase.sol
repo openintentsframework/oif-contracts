@@ -7,7 +7,6 @@ import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 
 import { SignatureChecker } from "openzeppelin/utils/cryptography/SignatureChecker.sol";
-import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
 import { IInputCallback } from "../interfaces/IInputCallback.sol";
 
@@ -18,19 +17,75 @@ import { OrderPurchase, OrderPurchaseType } from "./types/OrderPurchaseType.sol"
 import { InputSettlerBase } from "./InputSettlerBase.sol";
 
 /**
- * @title Base Input Settler
- * @notice Defines common logic that can be reused by other input settlers to support a variety of asset management
- * schemes.
+ * @title Input Settler Purchase
+ * @notice Extends InputSettlerBase with order purchasing functionality that allows third parties to buy orders from
+ * solvers.
+ * @dev This contract implements order purchasing functionality that enables order ownership transfer from solver to
+ * purchaser upon successful purchase. It includes a discount-based pricing mechanism where purchasers pay a reduced
+ * amount, EIP712 signature verification for purchase authorization, reentry protection and purchase state tracking, and
+ * integration with IInputCallback for post-purchase execution.
+ *
+ * **IMPORTANT SECURITY NOTE - FIRST SOLVER ORDER OWNERSHIP:**
+ * By default, the owner (address able to claim funds after and order is settled) is the solver of the first output, in
+ * case of an order with multiple outputs.
+ * This leads to some security considerations:
+ * For Users:
+ * 1. Denial of Service Risk: The solver of the first output may refuse to fill the other outputs, delaying the order
+ * execution until expiry (when user can be refunded).
+ *    - Mitigation: Users should ensure that the first output is the most important/valuable, making this attack more
+ * costly.
+ * 2. Exploitation of different order types: When opening orders, users are able to set different rules for filling
+ * them, i.e., output amounts could be determined by a dutch auction. If the order has multiple outputs, the solver of
+ * the first output (the owner) can delay the filling of other outputs, which could lead to worse prices for users.
+ *    - Mitigation: Users should be cautious when opening orders whose outputs have variable output amounts. In general,
+ * users SHOULD NOT open orders where any output other than the first has an order type whose output amount is
+ * determined by, for example, a time based mechanism.
+ *
+ * Users should also consider opening orders with exclusivity for trusted solvers, especially when the order has
+ * multiple outputs.
+ *
+ * For Solvers:
+ * 1. Multiple outputs risk: When filling an order, the solver MUST be aware that they will only be able to finalise the
+ * order (i.e., claim funds) after filling all of the outputs (potentially in multiple chains).
+ * If the solver is unable to do so, the user will be refunded and the order will be considered as not filled.
+ *    - Mitigation: Solvers should be aware of all of the risks and variables, such as:
+ *      - all outputs must be filled before `fillDeadline` and the proof of the filling transaction must be handled by
+ * each oracle before `expiry` time.
+ *      - Solvers should be aware that some outputs have callbacks, which is an arbitrary code that is executed during
+ * the filling of the output. They should refuse orders with callbacks outside of the primary batch (that containing the
+ * first output) unless it's known that it can't possibly revert (considering that a successful off-chain simulation is
+ * not a guarantee of on-chain success)
+ *        They should understand the risks of each callback and the potential for them to revert the filling of the
+ * output, which could lead to the solver not being able to finalise the order.
  */
 abstract contract InputSettlerPurchase is InputSettlerBase {
     using LibAddress for address;
     using LibAddress for bytes32;
     using LibAddress for uint256;
 
+    /**
+     * @dev The order has already been purchased.
+     */
     error AlreadyPurchased();
+    /**
+     * @dev The purchase expiry timestamp has passed.
+     */
     error Expired();
+    /**
+     * @dev The purchaser is invalid.
+     */
     error InvalidPurchaser();
+    /**
+     * @dev The caller is not the order owner.
+     */
+    error NotOrderOwner();
 
+    /**
+     * @notice Emitted when an order is purchased.
+     * @param orderId The order identifier.
+     * @param solver The solver.
+     * @param purchaser The purchaser.
+     */
     event OrderPurchased(bytes32 indexed orderId, bytes32 solver, bytes32 purchaser);
 
     uint256 constant DISCOUNT_DENOM = 10 ** 18;
@@ -48,22 +103,21 @@ abstract contract InputSettlerPurchase is InputSettlerBase {
      * @notice Helper function to get the owner of order incase it may have been bought. In case an order has been
      * bought, and bought in time, the owner will be set to the purchaser. Otherwise it will be set to the solver.
      * @param orderId A unique identifier for an order.
-     * @param solver Solver identifier that filled the order.
-     * @param timestamps List of timestamps for when the outputs were filled.
+     * @param solveParams List of solve parameters for when the outputs were filled.
      * @return orderOwner Owner of the order.
      */
     function _purchaseGetOrderOwner(
         bytes32 orderId,
-        bytes32 solver,
-        uint32[] calldata timestamps
+        SolveParams[] calldata solveParams
     ) internal returns (bytes32 orderOwner) {
+        bytes32 solver = solveParams[0].solver;
         Purchased storage purchaseDetails = purchasedOrders[solver][orderId];
         uint32 lastOrderTimestamp = purchaseDetails.lastOrderTimestamp;
         bytes32 purchaser = purchaseDetails.purchaser;
 
         if (purchaser != bytes32(0)) {
             // We use the last fill (oldest) to gauge if the order was purchased in time.
-            uint256 orderTimestamp = _maxTimestamp(timestamps);
+            uint256 orderTimestamp = _maxTimestamp(solveParams);
             delete purchaseDetails.lastOrderTimestamp;
             delete purchaseDetails.purchaser;
             // If the timestamp is less than or equal to lastOrderTimestamp, the order was purchased in time.
@@ -127,15 +181,15 @@ abstract contract InputSettlerPurchase is InputSettlerBase {
                 uint256 amountAfterDiscount = (allocatedAmount * (DISCOUNT_DENOM - discount)) / DISCOUNT_DENOM;
                 // Throws if discount > DISCOUNT_DENOM => DISCOUNT_DENOM - discount < 0;
                 SafeERC20.safeTransferFrom(
-                    IERC20(tokenId.fromIdentifier()), msg.sender, newDestination, amountAfterDiscount
+                    IERC20(tokenId.validatedCleanAddress()), msg.sender, newDestination, amountAfterDiscount
                 );
             }
             // Emit the event now because of stack issues.
             emit OrderPurchased(orderPurchase.orderId, orderSolvedByIdentifier, purchaser);
         }
         {
-            bytes calldata call = orderPurchase.call;
-            if (call.length > 0) IInputCallback(newDestination).orderFinalised(inputs, call);
+            bytes calldata callData = orderPurchase.callData;
+            if (callData.length > 0) IInputCallback(newDestination).orderFinalised(inputs, callData);
         }
     }
 }

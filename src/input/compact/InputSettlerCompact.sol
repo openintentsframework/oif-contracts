@@ -2,7 +2,6 @@
 pragma solidity ^0.8.26;
 
 import { TheCompact } from "the-compact/src/TheCompact.sol";
-import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 import { IdLib } from "the-compact/src/lib/IdLib.sol";
 import { BatchClaim } from "the-compact/src/types/BatchClaims.sol";
 import { BatchClaimComponent, Component } from "the-compact/src/types/Components.sol";
@@ -40,25 +39,62 @@ import { InputSettlerPurchase } from "../InputSettlerPurchase.sol";
 contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
     using LibAddress for bytes32;
 
+    /**
+     * @dev The user cannot be the settler.
+     */
     error UserCannotBeSettler();
+
+    /**
+     * @dev Mismatch between the provided and computed order IDs.
+     */
     error OrderIdMismatch(bytes32 provided, bytes32 computed);
 
     TheCompact public immutable COMPACT;
 
     constructor(
         address compact
-    ) EIP712("OIFCompact", "1") {
+    ) EIP712(_domainName(), _domainVersion()) {
         COMPACT = TheCompact(compact);
+    }
+
+    /**
+     * @notice Returns the domain name of the EIP712 signature.
+     * @dev This function is only called in the constructor and the returned value is cached
+     * by the EIP712 base contract.
+     * @return name The domain name.
+     */
+    function _domainName() internal view virtual returns (string memory) {
+        return "OIFCompact";
+    }
+
+    /**
+     * @notice Returns the domain version of the EIP712 signature.
+     * @dev This function is only called in the constructor and the returned value is cached
+     * by the EIP712 base contract.
+     * @return version The domain version.
+     */
+    function _domainVersion() internal view virtual returns (string memory) {
+        return "1";
     }
 
     // --- Generic order identifier --- //
 
+    /**
+     * @notice Computes the order identifier for a Standard Order. Used internally.
+     * @param order The Standard Order.
+     * @return The order identifier.
+     */
     function _orderIdentifier(
         StandardOrder calldata order
     ) internal view returns (bytes32) {
         return StandardOrderType.orderIdentifier(order);
     }
 
+    /**
+     * @notice Computes the order identifier for a Standard Order.
+     * @param order The Standard Order.
+     * @return The order identifier.
+     */
     function orderIdentifier(
         StandardOrder calldata order
     ) external view returns (bytes32) {
@@ -94,8 +130,7 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
      * @param order StandardOrder signed in conjunction with a Compact to form an order
      * @param signatures A signature for the sponsor and the allocator. abi.encode(bytes(sponsorSignature),
      * bytes(allocatorData))
-     * @param timestamps Array of timestamps when each output was filled
-     * @param solvers Array of solvers who filled each output (in order of outputs).
+     * @param solveParams List of solve parameters for when the outputs were filled
      * @param destination Where to send the inputs. If the solver wants to send the inputs to themselves, they should
      * pass their address to this parameter.
      * @param call Optional callback data. If non-empty, will call orderFinalised on the destination
@@ -103,8 +138,7 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
     function finalise(
         StandardOrder calldata order,
         bytes calldata signatures,
-        uint32[] calldata timestamps,
-        bytes32[] memory solvers,
+        SolveParams[] calldata solveParams,
         bytes32 destination,
         bytes calldata call
     ) external virtual {
@@ -112,12 +146,12 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
         _validateInputChain(order.originChainId);
 
         bytes32 orderId = _orderIdentifier(order);
-        bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
+        bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solveParams);
         _validateIsCaller(orderOwner);
 
-        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, timestamps, solvers);
+        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, solveParams);
 
-        _finalise(order, signatures, orderId, solvers[0], destination);
+        _finalise(order, signatures, orderId, solveParams[0].solver, destination);
 
         if (call.length > 0) IInputCallback(destination.fromIdentifier()).orderFinalised(order.inputs, call);
     }
@@ -128,8 +162,7 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
      * @param order StandardOrder signed in conjunction with a Compact to form an order
      * @param signatures A signature for the sponsor and the allocator. abi.encode(bytes(sponsorSignature),
      * bytes(allocatorData))
-     * @param timestamps Array of timestamps when each output was filled
-     * @param solvers Array of solvers who filled each output (in order of outputs)
+     * @param solveParams List of solve parameters for when the outputs were filled
      * element
      * @param destination Where to send the inputs
      * @param call Optional callback data. If non-empty, will call orderFinalised on the destination
@@ -138,8 +171,7 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
     function finaliseWithSignature(
         StandardOrder calldata order,
         bytes calldata signatures,
-        uint32[] calldata timestamps,
-        bytes32[] memory solvers,
+        SolveParams[] calldata solveParams,
         bytes32 destination,
         bytes calldata call,
         bytes calldata orderOwnerSignature
@@ -148,14 +180,16 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
         _validateInputChain(order.originChainId);
 
         bytes32 orderId = _orderIdentifier(order);
-        bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solvers[0], timestamps);
+        {
+            bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solveParams);
 
-        // Validate the external claimant with signature
-        _allowExternalClaimant(orderId, orderOwner.fromIdentifier(), destination, call, orderOwnerSignature);
+            // Validate the external claimant with signature
+            _allowExternalClaimant(orderId, orderOwner.fromIdentifier(), destination, call, orderOwnerSignature);
+        }
 
-        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, timestamps, solvers);
+        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, solveParams);
 
-        _finalise(order, signatures, orderId, solvers[0], destination);
+        _finalise(order, signatures, orderId, solveParams[0].solver, destination);
 
         if (call.length > 0) IInputCallback(destination.fromIdentifier()).orderFinalised(order.inputs, call);
     }

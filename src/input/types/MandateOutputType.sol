@@ -12,7 +12,7 @@ struct MandateOutput {
     bytes32 recipient;
     /// @dev Data that will be delivered to recipient through the settlement callback on the output chain. Can be used
     /// to schedule additional actions.
-    bytes call;
+    bytes callbackData;
     /// @dev Additional output context for the output settlement, encoding order types or other information.
     bytes context;
 }
@@ -27,11 +27,16 @@ library MandateOutputType {
     //--- Outputs Types ---//
 
     bytes constant MANDATE_OUTPUT_TYPE_STUB = bytes(
-        "MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
+        "MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes callbackData,bytes context)"
     );
 
     bytes32 constant MANDATE_OUTPUT_TYPE_HASH = keccak256(MANDATE_OUTPUT_TYPE_STUB);
 
+    /**
+     * @notice Hashes a MandateOutput struct.
+     * @param output The MandateOutput struct to hash.
+     * @return The hash of the MandateOutput struct.
+     */
     function hashOutput(
         MandateOutput calldata output
     ) internal pure returns (bytes32) {
@@ -44,12 +49,17 @@ library MandateOutputType {
                 output.token,
                 output.amount,
                 output.recipient,
-                keccak256(output.call),
+                keccak256(output.callbackData),
                 keccak256(output.context)
             )
         );
     }
 
+    /**
+     * @notice Hashes a list of MandateOutput structs.
+     * @param outputs The list of MandateOutput structs to hash.
+     * @return The hash of the list of MandateOutput structs.
+     */
     function hashOutputs(
         MandateOutput[] calldata outputs
     ) internal pure returns (bytes32) {

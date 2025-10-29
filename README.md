@@ -59,6 +59,21 @@ If an order contains multiple outputs, the **selected** solver will be the one f
 - Dutch auctions only work on the first output.
 - All Outputs may be solved atomically but in a random order. You cannot compose multiple assets into a single output call; You cannot know in which order the outputs will be filled in.
 
+### Security Considerations: First Solver Ownership
+
+**Important**: The solver filling the first output becomes the order owner and can claim funds after settlement. This creates specific risks for multi-output orders:
+
+**For Users:**
+- **DoS Risk**: First solver may refuse to fill remaining outputs, delaying execution until expiry
+  - *Mitigation*: Make the first output the most valuable
+- **Price Manipulation**: First solver can delay other outputs, potentially worsening prices
+  - *Mitigation*: Avoid time-based mechanisms (e.g., Dutch auctions) on non-first outputs
+
+**For Solvers:**
+- **Completion Risk**: Must fill ALL outputs before `fillDeadline` and prove completion before `expiry`
+- **Callback Risk**: Arbitrary code execution during output filling may revert transactions
+  - *Mitigation*: Refuse orders with callbacks outside of the primary batch (that containing the first output) unless it's known that it can't possibly revert (considering that a successful off-chain simulation is not a guarantee of on-chain success)
+
 ###  Order Purchasing / Underwriting
 
 The OIF supports underwriting. Within the contracts, this is described as order purchasing. Underwriting serves 2 purposes:
@@ -95,15 +110,9 @@ Otherwise, the fill interface is left undefined. It is generally expected that t
 
 ## Oracle
 
-Oracles are located in `src/oracles`. `src/oracles/BaseInputOracle.sol` provides a standardized attestation storage structure along with attestation lookup structures. This allows anyone to easily create new oracles that remains compatible with Input Settlers.
+Oracles are located in `src/integrations/oracles`. `src/oracles/BaseInputOracle.sol` provides a standardized attestation storage structure along with attestation lookup structures. This allows anyone to easily create new oracles that remains compatible with Input Settlers.
 
 Message submission and/or relaying is not defined and has to be created specifically for each oracle. The most important compatibility layer between fillers and oracles exists through the `IAttester.hasAttested`.
-
-### Bitcoin SPV (Light) Client
-
-To validate Bitcoin transactions This repository depends on the SPV client Bitcoin Prism. This repository does not contain it but depends on it as a submodule under `lib/bitcoinprism-evm`.
-
-Unlike other oracles, it is required that Bitcoin oracle outputs are filled optimistically. This is because it is not possible to provide the solver identifier cheaply on Bitcoin.
 
 # Contributions
 
@@ -124,5 +133,5 @@ forge test
 ### Coverage
 
 ```shell
-FOUNDRY_FUZZ_RUNS=10 forge coverage --no-match-coverage "(script|test|wormhole/external/wormhole|wormhole/external/callworm/GettersGetter)" [--report lcov]
+forge coverage --no-match-coverage "(script|test|integrations/oracles/.*/external)" [--report lcov]
 ```

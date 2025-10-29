@@ -3,7 +3,7 @@ pragma solidity ^0.8.26;
 
 import { OutputSettlerBase } from "../OutputSettlerBase.sol";
 
-import { OutputFillLib } from "../../libs/OutputFillLib.sol";
+import { MandateOutput } from "../../input/types/MandateOutputType.sol";
 import { FillerDataLib } from "./FillerDataLib.sol";
 import { FulfilmentLib } from "./FulfilmentLib.sol";
 
@@ -23,7 +23,6 @@ import { Math } from "openzeppelin/utils/math/Math.sol";
  * `NotImplemented()`.
  */
 contract OutputSettlerSimple is OutputSettlerBase {
-    using OutputFillLib for bytes;
     using FulfilmentLib for bytes;
     using FillerDataLib for bytes;
 
@@ -38,7 +37,7 @@ contract OutputSettlerSimple is OutputSettlerBase {
 
     /**
      * @dev Executes order specific logic and returns the amount.
-     * @param output The serialized output data to resolve.
+     * @param output The `MandateOutput` struct to resolve.
      * @param fillerData The solver data.
      * @return solver The address of the solver filling the output.
      * @return amount The final amount to be transferred (may differ from base amount for Dutch auctions).
@@ -47,16 +46,22 @@ contract OutputSettlerSimple is OutputSettlerBase {
      * - Dutch auctions: Calculates time-based price using slope
      * - Exclusive orders: Validates solver permissions and returns appropriate amount
      * - Reverts with NotImplemented() for unsupported order types
+     *
+     * SECURITY WARNING: When orders have multiple outputs, the solver of the first output (the owner) can optimize the
+     * filling of the other outputs, which could lead to worse prices for users. The dutch auction order type is
+     * vulnerable to this attack.
+     * Users should be aware of this risk and avoid this order type in multiple output orders or consider opening
+     * orders with exclusivity for trusted solvers.
      */
     function _resolveOutput(
-        bytes calldata output,
+        MandateOutput calldata output,
         bytes calldata fillerData
     ) internal view override returns (bytes32 solver, uint256 amount) {
-        amount = output.amount();
+        amount = output.amount;
         solver = fillerData.solver();
         if (solver == bytes32(0)) revert ZeroValue();
 
-        bytes calldata fulfilmentData = output.contextData();
+        bytes calldata fulfilmentData = output.context;
         uint16 fulfillmentLength = uint16(fulfilmentData.length);
         if (fulfillmentLength == 0) return (solver, amount);
 
@@ -68,7 +73,7 @@ contract OutputSettlerSimple is OutputSettlerBase {
         if (orderType == FulfilmentLib.DUTCH_AUCTION) {
             if (fulfillmentLength != 41) revert FulfilmentLib.InvalidContextDataLength();
             (uint32 startTime, uint32 stopTime, uint256 slope) = fulfilmentData.getDutchAuctionData();
-            return (solver, _dutchAuctionSlope(amount, slope, startTime, stopTime));
+            return (solver, _dutchAuctionPrice(amount, slope, startTime, stopTime));
         }
         if (orderType == FulfilmentLib.EXCLUSIVE_LIMIT_ORDER) {
             if (fulfillmentLength != 37) revert FulfilmentLib.InvalidContextDataLength();
@@ -81,13 +86,13 @@ contract OutputSettlerSimple is OutputSettlerBase {
             (bytes32 exclusiveFor, uint32 startTime, uint32 stopTime, uint256 slope) =
                 fulfilmentData.getExclusiveDutchAuctionData();
             if (startTime > block.timestamp && exclusiveFor != solver) revert ExclusiveTo(exclusiveFor);
-            return (solver, _dutchAuctionSlope(amount, slope, startTime, stopTime));
+            return (solver, _dutchAuctionPrice(amount, slope, startTime, stopTime));
         }
         revert NotImplemented();
     }
 
     /**
-     * @dev Computes a dutch auction slope.
+     * @dev Computes the current price of a dutch auction.
      * @dev The auction function is fixed until x=startTime at y=minimumAmount + slope · (stopTime - startTime) then it
      * linearly decreases until x=stopTime at y=minimumAmount which it remains at.
      *  If stopTime <= startTime return minimumAmount.
@@ -97,7 +102,7 @@ contract OutputSettlerSimple is OutputSettlerBase {
      * @param stopTime Timestamp when the slope stops counting and returns minimumAmount perpetually.
      * @return currentAmount Computed dutch auction amount.
      */
-    function _dutchAuctionSlope(
+    function _dutchAuctionPrice(
         uint256 minimumAmount,
         uint256 slope,
         uint32 startTime,

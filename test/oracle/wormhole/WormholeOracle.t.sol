@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.22;
 
-import { WormholeOracle } from "../../../src/oracles/wormhole/WormholeOracle.sol";
+import { WormholeOracle } from "../../../src/integrations/oracles/wormhole/WormholeOracle.sol";
 import { Test } from "forge-std/Test.sol";
 
 contract WormholeOracleTest is Test {
@@ -12,7 +12,10 @@ contract WormholeOracleTest is Test {
         wormholeOracle = new WormholeOracle(address(this), address(1));
     }
 
-    function test_set_chain_map(uint16 messagingProtocolChainIdentifier, uint256 chainId) external {
+    function test_set_chain_map(
+        uint16 messagingProtocolChainIdentifier,
+        uint256 chainId
+    ) external {
         vm.assume(messagingProtocolChainIdentifier != 0);
         vm.assume(chainId != 0);
         wormholeOracle.setChainMap(uint256(messagingProtocolChainIdentifier), chainId);

@@ -5,17 +5,23 @@ pragma solidity ^0.8.22;
 import { Test } from "forge-std/Test.sol";
 import { console2 } from "forge-std/console2.sol";
 
-import { MailboxClient } from "../../../src/oracles/hyperlane/external/hyperlane/MailboxClient.sol";
-import { IInterchainSecurityModule } from
-    "../../../src/oracles/hyperlane/external/hyperlane/interfaces/IInterchainSecurityModule.sol";
-import { IMailbox } from "../../../src/oracles/hyperlane/external/hyperlane/interfaces/IMailbox.sol";
-import { IPostDispatchHook } from
-    "../../../src/oracles/hyperlane/external/hyperlane/interfaces/hooks/IPostDispatchHook.sol";
+import { MailboxClient } from "../../../src/integrations/oracles/hyperlane/external/hyperlane/MailboxClient.sol";
+import {
+    IInterchainSecurityModule
+} from "../../../src/integrations/oracles/hyperlane/external/hyperlane/interfaces/IInterchainSecurityModule.sol";
+import { IMailbox } from "../../../src/integrations/oracles/hyperlane/external/hyperlane/interfaces/IMailbox.sol";
+import {
+    IPostDispatchHook
+} from "../../../src/integrations/oracles/hyperlane/external/hyperlane/interfaces/hooks/IPostDispatchHook.sol";
 
 contract HyperlaneMailboxClient is MailboxClient {
     uint256 public counter;
 
-    constructor(address mailbox, address customHook, address ism) MailboxClient(mailbox, customHook, ism) { }
+    constructor(
+        address mailbox,
+        address customHook,
+        address ism
+    ) MailboxClient(mailbox, customHook, ism) { }
 
     function somethingOnlyMailbox() external onlyMailbox {
         counter++;

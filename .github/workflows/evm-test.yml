@@ -22,7 +22,7 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
+          version: stable
 
       - name: Run Forge version
         run: forge --version
@@ -47,7 +47,7 @@ jobs:
       - name: Run Forge Coverage
         run: |
           FOUNDRY_FUZZ_RUNS=256 forge coverage \
-            --no-match-coverage "(script|test|wormhole/external/wormhole|wormhole/external/callworm/GettersGetter)" \
+            --no-match-coverage "(script|test|integrations/oracles/.*/external)" \
             --report lcov
         id: coverage
 

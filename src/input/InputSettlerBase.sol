@@ -5,7 +5,6 @@ import { LibAddress } from "../libs/LibAddress.sol";
 
 import { EIP712 } from "openzeppelin/utils/cryptography/EIP712.sol";
 import { SignatureChecker } from "openzeppelin/utils/cryptography/SignatureChecker.sol";
-import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
 
 import { IInputCallback } from "../interfaces/IInputCallback.sol";
 import { IInputOracle } from "../interfaces/IInputOracle.sol";
@@ -19,23 +18,63 @@ import { MandateOutput } from "./types/MandateOutputType.sol";
 /**
  * @title Base Input Settler
  * @notice Defines common logic that can be reused by other input settlers to support a variety of asset management
- * schemes.
+ * schemes within the Open Intents Framework (OIF). This abstract contract provides the foundational building blocks
+ * for cross-chain intent settlement, including validation, timestamp management, and proof verification.
  */
 abstract contract InputSettlerBase is EIP712 {
     using LibAddress for address;
     using LibAddress for bytes32;
 
+    /**
+     * @dev Timestamp has passed.
+     */
     error TimestampPassed();
+    /**
+     * @dev Timestamp has not passed.
+     */
     error TimestampNotPassed();
+    /**
+     * @dev Wrong chain.
+     */
     error WrongChain(uint256 expected, uint256 actual);
+    /**
+     * @dev Invalid signer.
+     */
     error InvalidSigner();
+    /**
+     * @dev Filled too late.
+     */
     error FilledTooLate(uint32 expected, uint32 actual);
+    /**
+     * @dev Invalid timestamp length.
+     */
     error InvalidTimestampLength();
+    /**
+     * @dev No destination.
+     */
     error NoDestination();
-    error UnexpectedCaller(bytes32 expected);
+    /**
+     * @dev Fill deadline is after expiry deadline.
+     */
+    error FillDeadlineAfterExpiry(uint32 fillDeadline, uint32 expires);
 
+    /**
+     * @notice Emitted when an order is finalised.
+     * @param orderId The order identifier.
+     * @param solver The solver.
+     * @param destination The destination.
+     */
     event Finalised(bytes32 indexed orderId, bytes32 solver, bytes32 destination);
 
+    struct SolveParams {
+        uint32 timestamp;
+        bytes32 solver;
+    }
+
+    /**
+     * @notice Returns the domain separator for the EIP712 contract.
+     * @return The domain separator.
+     */
     function DOMAIN_SEPARATOR() external view returns (bytes32) {
         return _domainSeparatorV4();
     }
@@ -60,6 +99,18 @@ abstract contract InputSettlerBase is EIP712 {
         uint32 timestamp
     ) internal view {
         if (block.timestamp <= timestamp) revert TimestampNotPassed();
+    }
+
+    /**
+     * @notice Checks that fillDeadline is before or equal to expires.
+     * @param fillDeadline The fill deadline timestamp to validate.
+     * @param expires The expiry timestamp to validate against.
+     */
+    function _validateFillDeadlineBeforeExpiry(
+        uint32 fillDeadline,
+        uint32 expires
+    ) internal pure {
+        if (fillDeadline > expires) revert FillDeadlineAfterExpiry(fillDeadline, expires);
     }
 
     /**
@@ -103,33 +154,33 @@ abstract contract InputSettlerBase is EIP712 {
     // --- Timestamp Helpers --- //
 
     /**
-     * @param timestamps Array of uint32s.
+     * @param solveParams Array of SolveParams.
      * @return timestamp Largest element of timestamps.
      */
     function _maxTimestamp(
-        uint32[] calldata timestamps
+        SolveParams[] calldata solveParams
     ) internal pure returns (uint256 timestamp) {
-        timestamp = timestamps[0];
+        timestamp = solveParams[0].timestamp;
 
-        uint256 numTimestamps = timestamps.length;
+        uint256 numTimestamps = solveParams.length;
         for (uint256 i = 1; i < numTimestamps; ++i) {
-            uint32 nextTimestamp = timestamps[i];
+            uint32 nextTimestamp = solveParams[i].timestamp;
             if (timestamp < nextTimestamp) timestamp = nextTimestamp;
         }
     }
 
     /**
-     * @param timestamps Array of uint32s.
+     * @param solveParams Array of SolveParams.
      * @return timestamp Smallest element of timestamps.
      */
     function _minTimestamp(
-        uint32[] calldata timestamps
+        SolveParams[] calldata solveParams
     ) internal pure returns (uint256 timestamp) {
-        timestamp = timestamps[0];
+        timestamp = solveParams[0].timestamp;
 
-        uint256 numTimestamps = timestamps.length;
+        uint256 numTimestamps = solveParams.length;
         for (uint256 i = 1; i < numTimestamps; ++i) {
-            uint32 nextTimestamp = timestamps[i];
+            uint32 nextTimestamp = solveParams[i].timestamp;
             if (timestamp > nextTimestamp) timestamp = nextTimestamp;
         }
     }
@@ -176,19 +227,18 @@ abstract contract InputSettlerBase is EIP712 {
         address inputOracle,
         MandateOutput[] calldata outputs,
         bytes32 orderId,
-        uint32[] calldata timestamps,
-        bytes32[] memory solvers // TODO: calldata
+        SolveParams[] calldata solveParams
     ) internal view {
         uint256 numOutputs = outputs.length;
-        uint256 numTimestamps = timestamps.length;
+        uint256 numTimestamps = solveParams.length;
         if (numTimestamps != numOutputs) revert InvalidTimestampLength();
 
         bytes memory proofSeries = new bytes(32 * 4 * numOutputs);
         for (uint256 i; i < numOutputs; ++i) {
-            uint32 outputFilledAt = timestamps[i];
+            uint32 outputFilledAt = solveParams[i].timestamp;
             if (fillDeadline < outputFilledAt) revert FilledTooLate(fillDeadline, outputFilledAt);
             MandateOutput calldata output = outputs[i];
-            bytes32 payloadHash = _proofPayloadHash(orderId, solvers[i], outputFilledAt, output);
+            bytes32 payloadHash = _proofPayloadHash(orderId, solveParams[i].solver, outputFilledAt, output);
 
             uint256 chainId = output.chainId;
             bytes32 outputOracle = output.oracle;
