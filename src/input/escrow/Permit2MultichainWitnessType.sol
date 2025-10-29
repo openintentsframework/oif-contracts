@@ -35,7 +35,7 @@ library Permit2MultichainWitnessType {
 
     /// @notice Typestring for handed to Permit2.
     string constant PERMIT2_MULTICHAIN_PERMIT2_TYPESTRING =
-        "MultichainPermit2Witness witness)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)TokenPermissions(address token,uint256 amount)MultichainPermit2Witness(bytes32 orderId,uint32 expires,address inputOracle,MandateOutput[] outputs)";
+        "MultichainPermit2Witness witness)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)MultichainPermit2Witness(bytes32 orderId,uint32 expires,address inputOracle,MandateOutput[] outputs)TokenPermissions(address token,uint256 amount)";
 
     /**
      * @notice Computes the permit2 witness hash.

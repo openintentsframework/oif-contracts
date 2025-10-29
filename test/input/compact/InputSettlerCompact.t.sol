@@ -119,7 +119,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
             timestamp: uint32(block.timestamp)
         });
         vm.expectRevert(
-            abi.encodeWithSignature("UnexpectedCaller(bytes32)", solvers[0])
+            abi.encodeWithSignature("UnexpectedCaller(bytes32)", solverIdentifier)
         );
         IInputSettlerCompact(inputSettlerCompact).finalise(
             order,
@@ -338,7 +338,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
             timestamp: uint32(block.timestamp)
         });
         vm.expectRevert(
-            abi.encodeWithSignature("UnexpectedCaller(bytes32)", solvers[0])
+            abi.encodeWithSignature("UnexpectedCaller(bytes32)", solverIdentifier)
         );
         IInputSettlerCompact(inputSettlerCompact).finalise(
             order,

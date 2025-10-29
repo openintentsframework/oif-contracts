@@ -323,33 +323,6 @@ contract InputSettlerCompactTestCrossChain is Test {
             );
     }
 
-    function encodeMessage(
-        bytes32 remoteIdentifier,
-        bytes[] calldata payloads
-    ) external pure returns (bytes memory) {
-        return MessageEncodingLib.encodeMessage(remoteIdentifier, payloads);
-    }
-
-    function getOrderOpenSignature(
-        uint256 privateKey,
-        bytes32 orderId,
-        bytes32 destination,
-        bytes calldata call
-    ) external view returns (bytes memory sig) {
-        bytes32 domainSeparator = EIP712(inputSettlerCompact)
-            .DOMAIN_SEPARATOR();
-        bytes32 msgHash = keccak256(
-            abi.encodePacked(
-                "\x19\x01",
-                domainSeparator,
-                AllowOpenType.hashAllowOpen(orderId, destination, call)
-            )
-        );
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
-        return bytes.concat(r, s, bytes1(v));
-    }
-
     function test_deposit_compact() external {
         vm.prank(swapper);
         theCompact.depositERC20(

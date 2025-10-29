@@ -266,7 +266,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
 
         outputs[0] = MandateOutput({
             oracle: bytes32(0),
-            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            settler: bytes32(uint256(uint160(outputSettlerSimpleAddress))),
             chainId: block.chainid,
             token: bytes32(0), // native token
             amount: amount1,
@@ -277,7 +277,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
 
         outputs[1] = MandateOutput({
             oracle: bytes32(0),
-            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            settler: bytes32(uint256(uint160(outputSettlerSimpleAddress))),
             chainId: block.chainid,
             token: bytes32(0), // native token
             amount: amount2,
@@ -307,7 +307,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
         );
 
         vm.prank(sender);
-        outputSettlerCoin.fillOrderOutputs{value: totalAmount}(
+        outputSettlerSimple.fillOrderOutputs{value: totalAmount}(
             orderId,
             outputs,
             type(uint48).max,
@@ -315,7 +315,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
         );
         vm.snapshotGasLastCall(
             "outputSettler",
-            "outputSettlerCoinFillOrderOutputsNative"
+            "outputSettlerSimpleFillOrderOutputsNative"
         );
 
         assertEq(swapper.balance, swapperBalanceBefore + totalAmount);
@@ -337,14 +337,14 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
         vm.deal(sender, nativeAmount);
         outputToken.mint(sender, tokenAmount);
         vm.prank(sender);
-        outputToken.approve(outputSettlerCoinAddress, tokenAmount);
+        outputToken.approve(outputSettlerSimpleAddress, tokenAmount);
 
         MandateOutput[] memory outputs = new MandateOutput[](2);
 
         // First output: native token
         outputs[0] = MandateOutput({
             oracle: bytes32(0),
-            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            settler: bytes32(uint256(uint160(outputSettlerSimpleAddress))),
             chainId: block.chainid,
             token: bytes32(0), // native token
             amount: nativeAmount,
@@ -356,7 +356,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
         // Second output: ERC20 token
         outputs[1] = MandateOutput({
             oracle: bytes32(0),
-            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            settler: bytes32(uint256(uint160(outputSettlerSimpleAddress))),
             chainId: block.chainid,
             token: bytes32(uint256(uint160(outputTokenAddress))),
             amount: tokenAmount,
@@ -396,7 +396,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
         );
 
         vm.prank(sender);
-        outputSettlerCoin.fillOrderOutputs{value: nativeAmount}(
+        outputSettlerSimple.fillOrderOutputs{value: nativeAmount}(
             orderId,
             outputs,
             type(uint48).max,
@@ -432,7 +432,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
 
         outputs[0] = MandateOutput({
             oracle: bytes32(0),
-            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            settler: bytes32(uint256(uint160(outputSettlerSimpleAddress))),
             chainId: block.chainid,
             token: bytes32(0), // native token
             amount: amount1,
@@ -443,7 +443,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
 
         outputs[1] = MandateOutput({
             oracle: bytes32(0),
-            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            settler: bytes32(uint256(uint160(outputSettlerSimpleAddress))),
             chainId: block.chainid,
             token: bytes32(0), // native token
             amount: amount2,
@@ -458,7 +458,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
         uint256 senderBalanceBefore = sender.balance;
 
         vm.prank(sender);
-        outputSettlerCoin.fillOrderOutputs{value: totalSent}(
+        outputSettlerSimple.fillOrderOutputs{value: totalSent}(
             orderId,
             outputs,
             type(uint48).max,
@@ -486,7 +486,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
 
         outputs[0] = MandateOutput({
             oracle: bytes32(0),
-            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            settler: bytes32(uint256(uint160(outputSettlerSimpleAddress))),
             chainId: block.chainid,
             token: bytes32(0), // native token
             amount: amount1,
@@ -497,7 +497,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
 
         outputs[1] = MandateOutput({
             oracle: bytes32(0),
-            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            settler: bytes32(uint256(uint160(outputSettlerSimpleAddress))),
             chainId: block.chainid,
             token: bytes32(0), // native token
             amount: amount2,
@@ -516,7 +516,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
                 uint256(amount2)
             )
         );
-        outputSettlerCoin.fillOrderOutputs{value: sentValue}(
+        outputSettlerSimple.fillOrderOutputs{value: sentValue}(
             orderId,
             outputs,
             type(uint48).max,

@@ -23,7 +23,6 @@ import {StandardOrder, StandardOrderType} from "../types/StandardOrderType.sol";
 
 import {InputSettlerPurchase} from "../InputSettlerPurchase.sol";
 
-import {InputTokenHasDirtyBits, InvalidOrderStatus, ReentrancyDetected, SignatureNotSupported} from "./EscrowErrors.sol";
 import {Permit2WitnessType} from "./Permit2WitnessType.sol";
 
 /**

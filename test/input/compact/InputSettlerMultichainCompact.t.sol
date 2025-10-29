@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
+import {InputSettlerBase} from "../../../src/input/InputSettlerBase.sol";
 import { InputSettlerMultichainCompact } from "../../../src/input/compact/InputSettlerMultichainCompact.sol";
 import { MandateOutput, MandateOutputType } from "../../../src/input/types/MandateOutputType.sol";
 import {
@@ -72,7 +73,7 @@ contract InputSettlerMultichainCompactTest is InputSettlerMultichainCompactTestB
                 token: address(token).toIdentifier(),
                 amount: 1e18 / 10,
                 recipient: swapper.toIdentifier(),
-                call: hex"",
+                callbackData: hex"",
                 context: hex""
             });
 
@@ -128,9 +129,8 @@ contract InputSettlerMultichainCompactTest is InputSettlerMultichainCompactTestB
         {
             vm.chainId(3);
             bytes32 orderId3 = InputSettlerMultichainCompact(inputSettlerMultichainCompact).orderIdentifier(order3);
-            bytes memory outputToFill = getOutputToFillFromMandateOutput(order1.fillDeadline, order1.outputs[0]);
             vm.prank(solver);
-            outputSettlerSimple.fill(orderId3, outputToFill, abi.encode(solver));
+            outputSettlerSimple.fill(orderId3, order1.outputs[0], order1.fillDeadline, abi.encode(solver));
         }
 
         assertEq(token.balanceOf(solver), 0);
@@ -201,13 +201,14 @@ contract InputSettlerMultichainCompactTest is InputSettlerMultichainCompactTestB
                 solver.toIdentifier(),
                 solver.toIdentifier()
             );
-            uint32[] memory timestamps = new uint32[](1);
-            timestamps[0] = uint32(block.timestamp);
-            bytes32[] memory solvers = new bytes32[](1);
-            solvers[0] = solver.toIdentifier();
+            InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
+            solveParams[0] = InputSettlerBase.SolveParams({
+                solver: solver.toIdentifier(),
+                timestamp: uint32(block.timestamp)
+            });
             vm.prank(solver);
             InputSettlerMultichainCompact(inputSettlerMultichainCompact).finalise(
-                order1, signatures, timestamps, solvers, solver.toIdentifier(), hex""
+                order1, signatures, solveParams, solver.toIdentifier(), hex""
             );
         }
 
@@ -232,13 +233,14 @@ contract InputSettlerMultichainCompactTest is InputSettlerMultichainCompactTestB
                 solver.toIdentifier(),
                 solver.toIdentifier()
             );
-            uint32[] memory timestamps = new uint32[](1);
-            timestamps[0] = uint32(block.timestamp);
-            bytes32[] memory solvers = new bytes32[](1);
-            solvers[0] = solver.toIdentifier();
+            InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
+            solveParams[0] = InputSettlerBase.SolveParams({
+                solver: solver.toIdentifier(),
+                timestamp: uint32(block.timestamp)
+            });
             vm.prank(solver);
             InputSettlerMultichainCompact(inputSettlerMultichainCompact).finalise(
-                order3, signatures, timestamps, solvers, solver.toIdentifier(), hex""
+                order3, signatures, solveParams, solver.toIdentifier(), hex""
             );
         }
 
@@ -260,13 +262,14 @@ contract InputSettlerMultichainCompactTest is InputSettlerMultichainCompactTestB
                 destination,
                 hex""
             );
-            uint32[] memory timestamps = new uint32[](1);
-            timestamps[0] = uint32(block.timestamp);
-            bytes32[] memory solvers = new bytes32[](1);
-            solvers[0] = solver.toIdentifier();
+            InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
+            solveParams[0] = InputSettlerBase.SolveParams({
+                solver: solver.toIdentifier(),
+                timestamp: uint32(block.timestamp)
+            });
             vm.prank(swapper);
             InputSettlerMultichainCompact(inputSettlerMultichainCompact).finaliseWithSignature(
-                order3, signatures, timestamps, solvers, destination, hex"", openSignature
+                order3, signatures, solveParams, destination, hex"", openSignature
             );
         }
 

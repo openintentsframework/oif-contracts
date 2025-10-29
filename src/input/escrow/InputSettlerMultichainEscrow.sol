@@ -19,9 +19,6 @@ import { MandateOutput } from "../types/MandateOutputType.sol";
 import { MultichainOrderComponent, MultichainOrderComponentType } from "../types/MultichainOrderComponentType.sol";
 
 import { InputSettlerBase } from "../InputSettlerBase.sol";
-import {
-    InputTokenHasDirtyBits, InvalidOrderStatus, ReentrancyDetected, SignatureNotSupported
-} from "./EscrowErrors.sol";
 import { Permit2MultichainWitnessType } from "./Permit2MultichainWitnessType.sol";
 
 /**
@@ -42,6 +39,27 @@ import { Permit2MultichainWitnessType } from "./Permit2MultichainWitnessType.sol
 contract InputSettlerMultichainEscrow is InputSettlerBase {
     using LibAddress for bytes32;
     using LibAddress for uint256;
+
+    /**
+     * @dev The order status is invalid.
+     */
+    error InvalidOrderStatus();
+    /**
+     * @dev Mismatch between the provided and computed order IDs.
+     */
+    error OrderIdMismatch(bytes32 provided, bytes32 computed);
+    /**
+     * @dev Mismatch between the number of inputs and signatures.
+     */
+    error SignatureAndInputsNotEqual();
+    /**
+     * @dev Reentrancy detected.
+     */
+    error ReentrancyDetected();
+    /**
+     * Signature type not supported.
+     */
+    error SignatureNotSupported(bytes1);
 
     event Open(bytes32 indexed orderId, bytes order);
     event Refunded(bytes32 indexed orderId);
@@ -168,13 +186,8 @@ contract InputSettlerMultichainEscrow is InputSettlerBase {
                 uint256[2] calldata orderInput = orderInputs[i];
                 uint256 inputToken = orderInput[0];
                 uint256 amount = orderInput[1];
-                // Validate that the input token's 12 leftmost bytes are 0.
-                if ((inputToken >> 160) != 0) revert InputTokenHasDirtyBits();
-                address token;
-                assembly ("memory-safe") {
-                    // No dirty bits exist.
-                    token := inputToken
-                }
+                // Validate that the input token's 12 leftmost bytes are 0. See non-multichain escrow.
+                address token = inputToken.validatedCleanAddress();
                 // Check if input tokens are contracts.
                 IsContractLib.validateContainsCode(token);
                 // Set the allowance. This is the explicit max allowed amount approved by the user.
@@ -239,16 +252,14 @@ contract InputSettlerMultichainEscrow is InputSettlerBase {
      * @notice Finalises an order when called directly by the solver
      * @dev The caller must be the address corresponding to the first solver in the solvers array.
      * @param order StandardOrder signed in conjunction with a Compact to form an order
-     * @param timestamps Array of timestamps when each output was filled
-     * @param solvers Array of solvers who filled each output (in order of outputs).
+     * @param solveParams List of solve parameters for when the outputs were filled
      * @param destination Where to send the inputs. If the solver wants to send the inputs to themselves, they should
      * pass their address to this parameter.
      * @param call Optional callback data. If non-empty, will call orderFinalised on the destination
      */
     function finalise(
         MultichainOrderComponent calldata order,
-        uint32[] calldata timestamps,
-        bytes32[] memory solvers,
+        SolveParams[] calldata solveParams,
         bytes32 destination,
         bytes calldata call
     ) external virtual {
@@ -256,11 +267,11 @@ contract InputSettlerMultichainEscrow is InputSettlerBase {
         _validateInputChain(order.chainIdField);
 
         bytes32 orderId = _orderIdentifier(order);
-        _validateIsCaller(solvers[0]);
+        _validateIsCaller(solveParams[0].solver);
 
-        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, timestamps, solvers);
+        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, solveParams);
 
-        _finalise(order, orderId, solvers[0], destination);
+        _finalise(order, orderId, solveParams[0].solver, destination);
 
         if (call.length > 0) IInputCallback(destination.fromIdentifier()).orderFinalised(order.inputs, call);
     }
@@ -269,17 +280,14 @@ contract InputSettlerMultichainEscrow is InputSettlerBase {
      * @notice Finalises a cross-chain order on behalf of someone else using their signature
      * @dev This function serves to finalise intents on the origin chain with proper authorization from the order owner.
      * @param order StandardOrder signed in conjunction with a Compact to form an order
-     * @param timestamps Array of timestamps when each output was filled
-     * @param solvers Array of solvers who filled each output (in order of outputs)
-     * element
+     * @param solveParams List of solve parameters for when the outputs were filled
      * @param destination Where to send the inputs
      * @param call Optional callback data. If non-empty, will call orderFinalised on the destination
      * @param orderOwnerSignature Signature from the order owner authorizing this external call
      */
     function finaliseWithSignature(
         MultichainOrderComponent calldata order,
-        uint32[] calldata timestamps,
-        bytes32[] memory solvers,
+        SolveParams[] calldata solveParams,
         bytes32 destination,
         bytes calldata call,
         bytes calldata orderOwnerSignature
@@ -290,11 +298,11 @@ contract InputSettlerMultichainEscrow is InputSettlerBase {
         bytes32 orderId = _orderIdentifier(order);
 
         // Validate the external claimant with signature
-        _allowExternalClaimant(orderId, solvers[0].fromIdentifier(), destination, call, orderOwnerSignature);
+        _allowExternalClaimant(orderId, solveParams[0].solver.fromIdentifier(), destination, call, orderOwnerSignature);
 
-        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, timestamps, solvers);
+        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, solveParams);
 
-        _finalise(order, orderId, solvers[0], destination);
+        _finalise(order, orderId, solveParams[0].solver, destination);
 
         if (call.length > 0) IInputCallback(destination.fromIdentifier()).orderFinalised(order.inputs, call);
     }

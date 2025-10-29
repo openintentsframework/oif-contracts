@@ -14,6 +14,7 @@ import { BatchClaimComponent, Component } from "the-compact/src/types/Components
 import { IInputCallback } from "../../interfaces/IInputCallback.sol";
 import { IInputOracle } from "../../interfaces/IInputOracle.sol";
 
+import { LibAddress } from "../../libs/LibAddress.sol";
 import { BytesLib } from "../../libs/BytesLib.sol";
 import { MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 
@@ -39,6 +40,8 @@ import { OrderPurchase } from "../types/OrderPurchaseType.sol";
  * The contract is intended to be entirely ownerless, permissionlessly deployable, and unstoppable.
  */
 contract InputSettlerMultichainCompact is InputSettlerBase {
+    using LibAddress for bytes32;
+    using LibAddress for uint256;
     error UserCannotBeSettler();
 
     TheCompact public immutable COMPACT;
@@ -91,8 +94,7 @@ contract InputSettlerMultichainCompact is InputSettlerBase {
      * @param order MultichainOrderComponent signed in conjunction with a Compact to form an order
      * @param signatures A signature for the sponsor and the allocator. abi.encode(bytes(sponsorSignature),
      * bytes(allocatorData))
-     * @param timestamps Array of timestamps when each output was filled
-     * @param solvers Array of solvers who filled each output (in order of outputs).
+     * @param solveParams List of solve parameters for when the outputs were filled
      * @param destination Where to send the inputs. If the solver wants to send the inputs to themselves, they should
      * pass their address to this parameter.
      * @param call Optional callback data. If non-empty, will call orderFinalised on the destination
@@ -100,18 +102,17 @@ contract InputSettlerMultichainCompact is InputSettlerBase {
     function finalise(
         MultichainOrderComponent calldata order,
         bytes calldata signatures,
-        uint32[] calldata timestamps,
-        bytes32[] memory solvers,
+        SolveParams[] calldata solveParams,
         bytes32 destination,
         bytes calldata call
     ) external virtual {
         _validateDestination(destination);
 
-        _validateIsCaller(solvers[0]);
+        _validateIsCaller(solveParams[0].solver);
 
-        bytes32 orderId = _finalise(order, signatures, solvers[0], destination);
+        bytes32 orderId = _finalise(order, signatures, solveParams[0].solver, destination);
 
-        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, timestamps, solvers);
+        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, solveParams);
 
         if (call.length > 0) {
             IInputCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
@@ -124,9 +125,7 @@ contract InputSettlerMultichainCompact is InputSettlerBase {
      * @param order MultichainOrderComponent signed in conjunction with a Compact to form an order
      * @param signatures A signature for the sponsor and the allocator. abi.encode(bytes(sponsorSignature),
      * bytes(allocatorData))
-     * @param timestamps Array of timestamps when each output was filled
-     * @param solvers Array of solvers who filled each output (in order of outputs)
-     * element
+     * @param solveParams List of solve parameters for when the outputs were filled
      * @param destination Where to send the inputs
      * @param call Optional callback data. If non-empty, will call orderFinalised on the destination
      * @param orderOwnerSignature Signature from the order owner authorizing this external call
@@ -134,25 +133,24 @@ contract InputSettlerMultichainCompact is InputSettlerBase {
     function finaliseWithSignature(
         MultichainOrderComponent calldata order,
         bytes calldata signatures,
-        uint32[] calldata timestamps,
-        bytes32[] memory solvers,
+        SolveParams[] calldata solveParams,
         bytes32 destination,
         bytes calldata call,
         bytes calldata orderOwnerSignature
     ) external virtual {
         if (destination == bytes32(0)) revert NoDestination();
 
-        bytes32 orderId = _finalise(order, signatures, solvers[0], destination);
+        bytes32 orderId = _finalise(order, signatures, solveParams[0].solver, destination);
 
         // Validate the external claimant with signature
         _allowExternalClaimant(
-            orderId, EfficiencyLib.asSanitizedAddress(uint256(solvers[0])), destination, call, orderOwnerSignature
+            orderId, solveParams[0].solver.fromIdentifier(), destination, call, orderOwnerSignature
         );
 
-        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, timestamps, solvers);
+        _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, solveParams);
 
         if (call.length > 0) {
-            IInputCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
+            IInputCallback(destination.fromIdentifier()).orderFinalised(order.inputs, call);
         }
     }
 

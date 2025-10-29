@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
+import {InputSettlerBase} from "../../../src/input/InputSettlerBase.sol";
 import { InputSettlerMultichainEscrow } from "../../../src/input/escrow/InputSettlerMultichainEscrow.sol";
 import { MandateOutput, MandateOutputType } from "../../../src/input/types/MandateOutputType.sol";
 import {
@@ -67,7 +68,7 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
             token: address(token).toIdentifier(),
             amount: amount,
             recipient: swapper.toIdentifier(),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
         MultichainOrderComponent memory order = MultichainOrderComponent({
@@ -106,9 +107,8 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         order.inputs = inputs1;
         order.additionalChains = additionalChains1;
 
-        bytes memory outputToFill = getOutputToFillFromMandateOutput(order.fillDeadline, order.outputs[0]);
         vm.prank(solver);
-        outputSettlerSimple.fill(orderId, outputToFill, abi.encode(solver));
+        outputSettlerSimple.fill(orderId, order.outputs[0], order.fillDeadline, abi.encode(solver));
 
         assertEq(token.balanceOf(solver), 0);
 
@@ -125,8 +125,11 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
 
         wormholeOracle.receiveMessage(vaa);
 
-        bytes32[] memory solvers = new bytes32[](1);
-        solvers[0] = solver.toIdentifier();
+        InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
+            solveParams[0] = InputSettlerBase.SolveParams({
+                solver: solver.toIdentifier(),
+                timestamp: uint32(block.timestamp)
+            });
         // Open Order & finalise
         uint256 snapshotId = vm.snapshot();
 
@@ -144,12 +147,9 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         assertEq(token.balanceOf(inputSettlerMultichainEscrow), inputs0[0][1]);
 
         {
-            uint32[] memory timestamps = new uint32[](1);
-            timestamps[0] = uint32(block.timestamp);
-
             vm.prank(solver);
             InputSettlerMultichainEscrow(inputSettlerMultichainEscrow).finalise(
-                order, timestamps, solvers, solver.toIdentifier(), hex""
+                order, solveParams, solver.toIdentifier(), hex""
             );
         }
 
@@ -174,12 +174,9 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         assertEq(anotherToken.balanceOf(inputSettlerMultichainEscrow), inputs1[0][1]);
 
         {
-            uint32[] memory timestamps = new uint32[](1);
-            timestamps[0] = uint32(block.timestamp);
-
             vm.prank(solver);
             InputSettlerMultichainEscrow(inputSettlerMultichainEscrow).finalise(
-                order, timestamps, solvers, solver.toIdentifier(), hex""
+                order, solveParams, solver.toIdentifier(), hex""
             );
         }
 
@@ -208,12 +205,10 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
                 destination,
                 hex""
             );
-            uint32[] memory timestamps = new uint32[](1);
-            timestamps[0] = uint32(block.timestamp);
 
             vm.prank(swapper);
             InputSettlerMultichainEscrow(inputSettlerMultichainEscrow).finaliseWithSignature(
-                order, timestamps, solvers, destination, hex"", openSignature
+                order, solveParams, destination, hex"", openSignature
             );
         }
         assertEq(token.balanceOf(solver), 0);
@@ -256,7 +251,7 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
             token: address(token).toIdentifier(),
             amount: amount,
             recipient: swapper.toIdentifier(),
-            call: hex"",
+            callbackData: hex"",
             context: hex""
         });
         MultichainOrderComponent memory order = MultichainOrderComponent({
@@ -295,9 +290,8 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         order.inputs = inputs1;
         order.additionalChains = additionalChains1;
 
-        bytes memory outputToFill = getOutputToFillFromMandateOutput(order.fillDeadline, order.outputs[0]);
         vm.prank(solver);
-        outputSettlerSimple.fill(orderId, outputToFill, abi.encode(solver));
+        outputSettlerSimple.fill(orderId, order.outputs[0], order.fillDeadline, abi.encode(solver));
 
         assertEq(token.balanceOf(solver), 0);
 
@@ -314,8 +308,11 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
 
         wormholeOracle.receiveMessage(vaa);
 
-        bytes32[] memory solvers = new bytes32[](1);
-        solvers[0] = solver.toIdentifier();
+        InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
+            solveParams[0] = InputSettlerBase.SolveParams({
+                solver: solver.toIdentifier(),
+                timestamp: uint32(block.timestamp)
+            });
         // Open Order & finalise
         uint256 snapshotId = vm.snapshot();
 
@@ -335,12 +332,9 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         assertEq(token.balanceOf(inputSettlerMultichainEscrow), inputs0[0][1]);
 
         {
-            uint32[] memory timestamps = new uint32[](1);
-            timestamps[0] = uint32(block.timestamp);
-
             vm.prank(solver);
             InputSettlerMultichainEscrow(inputSettlerMultichainEscrow).finalise(
-                order, timestamps, solvers, solver.toIdentifier(), hex""
+                order, solveParams, solver.toIdentifier(), hex""
             );
         }
 
@@ -368,12 +362,9 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         assertEq(anotherToken.balanceOf(inputSettlerMultichainEscrow), inputs1[0][1]);
 
         {
-            uint32[] memory timestamps = new uint32[](1);
-            timestamps[0] = uint32(block.timestamp);
-
             vm.prank(solver);
             InputSettlerMultichainEscrow(inputSettlerMultichainEscrow).finalise(
-                order, timestamps, solvers, solver.toIdentifier(), hex""
+                order, solveParams, solver.toIdentifier(), hex""
             );
         }
 

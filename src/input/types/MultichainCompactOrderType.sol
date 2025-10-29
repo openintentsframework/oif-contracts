@@ -13,6 +13,8 @@ struct Mandate {
     MandateOutput[] outputs;
 }
 
+import {console} from "forge-std/console.sol";
+
 /**
  * @notice Helper library for the multichain order type.
  * TYPE_PARTIAL: An incomplete type. Is missing a field.
@@ -92,6 +94,15 @@ library MultichainCompactOrderType {
         // Compute the element hash of this chain.
         bytes32 elementHash = keccak256(
             abi.encode(
+                ELEMENTS_COMPACT_TYPEHASH_WITH_WITNESS,
+                address(this),
+                block.chainid,
+                inputsToLocksHash(order.inputs),
+                witnessHash(order)
+            )
+        );
+        console.logBytes(
+             abi.encode(
                 ELEMENTS_COMPACT_TYPEHASH_WITH_WITNESS,
                 address(this),
                 block.chainid,
