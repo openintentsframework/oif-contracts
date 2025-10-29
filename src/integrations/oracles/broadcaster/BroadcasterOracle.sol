@@ -60,6 +60,9 @@ contract BroadcasterOracle is BaseInputOracle, ChainMap {
      * @param remoteChainId The chain id of the remote chain.
      * @param remoteOracle The address of the remote oracle.
      * @param messageData The data of the message to verify.
+     * @dev In this oracle, `ChainMap` maps EVM `chainId` to `broadcasterId` (not to chain identifiers).
+     * The `broadcasterId` depends on the configured `BlockHashProverPointer`; for each remote chain, only one pointer
+     * (and thus one broadcasterId) is supported.
      */
     function verifyMessage(
         IReceiver.RemoteReadArgs calldata broadcasterReadArgs,
