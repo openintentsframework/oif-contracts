@@ -34,7 +34,7 @@ library Permit2WitnessType {
 
     /// @notice Typestring for handed to Permit2.
     string constant PERMIT2_PERMIT2_TYPESTRING =
-        "Permit2Witness witness)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)TokenPermissions(address token,uint256 amount)Permit2Witness(uint32 expires,address inputOracle,MandateOutput[] outputs)";
+        "Permit2Witness witness)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)Permit2Witness(uint32 expires,address inputOracle,MandateOutput[] outputs)TokenPermissions(address token,uint256 amount)";
     /**
      * @notice Computes the permit2 witness hash.
      * @param order The Standard Order.

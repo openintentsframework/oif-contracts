@@ -46,6 +46,12 @@ contract OutputSettlerSimple is OutputSettlerBase {
      * - Dutch auctions: Calculates time-based price using slope
      * - Exclusive orders: Validates solver permissions and returns appropriate amount
      * - Reverts with NotImplemented() for unsupported order types
+     *
+     * SECURITY WARNING: When orders have multiple outputs, the solver of the first output (the owner) can optimize the
+     * filling of the other outputs, which could lead to worse prices for users. The dutch auction order type is
+     * vulnerable to this attack.
+     * Users should be aware of this risk and avoid this order type in multiple output orders or consider opening
+     * orders with exclusivity for trusted solvers.
      */
     function _resolveOutput(
         MandateOutput calldata output,
