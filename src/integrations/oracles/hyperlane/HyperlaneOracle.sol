@@ -199,8 +199,8 @@ contract HyperlaneOracle is BaseInputOracle, MailboxClient, IMessageRecipient {
 
         bytes memory message = MessageEncodingLib.encodeMessage(source.toIdentifier(), payloads);
 
-        MAILBOX.dispatch{ value: msg.value }(
-            destinationDomain, recipientOracle.toIdentifier(), message, hookMetadata, customHook
-        );
+        MAILBOX.dispatch{
+            value: msg.value
+        }(destinationDomain, recipientOracle.toIdentifier(), message, hookMetadata, customHook);
     }
 }
