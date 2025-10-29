@@ -3,7 +3,7 @@
     "rev": "158ff5e6361ba6813f37135c3635d6a88c6b3407"
   },
   "lib/broadcaster": {
-    "rev": "3522b4c7c958ce254497b879cc1f6106131c7e3e"
+    "rev": "6be64bee7534e41752ba037a3b0e2f46fe6478be"
   },
   "lib/forge-std": {
     "rev": "77041d2ce690e692d6e03cc812b57d1ddaa4d505"
