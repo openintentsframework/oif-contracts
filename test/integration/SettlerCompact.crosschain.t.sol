@@ -217,7 +217,7 @@ contract InputSettlerCompactTestCrossChain is Test {
                     abi.encode(
                         keccak256(
                             bytes(
-                                "BatchCompact(address arbiter,address sponsor,uint256 nonce,uint256 expires,Lock[] commitments,Mandate mandate)Lock(bytes12 lockTag,address token,uint256 amount)Mandate(uint32 fillDeadline,address inputOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
+                                "BatchCompact(address arbiter,address sponsor,uint256 nonce,uint256 expires,Lock[] commitments,Mandate mandate)Lock(bytes12 lockTag,address token,uint256 amount)Mandate(uint32 fillDeadline,address inputOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes callbackData,bytes context)"
                             )
                         ),
                         arbiter,
@@ -238,19 +238,18 @@ contract InputSettlerCompactTestCrossChain is Test {
     function witnessHash(
         StandardOrder memory order
     ) internal pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encode(
-                    keccak256(
-                        bytes(
-                            "Mandate(uint32 fillDeadline,address inputOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes call,bytes context)"
-                        )
-                    ),
-                    order.fillDeadline,
-                    order.inputOracle,
-                    hashOutputsForMemory(order.outputs)
-                )
-            );
+        return keccak256(
+            abi.encode(
+                keccak256(
+                    bytes(
+                        "Mandate(uint32 fillDeadline,address inputOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes callbackData,bytes context)"
+                    )
+                ),
+                order.fillDeadline,
+                order.inputOracle,
+                hashOutputsForMemory(order.outputs)
+            )
+        );
     }
 
     function hashOutputsForMemory(
