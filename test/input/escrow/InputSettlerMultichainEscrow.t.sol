@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import {InputSettlerBase} from "../../../src/input/InputSettlerBase.sol";
+import { InputSettlerBase } from "../../../src/input/InputSettlerBase.sol";
 import { InputSettlerMultichainEscrow } from "../../../src/input/escrow/InputSettlerMultichainEscrow.sol";
 import { MandateOutput, MandateOutputType } from "../../../src/input/types/MandateOutputType.sol";
 import {
@@ -82,7 +82,7 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
             inputs: new uint256[2][](0), // Shall be replaced before execution
             outputs: outputs,
             additionalChains: new bytes32[](0) // Shall be replaced before execution
-         });
+        });
 
         // Check that both orders have the same chainId
         vm.chainId(0);
@@ -126,10 +126,8 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         wormholeOracle.receiveMessage(vaa);
 
         InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
-            solveParams[0] = InputSettlerBase.SolveParams({
-                solver: solver.toIdentifier(),
-                timestamp: uint32(block.timestamp)
-            });
+        solveParams[0] =
+            InputSettlerBase.SolveParams({ solver: solver.toIdentifier(), timestamp: uint32(block.timestamp) });
         // Open Order & finalise
         uint256 snapshotId = vm.snapshot();
 
@@ -148,9 +146,8 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
 
         {
             vm.prank(solver);
-            InputSettlerMultichainEscrow(inputSettlerMultichainEscrow).finalise(
-                order, solveParams, solver.toIdentifier(), hex""
-            );
+            InputSettlerMultichainEscrow(inputSettlerMultichainEscrow)
+                .finalise(order, solveParams, solver.toIdentifier(), hex"");
         }
 
         // Validate that we received input 0.
@@ -175,9 +172,8 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
 
         {
             vm.prank(solver);
-            InputSettlerMultichainEscrow(inputSettlerMultichainEscrow).finalise(
-                order, solveParams, solver.toIdentifier(), hex""
-            );
+            InputSettlerMultichainEscrow(inputSettlerMultichainEscrow)
+                .finalise(order, solveParams, solver.toIdentifier(), hex"");
         }
 
         // Validate that we received input 1.
@@ -207,9 +203,8 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
             );
 
             vm.prank(swapper);
-            InputSettlerMultichainEscrow(inputSettlerMultichainEscrow).finaliseWithSignature(
-                order, solveParams, destination, hex"", openSignature
-            );
+            InputSettlerMultichainEscrow(inputSettlerMultichainEscrow)
+                .finaliseWithSignature(order, solveParams, destination, hex"", openSignature);
         }
         assertEq(token.balanceOf(solver), 0);
         assertEq(token.balanceOf(inputSettlerMultichainEscrow), 0);
@@ -265,7 +260,7 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
             inputs: new uint256[2][](0), // Shall be replaced before execution
             outputs: outputs,
             additionalChains: new bytes32[](0) // Shall be replaced before execution
-         });
+        });
 
         // Check that both orders have the same chainId
         vm.chainId(0);
@@ -309,10 +304,8 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
         wormholeOracle.receiveMessage(vaa);
 
         InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
-            solveParams[0] = InputSettlerBase.SolveParams({
-                solver: solver.toIdentifier(),
-                timestamp: uint32(block.timestamp)
-            });
+        solveParams[0] =
+            InputSettlerBase.SolveParams({ solver: solver.toIdentifier(), timestamp: uint32(block.timestamp) });
         // Open Order & finalise
         uint256 snapshotId = vm.snapshot();
 
@@ -333,9 +326,8 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
 
         {
             vm.prank(solver);
-            InputSettlerMultichainEscrow(inputSettlerMultichainEscrow).finalise(
-                order, solveParams, solver.toIdentifier(), hex""
-            );
+            InputSettlerMultichainEscrow(inputSettlerMultichainEscrow)
+                .finalise(order, solveParams, solver.toIdentifier(), hex"");
         }
 
         // Validate that we received input 0.
@@ -363,9 +355,8 @@ contract InputSettlerMultichainEscrowTest is InputSettlerMultichainEscrowTestBas
 
         {
             vm.prank(solver);
-            InputSettlerMultichainEscrow(inputSettlerMultichainEscrow).finalise(
-                order, solveParams, solver.toIdentifier(), hex""
-            );
+            InputSettlerMultichainEscrow(inputSettlerMultichainEscrow)
+                .finalise(order, solveParams, solver.toIdentifier(), hex"");
         }
 
         // Validate that we received input 1.

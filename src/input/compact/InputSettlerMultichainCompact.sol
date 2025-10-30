@@ -14,8 +14,8 @@ import { BatchClaimComponent, Component } from "the-compact/src/types/Components
 import { IInputCallback } from "../../interfaces/IInputCallback.sol";
 import { IInputOracle } from "../../interfaces/IInputOracle.sol";
 
-import { LibAddress } from "../../libs/LibAddress.sol";
 import { BytesLib } from "../../libs/BytesLib.sol";
+import { LibAddress } from "../../libs/LibAddress.sol";
 import { MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 
 import { InputSettlerBase } from "../InputSettlerBase.sol";
@@ -143,15 +143,11 @@ contract InputSettlerMultichainCompact is InputSettlerBase {
         bytes32 orderId = _finalise(order, signatures, solveParams[0].solver, destination);
 
         // Validate the external claimant with signature
-        _allowExternalClaimant(
-            orderId, solveParams[0].solver.fromIdentifier(), destination, call, orderOwnerSignature
-        );
+        _allowExternalClaimant(orderId, solveParams[0].solver.fromIdentifier(), destination, call, orderOwnerSignature);
 
         _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, solveParams);
 
-        if (call.length > 0) {
-            IInputCallback(destination.fromIdentifier()).orderFinalised(order.inputs, call);
-        }
+        if (call.length > 0) IInputCallback(destination.fromIdentifier()).orderFinalised(order.inputs, call);
     }
 
     //--- The Compact & Resource Locks ---//

@@ -150,9 +150,7 @@ abstract contract InputSettlerBase is EIP712 {
     function _validateIsCaller(
         bytes32 expectedCaller
     ) internal view {
-        if (LibAddress.fromIdentifier(expectedCaller) != msg.sender) {
-            revert UnexpectedCaller(expectedCaller);
-        }
+        if (LibAddress.fromIdentifier(expectedCaller) != msg.sender) revert UnexpectedCaller(expectedCaller);
     }
 
     // --- Timestamp Helpers --- //

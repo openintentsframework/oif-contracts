@@ -26,13 +26,11 @@ struct MandateOutput {
 library MandateOutputType {
     //--- Outputs Types ---//
 
-    bytes constant MANDATE_OUTPUT_TYPE_STUB =
-        bytes(
-            "MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes callbackData,bytes context)"
-        );
+    bytes constant MANDATE_OUTPUT_TYPE_STUB = bytes(
+        "MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes callbackData,bytes context)"
+    );
 
-    bytes32 constant MANDATE_OUTPUT_TYPE_HASH =
-        keccak256(MANDATE_OUTPUT_TYPE_STUB);
+    bytes32 constant MANDATE_OUTPUT_TYPE_HASH = keccak256(MANDATE_OUTPUT_TYPE_STUB);
 
     /**
      * @notice Hashes a MandateOutput struct.
@@ -42,20 +40,19 @@ library MandateOutputType {
     function hashOutput(
         MandateOutput calldata output
     ) internal pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encode(
-                    MANDATE_OUTPUT_TYPE_HASH,
-                    output.oracle,
-                    output.settler,
-                    output.chainId,
-                    output.token,
-                    output.amount,
-                    output.recipient,
-                    keccak256(output.callbackData),
-                    keccak256(output.context)
-                )
-            );
+        return keccak256(
+            abi.encode(
+                MANDATE_OUTPUT_TYPE_HASH,
+                output.oracle,
+                output.settler,
+                output.chainId,
+                output.token,
+                output.amount,
+                output.recipient,
+                keccak256(output.callbackData),
+                keccak256(output.context)
+            )
+        );
     }
 
     /**
@@ -87,20 +84,19 @@ library MandateOutputType {
     function hashOutputM(
         MandateOutput memory output
     ) internal pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encode(
-                    MANDATE_OUTPUT_TYPE_HASH,
-                    output.oracle,
-                    output.settler,
-                    output.chainId,
-                    output.token,
-                    output.amount,
-                    output.recipient,
-                    keccak256(output.callbackData),
-                    keccak256(output.context)
-                )
-            );
+        return keccak256(
+            abi.encode(
+                MANDATE_OUTPUT_TYPE_HASH,
+                output.oracle,
+                output.settler,
+                output.chainId,
+                output.token,
+                output.amount,
+                output.recipient,
+                keccak256(output.callbackData),
+                keccak256(output.context)
+            )
+        );
     }
 
     function hashOutputsM(

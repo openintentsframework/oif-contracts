@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import {InputSettlerBase} from "../../../src/input/InputSettlerBase.sol";
+import { InputSettlerBase } from "../../../src/input/InputSettlerBase.sol";
 import { InputSettlerMultichainCompact } from "../../../src/input/compact/InputSettlerMultichainCompact.sol";
 import { MandateOutput, MandateOutputType } from "../../../src/input/types/MandateOutputType.sol";
 import {
@@ -158,14 +158,10 @@ contract InputSettlerMultichainCompactTest is InputSettlerMultichainCompactTestB
         {
             Element[] memory elements = new Element[](2);
             elements[0] = Element({
-                arbiter: inputSettlerMultichainCompact,
-                chainId: 1,
-                commitments: uintsToLocks(order1.inputs)
+                arbiter: inputSettlerMultichainCompact, chainId: 1, commitments: uintsToLocks(order1.inputs)
             });
             elements[1] = Element({
-                arbiter: inputSettlerMultichainCompact,
-                chainId: 3,
-                commitments: uintsToLocks(order3.inputs)
+                arbiter: inputSettlerMultichainCompact, chainId: 3, commitments: uintsToLocks(order3.inputs)
             });
             // (Sponsor signature but stored in initiated variable for stack)
             signatures = getCompactMultichainWitnessSignature(
@@ -202,14 +198,11 @@ contract InputSettlerMultichainCompactTest is InputSettlerMultichainCompactTestB
                 solver.toIdentifier()
             );
             InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
-            solveParams[0] = InputSettlerBase.SolveParams({
-                solver: solver.toIdentifier(),
-                timestamp: uint32(block.timestamp)
-            });
+            solveParams[0] =
+                InputSettlerBase.SolveParams({ solver: solver.toIdentifier(), timestamp: uint32(block.timestamp) });
             vm.prank(solver);
-            InputSettlerMultichainCompact(inputSettlerMultichainCompact).finalise(
-                order1, signatures, solveParams, solver.toIdentifier(), hex""
-            );
+            InputSettlerMultichainCompact(inputSettlerMultichainCompact)
+                .finalise(order1, signatures, solveParams, solver.toIdentifier(), hex"");
         }
 
         // Validate that we received input 0.
@@ -234,14 +227,11 @@ contract InputSettlerMultichainCompactTest is InputSettlerMultichainCompactTestB
                 solver.toIdentifier()
             );
             InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
-            solveParams[0] = InputSettlerBase.SolveParams({
-                solver: solver.toIdentifier(),
-                timestamp: uint32(block.timestamp)
-            });
+            solveParams[0] =
+                InputSettlerBase.SolveParams({ solver: solver.toIdentifier(), timestamp: uint32(block.timestamp) });
             vm.prank(solver);
-            InputSettlerMultichainCompact(inputSettlerMultichainCompact).finalise(
-                order3, signatures, solveParams, solver.toIdentifier(), hex""
-            );
+            InputSettlerMultichainCompact(inputSettlerMultichainCompact)
+                .finalise(order3, signatures, solveParams, solver.toIdentifier(), hex"");
         }
 
         // Validate that we received input 1.
@@ -263,14 +253,11 @@ contract InputSettlerMultichainCompactTest is InputSettlerMultichainCompactTestB
                 hex""
             );
             InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
-            solveParams[0] = InputSettlerBase.SolveParams({
-                solver: solver.toIdentifier(),
-                timestamp: uint32(block.timestamp)
-            });
+            solveParams[0] =
+                InputSettlerBase.SolveParams({ solver: solver.toIdentifier(), timestamp: uint32(block.timestamp) });
             vm.prank(swapper);
-            InputSettlerMultichainCompact(inputSettlerMultichainCompact).finaliseWithSignature(
-                order3, signatures, solveParams, destination, hex"", openSignature
-            );
+            InputSettlerMultichainCompact(inputSettlerMultichainCompact)
+                .finaliseWithSignature(order3, signatures, solveParams, destination, hex"", openSignature);
         }
 
         assertEq(token.balanceOf(solver), 0);

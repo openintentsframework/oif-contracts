@@ -1,28 +1,31 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import {Test} from "forge-std/Test.sol";
+import { Test } from "forge-std/Test.sol";
 
-import {OutputSettlerSimple} from "../../../src/output/simple/OutputSettlerSimple.sol";
+import { OutputSettlerSimple } from "../../../src/output/simple/OutputSettlerSimple.sol";
 
-import {InputSettlerMultichainEscrow} from "../../../src/input/escrow/InputSettlerMultichainEscrow.sol";
-import {AllowOpenType} from "../../../src/input/types/AllowOpenType.sol";
-import {MandateOutput, MandateOutputType} from "../../../src/input/types/MandateOutputType.sol";
+import { InputSettlerMultichainEscrow } from "../../../src/input/escrow/InputSettlerMultichainEscrow.sol";
+import { AllowOpenType } from "../../../src/input/types/AllowOpenType.sol";
+import { MandateOutput, MandateOutputType } from "../../../src/input/types/MandateOutputType.sol";
 
-import {MultichainOrderComponent, MultichainOrderComponentType} from "../../../src/input/types/MultichainOrderComponentType.sol";
-import {OrderPurchase, OrderPurchaseType} from "../../../src/input/types/OrderPurchaseType.sol";
+import {
+    MultichainOrderComponent,
+    MultichainOrderComponentType
+} from "../../../src/input/types/MultichainOrderComponentType.sol";
+import { OrderPurchase, OrderPurchaseType } from "../../../src/input/types/OrderPurchaseType.sol";
 
-import {LibAddress} from "../../../src/libs/LibAddress.sol";
-import {MandateOutputEncodingLib} from "../../../src/libs/MandateOutputEncodingLib.sol";
-import {MessageEncodingLib} from "../../../src/libs/MessageEncodingLib.sol";
-import {WormholeOracle} from "../../../src/integrations/oracles/wormhole/WormholeOracle.sol";
-import {Messages} from "../../../src/integrations/oracles/wormhole/external/wormhole/Messages.sol";
-import {Setters} from "../../../src/integrations/oracles/wormhole/external/wormhole/Setters.sol";
-import {Structs} from "../../../src/integrations/oracles/wormhole/external/wormhole/Structs.sol";
+import { WormholeOracle } from "../../../src/integrations/oracles/wormhole/WormholeOracle.sol";
+import { Messages } from "../../../src/integrations/oracles/wormhole/external/wormhole/Messages.sol";
+import { Setters } from "../../../src/integrations/oracles/wormhole/external/wormhole/Setters.sol";
+import { Structs } from "../../../src/integrations/oracles/wormhole/external/wormhole/Structs.sol";
+import { LibAddress } from "../../../src/libs/LibAddress.sol";
+import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
+import { MessageEncodingLib } from "../../../src/libs/MessageEncodingLib.sol";
 
-import {AlwaysYesOracle} from "../../mocks/AlwaysYesOracle.sol";
-import {MockERC20} from "../../mocks/MockERC20.sol";
-import {Permit2Test} from "./Permit2.t.sol";
+import { AlwaysYesOracle } from "../../mocks/AlwaysYesOracle.sol";
+import { MockERC20 } from "../../mocks/MockERC20.sol";
+import { Permit2Test } from "./Permit2.t.sol";
 
 interface EIP712 {
     function DOMAIN_SEPARATOR() external view returns (bytes32);
@@ -71,9 +74,7 @@ contract InputSettlerMultichainEscrowTestBase is Permit2Test {
 
     function setUp() public virtual override {
         super.setUp();
-        inputSettlerMultichainEscrow = address(
-            new InputSettlerMultichainEscrow()
-        );
+        inputSettlerMultichainEscrow = address(new InputSettlerMultichainEscrow());
         outputSettlerSimple = new OutputSettlerSimple();
         alwaysYesOracle = address(new AlwaysYesOracle());
 
@@ -86,11 +87,7 @@ contract InputSettlerMultichainEscrowTestBase is Permit2Test {
         // Oracles
         messages = new ExportedMessages();
         address wormholeDeployment = makeAddr("wormholeOracle");
-        deployCodeTo(
-            "WormholeOracle.sol",
-            abi.encode(address(this), address(messages)),
-            wormholeDeployment
-        );
+        deployCodeTo("WormholeOracle.sol", abi.encode(address(this), address(messages)), wormholeDeployment);
         wormholeOracle = WormholeOracle(wormholeDeployment);
         wormholeOracle.setChainMap(3, 3);
         (testGuardian, testGuardianPrivateKey) = makeAddrAndKey("testGuardian");
@@ -98,10 +95,7 @@ contract InputSettlerMultichainEscrowTestBase is Permit2Test {
         address[] memory keys = new address[](1);
         keys[0] = testGuardian;
         Structs.GuardianSet memory guardianSet = Structs.GuardianSet(keys, 0);
-        require(
-            messages.quorum(guardianSet.keys.length) == 1,
-            "Quorum should be 1"
-        );
+        require(messages.quorum(guardianSet.keys.length) == 1, "Quorum should be 1");
 
         messages.storeGuardianSetPub(guardianSet, uint32(0));
     }
@@ -110,20 +104,19 @@ contract InputSettlerMultichainEscrowTestBase is Permit2Test {
         uint48 fillDeadline,
         MandateOutput memory output
     ) internal pure returns (bytes memory) {
-        return
-            abi.encodePacked(
-                fillDeadline, // fill deadline
-                output.oracle, // oracle
-                output.settler, // settler
-                uint256(output.chainId), // chainId
-                output.token, // token
-                output.amount, // amount
-                output.recipient, // recipient
-                uint16(output.callbackData.length), // call length
-                output.callbackData, // call
-                uint16(output.context.length), // context length
-                output.context // context
-            );
+        return abi.encodePacked(
+            fillDeadline, // fill deadline
+            output.oracle, // oracle
+            output.settler, // settler
+            uint256(output.chainId), // chainId
+            output.token, // token
+            output.amount, // amount
+            output.recipient, // recipient
+            uint16(output.callbackData.length), // call length
+            output.callbackData, // call
+            uint16(output.context.length), // context length
+            output.context // context
+        );
     }
 
     function encodeMessage(
@@ -138,14 +131,7 @@ contract InputSettlerMultichainEscrowTestBase is Permit2Test {
         bytes32 emitterAddress
     ) internal pure returns (bytes memory preMessage) {
         return
-            abi.encodePacked(
-                hex"000003e8"
-                hex"00000001",
-                emitterChainId,
-                emitterAddress,
-                hex"0000000000000539"
-                hex"0f"
-            );
+            abi.encodePacked(hex"000003e8" hex"00000001", emitterChainId, emitterAddress, hex"0000000000000539" hex"0f");
     }
 
     function makeValidVAA(
@@ -153,26 +139,11 @@ contract InputSettlerMultichainEscrowTestBase is Permit2Test {
         bytes32 emitterAddress,
         bytes memory message
     ) internal view returns (bytes memory validVM) {
-        bytes memory postvalidVM = abi.encodePacked(
-            _buildPreMessage(emitterChainId, emitterAddress),
-            message
-        );
+        bytes memory postvalidVM = abi.encodePacked(_buildPreMessage(emitterChainId, emitterAddress), message);
         bytes32 vmHash = keccak256(abi.encodePacked(keccak256(postvalidVM)));
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
-            testGuardianPrivateKey,
-            vmHash
-        );
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(testGuardianPrivateKey, vmHash);
 
-        validVM = abi.encodePacked(
-            hex"01"
-            hex"00000000"
-            hex"01",
-            uint8(0),
-            r,
-            s,
-            v - 27,
-            postvalidVM
-        );
+        validVM = abi.encodePacked(hex"01" hex"00000000" hex"01", uint8(0), r, s, v - 27, postvalidVM);
     }
 
     function getOrderOpenSignature(
@@ -181,14 +152,9 @@ contract InputSettlerMultichainEscrowTestBase is Permit2Test {
         bytes32 destination,
         bytes calldata call
     ) external view returns (bytes memory sig) {
-        bytes32 domainSeparator = EIP712(inputSettlerMultichainEscrow)
-            .DOMAIN_SEPARATOR();
+        bytes32 domainSeparator = EIP712(inputSettlerMultichainEscrow).DOMAIN_SEPARATOR();
         bytes32 msgHash = keccak256(
-            abi.encodePacked(
-                "\x19\x01",
-                domainSeparator,
-                AllowOpenType.hashAllowOpen(orderId, destination, call)
-            )
+            abi.encodePacked("\x19\x01", domainSeparator, AllowOpenType.hashAllowOpen(orderId, destination, call))
         );
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
@@ -198,23 +164,20 @@ contract InputSettlerMultichainEscrowTestBase is Permit2Test {
     function witnessHash(
         MultichainOrderComponent memory order
     ) internal view returns (bytes32) {
-        bytes32 orderId = InputSettlerMultichainEscrow(
-            inputSettlerMultichainEscrow
-        ).orderIdentifier(order);
-        return
-            keccak256(
-                abi.encode(
-                    keccak256(
-                        bytes(
-                            "MultichainPermit2Witness(bytes32 orderId,uint32 expires,address inputOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes callbackData,bytes context)"
-                        )
-                    ),
-                    orderId,
-                    order.expires,
-                    order.inputOracle,
-                    outputsHash(order.outputs)
-                )
-            );
+        bytes32 orderId = InputSettlerMultichainEscrow(inputSettlerMultichainEscrow).orderIdentifier(order);
+        return keccak256(
+            abi.encode(
+                keccak256(
+                    bytes(
+                        "MultichainPermit2Witness(bytes32 orderId,uint32 expires,address inputOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes callbackData,bytes context)"
+                    )
+                ),
+                orderId,
+                order.expires,
+                order.inputOracle,
+                outputsHash(order.outputs)
+            )
+        );
     }
 
     function outputsHash(
@@ -255,11 +218,7 @@ contract InputSettlerMultichainEscrowTestBase is Permit2Test {
             address inputToken = input[0].fromIdentifier();
             uint256 amount = input[1];
             tokenPermissionsHashes[i] = keccak256(
-                abi.encode(
-                    keccak256("TokenPermissions(address token,uint256 amount)"),
-                    inputToken,
-                    amount
-                )
+                abi.encode(keccak256("TokenPermissions(address token,uint256 amount)"), inputToken, amount)
             );
         }
         bytes32 domainSeparator = EIP712(permit2).DOMAIN_SEPARATOR();

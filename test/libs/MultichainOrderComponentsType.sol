@@ -21,7 +21,10 @@ contract MultichainOrderComponentTypeTest is Test {
         uint256[2][] inputs;
     }
 
-    function discardIndex(uint256 index, bytes32[] memory arr) internal pure returns (bytes32[] memory newArr) {
+    function discardIndex(
+        uint256 index,
+        bytes32[] memory arr
+    ) internal pure returns (bytes32[] memory newArr) {
         newArr = new bytes32[](arr.length - 1);
         for (uint256 i; i < arr.length; ++i) {
             if (i == index) continue;

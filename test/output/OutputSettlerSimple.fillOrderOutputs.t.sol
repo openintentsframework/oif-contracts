@@ -1,22 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import {Test} from "forge-std/Test.sol";
+import { Test } from "forge-std/Test.sol";
 
-import {MandateOutput} from "../../src/input/types/MandateOutputType.sol";
-import {OutputSettlerSimple} from "../../src/output/simple/OutputSettlerSimple.sol";
+import { MandateOutput } from "../../src/input/types/MandateOutputType.sol";
+import { OutputSettlerSimple } from "../../src/output/simple/OutputSettlerSimple.sol";
 
-import {MockERC20} from "../mocks/MockERC20.sol";
+import { MockERC20 } from "../mocks/MockERC20.sol";
 
 contract OutputSettlerSimpleTestfillOrderOutputs is Test {
     error FilledBySomeoneElse(bytes32 solver);
 
     event OutputFilled(
-        bytes32 indexed orderId,
-        bytes32 solver,
-        uint32 timestamp,
-        MandateOutput output,
-        uint256 finalAmount
+        bytes32 indexed orderId, bytes32 solver, uint32 timestamp, MandateOutput output, uint256 finalAmount
     );
 
     OutputSettlerSimple outputSettlerSimple;
@@ -57,20 +53,13 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
         uint128 amount2
     ) public {
         vm.assume(
-            filler != bytes32(0) &&
-                swapper != sender &&
-                nextFiller != filler &&
-                nextFiller != bytes32(0) &&
-                amount != amount2 &&
-                sender != address(0)
+            filler != bytes32(0) && swapper != sender && nextFiller != filler && nextFiller != bytes32(0)
+                && amount != amount2 && sender != address(0)
         );
 
         outputToken.mint(sender, uint256(amount) + uint256(amount2));
         vm.prank(sender);
-        outputToken.approve(
-            outputSettlerSimpleAddress,
-            uint256(amount) + uint256(amount2)
-        );
+        outputToken.approve(outputSettlerSimpleAddress, uint256(amount) + uint256(amount2));
         MandateOutput[] memory outputs = new MandateOutput[](2);
 
         outputs[0] = MandateOutput({
@@ -99,97 +88,44 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
         bytes memory nextFillerData = abi.encodePacked(nextFiller);
 
         vm.expectEmit();
-        emit OutputFilled(
-            orderId,
-            filler,
-            uint32(block.timestamp),
-            outputs[0],
-            amount
-        );
-        emit OutputFilled(
-            orderId,
-            filler,
-            uint32(block.timestamp),
-            outputs[1],
-            amount2
-        );
+        emit OutputFilled(orderId, filler, uint32(block.timestamp), outputs[0], amount);
+        emit OutputFilled(orderId, filler, uint32(block.timestamp), outputs[1], amount2);
 
         vm.expectCall(
             outputTokenAddress,
-            abi.encodeWithSignature(
-                "transferFrom(address,address,uint256)",
-                sender,
-                swapper,
-                amount
-            )
+            abi.encodeWithSignature("transferFrom(address,address,uint256)", sender, swapper, amount)
         );
         vm.expectCall(
             outputTokenAddress,
-            abi.encodeWithSignature(
-                "transferFrom(address,address,uint256)",
-                sender,
-                swapper,
-                amount2
-            )
+            abi.encodeWithSignature("transferFrom(address,address,uint256)", sender, swapper, amount2)
         );
 
         uint256 prefillSnapshot = vm.snapshot();
 
         vm.prank(sender);
-        outputSettlerSimple.fillOrderOutputs(
-            orderId,
-            outputs,
-            type(uint48).max,
-            fillerData
-        );
-        vm.snapshotGasLastCall(
-            "outputSettler",
-            "outputSettlerSimplefillOrderOutputs"
-        );
+        outputSettlerSimple.fillOrderOutputs(orderId, outputs, type(uint48).max, fillerData);
+        vm.snapshotGasLastCall("outputSettler", "outputSettlerSimplefillOrderOutputs");
 
-        assertEq(
-            outputToken.balanceOf(swapper),
-            uint256(amount) + uint256(amount2)
-        );
+        assertEq(outputToken.balanceOf(swapper), uint256(amount) + uint256(amount2));
         assertEq(outputToken.balanceOf(sender), 0);
 
         vm.revertTo(prefillSnapshot);
         // Fill the first output by someone else. The other outputs won't be filled.
         vm.prank(sender);
-        outputSettlerSimple.fill(
-            orderId,
-            outputs[0],
-            type(uint48).max,
-            nextFillerData
-        );
+        outputSettlerSimple.fill(orderId, outputs[0], type(uint48).max, nextFillerData);
 
         vm.expectRevert(abi.encodeWithSignature("AlreadyFilled()"));
         vm.prank(sender);
-        outputSettlerSimple.fillOrderOutputs(
-            orderId,
-            outputs,
-            type(uint48).max,
-            fillerData
-        );
+        outputSettlerSimple.fillOrderOutputs(orderId, outputs, type(uint48).max, fillerData);
 
         vm.revertTo(prefillSnapshot);
         // Fill the second output by someone else. The first output will be filled.
 
         vm.prank(sender);
-        outputSettlerSimple.fill(
-            orderId,
-            outputs[1],
-            type(uint48).max,
-            nextFillerData
-        );
+        outputSettlerSimple.fill(orderId, outputs[1], type(uint48).max, nextFillerData);
 
         vm.prank(sender);
-        outputSettlerSimple.fillOrderOutputs(
-            orderId,
-            outputs,
-            type(uint48).max,
-            fillerData
-        );
+        outputSettlerSimple.fillOrderOutputs(orderId, outputs, type(uint48).max, fillerData);
     }
 
     function test_revert_fill_batch_fillDeadline(
@@ -223,15 +159,9 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
         uint32 warpTo = uint32(excess) + uint32(fillDeadline);
         vm.warp(warpTo);
 
-        if (excess != 0)
-            vm.expectRevert(abi.encodeWithSignature("FillDeadline()"));
+        if (excess != 0) vm.expectRevert(abi.encodeWithSignature("FillDeadline()"));
         vm.prank(sender);
-        outputSettlerSimple.fillOrderOutputs(
-            orderId,
-            outputs,
-            uint48(fillDeadline),
-            fillerData
-        );
+        outputSettlerSimple.fillOrderOutputs(orderId, outputs, uint48(fillDeadline), fillerData);
     }
 
     // --- NATIVE TOKEN BATCH TESTS --- //
@@ -239,11 +169,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
     /// forge-config: default.isolate = true
     function test_fill_batch_native_token_gas() external {
         test_fill_batch_native_token(
-            keccak256(bytes("orderId")),
-            makeAddr("sender"),
-            keccak256(bytes("filler")),
-            10 ** 18,
-            5 * 10 ** 17
+            keccak256(bytes("orderId")), makeAddr("sender"), keccak256(bytes("filler")), 10 ** 18, 5 * 10 ** 17
         );
     }
 
@@ -254,9 +180,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
         uint128 amount1,
         uint128 amount2
     ) public {
-        vm.assume(
-            filler != bytes32(0) && swapper != sender && sender != address(0)
-        );
+        vm.assume(filler != bytes32(0) && swapper != sender && sender != address(0));
         vm.assume(amount1 > 0 && amount2 > 0 && amount1 != amount2);
 
         uint256 totalAmount = uint256(amount1) + uint256(amount2);
@@ -291,32 +215,12 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
         uint256 swapperBalanceBefore = swapper.balance;
 
         vm.expectEmit();
-        emit OutputFilled(
-            orderId,
-            filler,
-            uint32(block.timestamp),
-            outputs[0],
-            amount1
-        );
-        emit OutputFilled(
-            orderId,
-            filler,
-            uint32(block.timestamp),
-            outputs[1],
-            amount2
-        );
+        emit OutputFilled(orderId, filler, uint32(block.timestamp), outputs[0], amount1);
+        emit OutputFilled(orderId, filler, uint32(block.timestamp), outputs[1], amount2);
 
         vm.prank(sender);
-        outputSettlerSimple.fillOrderOutputs{value: totalAmount}(
-            orderId,
-            outputs,
-            type(uint48).max,
-            fillerData
-        );
-        vm.snapshotGasLastCall(
-            "outputSettler",
-            "outputSettlerSimpleFillOrderOutputsNative"
-        );
+        outputSettlerSimple.fillOrderOutputs{ value: totalAmount }(orderId, outputs, type(uint48).max, fillerData);
+        vm.snapshotGasLastCall("outputSettler", "outputSettlerSimpleFillOrderOutputsNative");
 
         assertEq(swapper.balance, swapperBalanceBefore + totalAmount);
         assertEq(sender.balance, 0);
@@ -329,9 +233,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
         uint256 nativeAmount,
         uint256 tokenAmount
     ) public {
-        vm.assume(
-            filler != bytes32(0) && swapper != sender && sender != address(0)
-        );
+        vm.assume(filler != bytes32(0) && swapper != sender && sender != address(0));
         vm.assume(nativeAmount > 0 && tokenAmount > 0);
 
         vm.deal(sender, nativeAmount);
@@ -370,38 +272,16 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
         uint256 swapperBalanceBefore = swapper.balance;
 
         vm.expectEmit();
-        emit OutputFilled(
-            orderId,
-            filler,
-            uint32(block.timestamp),
-            outputs[0],
-            nativeAmount
-        );
-        emit OutputFilled(
-            orderId,
-            filler,
-            uint32(block.timestamp),
-            outputs[1],
-            tokenAmount
-        );
+        emit OutputFilled(orderId, filler, uint32(block.timestamp), outputs[0], nativeAmount);
+        emit OutputFilled(orderId, filler, uint32(block.timestamp), outputs[1], tokenAmount);
 
         vm.expectCall(
             outputTokenAddress,
-            abi.encodeWithSignature(
-                "transferFrom(address,address,uint256)",
-                sender,
-                swapper,
-                tokenAmount
-            )
+            abi.encodeWithSignature("transferFrom(address,address,uint256)", sender, swapper, tokenAmount)
         );
 
         vm.prank(sender);
-        outputSettlerSimple.fillOrderOutputs{value: nativeAmount}(
-            orderId,
-            outputs,
-            type(uint48).max,
-            fillerData
-        );
+        outputSettlerSimple.fillOrderOutputs{ value: nativeAmount }(orderId, outputs, type(uint48).max, fillerData);
 
         assertEq(swapper.balance, swapperBalanceBefore + nativeAmount);
         assertEq(outputToken.balanceOf(swapper), tokenAmount);
@@ -420,9 +300,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
 
         vm.assume(filler != bytes32(0) && swapper != sender);
         vm.assume(amount2 > 0 && amount1 != amount2);
-        vm.assume(
-            excess < type(uint256).max - uint256(amount1) - uint256(amount2)
-        );
+        vm.assume(excess < type(uint256).max - uint256(amount1) - uint256(amount2));
 
         uint256 totalRequired = uint256(amount1) + uint256(amount2);
         uint256 totalSent = totalRequired + excess;
@@ -458,12 +336,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
         uint256 senderBalanceBefore = sender.balance;
 
         vm.prank(sender);
-        outputSettlerSimple.fillOrderOutputs{value: totalSent}(
-            orderId,
-            outputs,
-            type(uint48).max,
-            fillerData
-        );
+        outputSettlerSimple.fillOrderOutputs{ value: totalSent }(orderId, outputs, type(uint48).max, fillerData);
 
         assertEq(swapper.balance, swapperBalanceBefore + totalRequired);
         assertEq(sender.balance, senderBalanceBefore - totalRequired); // Should get excess back
@@ -509,18 +382,7 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
         bytes memory fillerData = abi.encodePacked(filler);
 
         vm.prank(sender);
-        vm.expectRevert(
-            abi.encodeWithSignature(
-                "InsufficientBalance(uint256,uint256)",
-                0,
-                uint256(amount2)
-            )
-        );
-        outputSettlerSimple.fillOrderOutputs{value: sentValue}(
-            orderId,
-            outputs,
-            type(uint48).max,
-            fillerData
-        );
+        vm.expectRevert(abi.encodeWithSignature("InsufficientBalance(uint256,uint256)", 0, uint256(amount2)));
+        outputSettlerSimple.fillOrderOutputs{ value: sentValue }(orderId, outputs, type(uint48).max, fillerData);
     }
 }

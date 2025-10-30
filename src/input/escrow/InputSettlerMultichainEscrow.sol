@@ -129,7 +129,11 @@ contract InputSettlerMultichainEscrow is InputSettlerBase {
         }
     }
 
-    function openFor(MultichainOrderComponent calldata order, address sponsor, bytes calldata signature) external {
+    function openFor(
+        MultichainOrderComponent calldata order,
+        address sponsor,
+        bytes calldata signature
+    ) external {
         // Validate the order structure.
         _validateTimestampHasNotPassed(order.fillDeadline);
         _validateTimestampHasNotPassed(order.expires);
@@ -197,9 +201,7 @@ contract InputSettlerMultichainEscrow is InputSettlerBase {
             }
         }
         ISignatureTransfer.PermitBatchTransferFrom memory permitBatch = ISignatureTransfer.PermitBatchTransferFrom({
-            permitted: permitted,
-            nonce: order.nonce,
-            deadline: order.fillDeadline
+            permitted: permitted, nonce: order.nonce, deadline: order.fillDeadline
         });
         PERMIT2.permitWitnessTransferFrom(
             permitBatch,
