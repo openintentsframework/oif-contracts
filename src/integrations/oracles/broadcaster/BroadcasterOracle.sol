@@ -15,6 +15,9 @@ import { IReceiver } from "broadcaster/interfaces/IReceiver.sol";
  * Implements a transparent oracle that allows both for broadcasting messages and verifying them at the destination,
  * relying on storage proofs. This oracle only works for communication between chains that are in the Ethereum
  * ecosystem, i.e., Ethereum and its rollups.
+ * @dev In this oracle, `ChainMap` maps EVM `chainId` to `broadcasterId` (not to chain identifiers).
+ * The `broadcasterId` depends on the configured `BlockHashProverPointer`; for each remote chain, only one pointer
+ * (and thus one broadcasterId) is supported.
  */
 contract BroadcasterOracle is BaseInputOracle, ChainMap {
     using LibAddress for address;
