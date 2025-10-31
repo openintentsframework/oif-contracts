@@ -3,3 +3,7 @@ forge-std/=lib/forge-std/src/
 the-compact/=lib/the-compact/
 permit2/=lib/permit2/
 openzeppelin/=lib/openzeppelin-contracts/contracts/
+@openzeppelin/=lib/openzeppelin-contracts/
+@eth-optimism/=lib/@eth-optimism/
+broadcaster/=lib/broadcaster/src/contracts/
+broadcaster-test/=lib/broadcaster/test/
