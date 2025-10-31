@@ -1,31 +1,31 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { TheCompact } from "the-compact/src/TheCompact.sol";
-import { IdLib } from "the-compact/src/lib/IdLib.sol";
-import { BatchClaim } from "the-compact/src/types/BatchClaims.sol";
-import { BatchClaimComponent, Component } from "the-compact/src/types/Components.sol";
-
+import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 import { EIP712 } from "openzeppelin/utils/cryptography/EIP712.sol";
+
+import { TheCompact } from "the-compact/src/TheCompact.sol";
+import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
+import { IdLib } from "the-compact/src/lib/IdLib.sol";
+import { BatchMultichainClaim, ExogenousBatchMultichainClaim } from "the-compact/src/types/BatchMultichainClaims.sol";
+import { BatchClaimComponent, Component } from "the-compact/src/types/Components.sol";
 
 import { IInputCallback } from "../../interfaces/IInputCallback.sol";
 import { IInputOracle } from "../../interfaces/IInputOracle.sol";
-import { IInputSettlerCompact } from "../../interfaces/IInputSettlerCompact.sol";
 
 import { BytesLib } from "../../libs/BytesLib.sol";
-
 import { LibAddress } from "../../libs/LibAddress.sol";
 import { MandateOutputEncodingLib } from "../../libs/MandateOutputEncodingLib.sol";
 
+import { InputSettlerBase } from "../InputSettlerBase.sol";
 import { MandateOutput } from "../types/MandateOutputType.sol";
-import { OrderPurchase } from "../types/OrderPurchaseType.sol";
-import { StandardOrder, StandardOrderType } from "../types/StandardOrderType.sol";
 
-import { InputSettlerPurchase } from "../InputSettlerPurchase.sol";
+import { MultichainCompactOrderType, MultichainOrderComponent } from "../types/MultichainCompactOrderType.sol";
+import { OrderPurchase } from "../types/OrderPurchaseType.sol";
 
 /**
- * @title Input Settler supporting `The Compact` and `StandardOrder` orders. For explicitly escrowed orders refer to
- * `InputSettlerEscrow`
+ * @title Multichain Input Settler using `The Compact` as an escrow.
  * @notice This Input Settler implementation uses The Compact as the deposit scheme. It is a Output first scheme that
  * allows users with a deposit inside The Compact to execute transactions that will be paid **after** the outputs have
  * been proven. This has the advantage that failed orders can be quickly retried. These orders are also entirely gasless
@@ -34,69 +34,34 @@ import { InputSettlerPurchase } from "../InputSettlerPurchase.sol";
  * Users are expected to have an existing deposit inside the Compact or purposefully deposit for the intent. Then either
  * register or sign a supported claim with the intent outputs as the witness.
  *
+ * A multichain intent is an intent that collects tokens on multiple chains in exchange for single set of outputs. Using
+ * TheCompact allows users to issue a multichain input intent using a single Multichain Compact signature.
+ *
  * The contract is intended to be entirely ownerless, permissionlessly deployable, and unstoppable.
  */
-contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
+contract InputSettlerMultichainCompact is InputSettlerBase {
     using LibAddress for bytes32;
-
-    /**
-     * @dev The user cannot be the settler.
-     */
+    using LibAddress for uint256;
     error UserCannotBeSettler();
-
-    /**
-     * @dev Mismatch between the provided and computed order IDs.
-     */
-    error OrderIdMismatch(bytes32 provided, bytes32 computed);
 
     TheCompact public immutable COMPACT;
 
     constructor(
         address compact
-    ) EIP712(_domainName(), _domainVersion()) {
+    ) EIP712("OIFMultichainEscrow", "1") {
         COMPACT = TheCompact(compact);
-    }
-
-    /**
-     * @notice Returns the domain name of the EIP712 signature.
-     * @dev This function is only called in the constructor and the returned value is cached
-     * by the EIP712 base contract.
-     * @return name The domain name.
-     */
-    function _domainName() internal view virtual returns (string memory) {
-        return "OIFCompact";
-    }
-
-    /**
-     * @notice Returns the domain version of the EIP712 signature.
-     * @dev This function is only called in the constructor and the returned value is cached
-     * by the EIP712 base contract.
-     * @return version The domain version.
-     */
-    function _domainVersion() internal view virtual returns (string memory) {
-        return "1";
     }
 
     // --- Generic order identifier --- //
 
-    /**
-     * @notice Computes the order identifier for a Standard Order. Used internally.
-     * @param order The Standard Order.
-     * @return The order identifier.
-     */
     function _orderIdentifier(
-        StandardOrder calldata order
+        MultichainOrderComponent calldata order
     ) internal view returns (bytes32) {
-        return StandardOrderType.orderIdentifier(order);
+        return MultichainCompactOrderType.orderIdentifier(order);
     }
 
-    /**
-     * @notice Computes the order identifier for a Standard Order.
-     * @param order The Standard Order.
-     * @return The order identifier.
-     */
     function orderIdentifier(
-        StandardOrder calldata order
+        MultichainOrderComponent calldata order
     ) external view returns (bytes32) {
         return _orderIdentifier(order);
     }
@@ -107,27 +72,26 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
      * @notice Finalise an order, paying the inputs to the solver.
      * @param order that has been filled.
      * @param signatures For the signed intent. Is packed: abi.encode(sponsorSignature, allocatorData).
-     * @param orderId A unique identifier for the order.
      * @param solver Solver of the outputs.
      * @param destination Destination of the inputs funds signed for by the user.
+     * @return orderId Returns a unique global order identifier.
      */
     function _finalise(
-        StandardOrder calldata order,
+        MultichainOrderComponent calldata order,
         bytes calldata signatures,
-        bytes32 orderId,
         bytes32 solver,
         bytes32 destination
-    ) internal virtual {
+    ) internal virtual returns (bytes32 orderId) {
         bytes calldata sponsorSignature = BytesLib.toBytes(signatures, 0x00);
         bytes calldata allocatorData = BytesLib.toBytes(signatures, 0x20);
-        _resolveLock(order, sponsorSignature, allocatorData, destination);
+        orderId = _resolveLock(order, sponsorSignature, allocatorData, destination);
         emit Finalised(orderId, solver, destination);
     }
 
     /**
      * @notice Finalises an order when called directly by the solver
      * @dev The caller must be the address corresponding to the first solver in the solvers array.
-     * @param order StandardOrder signed in conjunction with a Compact to form an order
+     * @param order MultichainOrderComponent signed in conjunction with a Compact to form an order
      * @param signatures A signature for the sponsor and the allocator. abi.encode(bytes(sponsorSignature),
      * bytes(allocatorData))
      * @param solveParams List of solve parameters for when the outputs were filled
@@ -136,60 +100,52 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
      * @param call Optional callback data. If non-empty, will call orderFinalised on the destination
      */
     function finalise(
-        StandardOrder calldata order,
+        MultichainOrderComponent calldata order,
         bytes calldata signatures,
         SolveParams[] calldata solveParams,
         bytes32 destination,
         bytes calldata call
     ) external virtual {
         _validateDestination(destination);
-        _validateInputChain(order.originChainId);
 
-        bytes32 orderId = _orderIdentifier(order);
-        bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solveParams);
-        _validateIsCaller(orderOwner);
+        _validateIsCaller(solveParams[0].solver);
+
+        bytes32 orderId = _finalise(order, signatures, solveParams[0].solver, destination);
 
         _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, solveParams);
 
-        _finalise(order, signatures, orderId, solveParams[0].solver, destination);
-
-        if (call.length > 0) IInputCallback(destination.fromIdentifier()).orderFinalised(order.inputs, call);
+        if (call.length > 0) {
+            IInputCallback(EfficiencyLib.asSanitizedAddress(uint256(destination))).orderFinalised(order.inputs, call);
+        }
     }
 
     /**
      * @notice Finalises a cross-chain order on behalf of someone else using their signature
      * @dev This function serves to finalise intents on the origin chain with proper authorization from the order owner.
-     * @param order StandardOrder signed in conjunction with a Compact to form an order
+     * @param order MultichainOrderComponent signed in conjunction with a Compact to form an order
      * @param signatures A signature for the sponsor and the allocator. abi.encode(bytes(sponsorSignature),
      * bytes(allocatorData))
      * @param solveParams List of solve parameters for when the outputs were filled
-     * element
      * @param destination Where to send the inputs
      * @param call Optional callback data. If non-empty, will call orderFinalised on the destination
      * @param orderOwnerSignature Signature from the order owner authorizing this external call
      */
     function finaliseWithSignature(
-        StandardOrder calldata order,
+        MultichainOrderComponent calldata order,
         bytes calldata signatures,
         SolveParams[] calldata solveParams,
         bytes32 destination,
         bytes calldata call,
         bytes calldata orderOwnerSignature
     ) external virtual {
-        _validateDestination(destination);
-        _validateInputChain(order.originChainId);
+        if (destination == bytes32(0)) revert NoDestination();
 
-        bytes32 orderId = _orderIdentifier(order);
-        {
-            bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solveParams);
+        bytes32 orderId = _finalise(order, signatures, solveParams[0].solver, destination);
 
-            // Validate the external claimant with signature
-            _allowExternalClaimant(orderId, orderOwner.fromIdentifier(), destination, call, orderOwnerSignature);
-        }
+        // Validate the external claimant with signature
+        _allowExternalClaimant(orderId, solveParams[0].solver.fromIdentifier(), destination, call, orderOwnerSignature);
 
         _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, solveParams);
-
-        _finalise(order, signatures, orderId, solveParams[0].solver, destination);
 
         if (call.length > 0) IInputCallback(destination.fromIdentifier()).orderFinalised(order.inputs, call);
     }
@@ -202,13 +158,15 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
      * @param sponsorSignature The user's signature for the Compact Claim.
      * @param allocatorData The allocator's signature for the Compact Claim.
      * @param claimant Destination of the inputs funds signed for by the user.
+     * @return claimHash The compact claimhash is used as the order identifier, as it is identical for a specific order
+     * cross-chain.
      */
     function _resolveLock(
-        StandardOrder calldata order,
+        MultichainOrderComponent calldata order,
         bytes calldata sponsorSignature,
         bytes calldata allocatorData,
         bytes32 claimant
-    ) internal virtual {
+    ) internal virtual returns (bytes32 claimHash) {
         BatchClaimComponent[] memory batchClaimComponents;
         {
             uint256 numInputs = order.inputs.length;
@@ -232,51 +190,37 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
         address user = order.user;
         // The Compact skips signature checks for msg.sender. Ensure no accidental intents are issued.
         if (user == address(this)) revert UserCannotBeSettler();
-        require(
-            COMPACT.batchClaim(
-                BatchClaim({
+        if (order.chainIdField == block.chainid) {
+            claimHash = COMPACT.batchMultichainClaim(
+                BatchMultichainClaim({
                     allocatorData: allocatorData,
                     sponsorSignature: sponsorSignature,
                     sponsor: user,
                     nonce: order.nonce,
                     expires: order.expires,
-                    witness: StandardOrderType.witnessHash(order),
-                    witnessTypestring: string(StandardOrderType.BATCH_COMPACT_SUB_TYPES),
-                    claims: batchClaimComponents
+                    witness: MultichainCompactOrderType.witnessHash(order),
+                    witnessTypestring: string(MultichainCompactOrderType.BATCH_COMPACT_SUB_TYPES),
+                    claims: batchClaimComponents,
+                    additionalChains: order.additionalChains
                 })
-            ) != bytes32(0)
-        );
-    }
-
-    // --- Purchase Order --- //
-
-    /**
-     * @notice This function is called to buy an order from a solver.
-     * If the order was purchased in time, then when the order is settled, the inputs will go to the purchaser instead
-     * of the original solver.
-     * @param orderPurchase Order purchase description signed by solver.
-     * @param order Order to purchase.
-     * @param orderSolvedByIdentifier Solver of the order. Is not validated, if wrong the purchase will be skipped.
-     * @param purchaser The new order owner.
-     * @param expiryTimestamp Set to ensure if your transaction does not mine quickly, you don't end up purchasing an
-     * order that you can not prove OR is outside the timeToBuy window.
-     * @param solverSignature EIP712 Signature of OrderPurchase by orderOwner.
-     */
-    function purchaseOrder(
-        OrderPurchase calldata orderPurchase,
-        StandardOrder calldata order,
-        bytes32 orderSolvedByIdentifier,
-        bytes32 purchaser,
-        uint256 expiryTimestamp,
-        bytes calldata solverSignature
-    ) external virtual {
-        _validateInputChain(order.originChainId);
-        bytes32 computedOrderId = _orderIdentifier(order);
-        // Sanity check to ensure the user thinks they are buying the right order.
-        if (computedOrderId != orderPurchase.orderId) revert OrderIdMismatch(orderPurchase.orderId, computedOrderId);
-
-        _purchaseOrder(
-            orderPurchase, order.inputs, orderSolvedByIdentifier, purchaser, expiryTimestamp, solverSignature
-        );
+            );
+        } else {
+            claimHash = COMPACT.exogenousBatchClaim(
+                ExogenousBatchMultichainClaim({
+                    allocatorData: allocatorData,
+                    sponsorSignature: sponsorSignature,
+                    sponsor: user,
+                    nonce: order.nonce,
+                    expires: order.expires,
+                    witness: MultichainCompactOrderType.witnessHash(order),
+                    witnessTypestring: string(MultichainCompactOrderType.BATCH_COMPACT_SUB_TYPES),
+                    claims: batchClaimComponents,
+                    additionalChains: order.additionalChains,
+                    chainIndex: order.chainIndex - 1, // We use chainIndex as the offset to elements array where compact
+                        // uses it as offset to the notarized.
+                    notarizedChainId: order.chainIdField
+                })
+            );
+        }
     }
 }

@@ -33,7 +33,7 @@ contract InputSettlerEscrowTestBase is Permit2Test {
     uint64 constant MAX_GOVERNANCE_FEE = 10 ** 18 * 0.05; // 10%
 
     address inputSettlerEscrow;
-    OutputSettlerSimple outputSettlerCoin;
+    OutputSettlerSimple outputSettlerSimple;
 
     address alwaysYesOracle;
 
@@ -69,7 +69,7 @@ contract InputSettlerEscrowTestBase is Permit2Test {
 
         DOMAIN_SEPARATOR = EIP712(inputSettlerEscrow).DOMAIN_SEPARATOR();
 
-        outputSettlerCoin = new OutputSettlerSimple();
+        outputSettlerSimple = new OutputSettlerSimple();
 
         token = new MockERC20("Mock ERC20", "MOCK", 18);
         anotherToken = new MockERC20("Mock2 ERC20", "MOCK2", 18);
@@ -86,7 +86,7 @@ contract InputSettlerEscrowTestBase is Permit2Test {
         vm.prank(swapper);
         token.approve(address(permit2), type(uint256).max);
         vm.prank(solver);
-        anotherToken.approve(address(outputSettlerCoin), type(uint256).max);
+        anotherToken.approve(address(outputSettlerSimple), type(uint256).max);
     }
 
     function witnessHash(
@@ -153,15 +153,13 @@ contract InputSettlerEscrowTestBase is Permit2Test {
         StandardOrder memory order
     ) internal view returns (bytes memory sig) {
         uint256[2][] memory inputs = order.inputs;
-        bytes memory tokenPermissionsHashes = hex"";
+        bytes32[] memory tokenPermissionsHashes = new bytes32[](inputs.length);
         for (uint256 i; i < inputs.length; ++i) {
             uint256[2] memory input = inputs[i];
             address inputToken = input[0].fromIdentifier();
             uint256 amount = input[1];
-            tokenPermissionsHashes = abi.encodePacked(
-                tokenPermissionsHashes,
-                keccak256(abi.encode(keccak256("TokenPermissions(address token,uint256 amount)"), inputToken, amount))
-            );
+            tokenPermissionsHashes[i] =
+                keccak256(abi.encode(keccak256("TokenPermissions(address token,uint256 amount)"), inputToken, amount));
         }
         bytes32 domainSeparator = EIP712(permit2).DOMAIN_SEPARATOR();
         bytes32 msgHash = keccak256(
@@ -173,7 +171,7 @@ contract InputSettlerEscrowTestBase is Permit2Test {
                         keccak256(
                             "PermitBatchWitnessTransferFrom(TokenPermissions[] permitted,address spender,uint256 nonce,uint256 deadline,Permit2Witness witness)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes callbackData,bytes context)Permit2Witness(uint32 expires,address inputOracle,MandateOutput[] outputs)TokenPermissions(address token,uint256 amount)"
                         ),
-                        keccak256(tokenPermissionsHashes),
+                        keccak256(abi.encodePacked(tokenPermissionsHashes)),
                         inputSettlerEscrow,
                         order.nonce,
                         order.fillDeadline,

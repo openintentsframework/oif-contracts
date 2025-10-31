@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.22;
 
-import { Test } from "forge-std/Test.sol";
+import { Test, console } from "forge-std/Test.sol";
 
 import { TheCompact } from "the-compact/src/TheCompact.sol";
 import { SimpleAllocator } from "the-compact/src/examples/allocator/SimpleAllocator.sol";
@@ -11,14 +11,11 @@ import { AlwaysOKAllocator } from "the-compact/src/test/AlwaysOKAllocator.sol";
 import { ResetPeriod } from "the-compact/src/types/ResetPeriod.sol";
 import { Scope } from "the-compact/src/types/Scope.sol";
 
-import { InputSettlerBase } from "../../../src/input/InputSettlerBase.sol";
-import { InputSettlerCompact } from "../../../src/input/compact/InputSettlerCompact.sol";
+import { InputSettlerMultichainCompact } from "../../../src/input/compact/InputSettlerMultichainCompact.sol";
 import { AllowOpenType } from "../../../src/input/types/AllowOpenType.sol";
-import { MandateOutput, MandateOutputType } from "../../../src/input/types/MandateOutputType.sol";
+import { MandateOutput } from "../../../src/input/types/MandateOutputType.sol";
 import { OrderPurchase, OrderPurchaseType } from "../../../src/input/types/OrderPurchaseType.sol";
 import { StandardOrder } from "../../../src/input/types/StandardOrderType.sol";
-import { IInputSettlerCompact } from "../../../src/interfaces/IInputSettlerCompact.sol";
-
 import { WormholeOracle } from "../../../src/integrations/oracles/wormhole/WormholeOracle.sol";
 import { Messages } from "../../../src/integrations/oracles/wormhole/external/wormhole/Messages.sol";
 import { Setters } from "../../../src/integrations/oracles/wormhole/external/wormhole/Setters.sol";
@@ -53,8 +50,8 @@ contract ExportedMessages is Messages, Setters {
     }
 }
 
-contract InputSettlerCompactTestBase is Test {
-    address inputSettlerCompact;
+contract InputSettlerMultichainCompactTestBase is Test {
+    address inputSettlerMultichainCompact;
     OutputSettlerSimple outputSettlerSimple;
 
     // Oracles
@@ -79,7 +76,6 @@ contract InputSettlerCompactTestBase is Test {
     TheCompact public theCompact;
     address alwaysOKAllocator;
     bytes12 alwaysOkAllocatorLockTag;
-    bytes32 DOMAIN_SEPARATOR;
 
     function setUp() public virtual {
         theCompact = new TheCompact();
@@ -93,9 +89,7 @@ contract InputSettlerCompactTestBase is Test {
         uint96 signAllocatorId = theCompact.__registerAllocator(address(simpleAllocator), "");
         signAllocatorLockTag = bytes12(signAllocatorId);
 
-        DOMAIN_SEPARATOR = theCompact.DOMAIN_SEPARATOR();
-
-        inputSettlerCompact = address(new InputSettlerCompact(address(theCompact)));
+        inputSettlerMultichainCompact = address(new InputSettlerMultichainCompact(address(theCompact)));
         outputSettlerSimple = new OutputSettlerSimple();
         alwaysYesOracle = address(new AlwaysYesOracle());
 
@@ -110,7 +104,8 @@ contract InputSettlerCompactTestBase is Test {
         address wormholeDeployment = makeAddr("wormholeOracle");
         deployCodeTo("WormholeOracle.sol", abi.encode(address(this), address(messages)), wormholeDeployment);
         wormholeOracle = WormholeOracle(wormholeDeployment);
-        wormholeOracle.setChainMap(uint16(block.chainid), block.chainid);
+        wormholeOracle.setChainMap(1, 1);
+        wormholeOracle.setChainMap(3, 3);
         (testGuardian, testGuardianPrivateKey) = makeAddrAndKey("testGuardian");
         // initialize guardian set with one guardian
         address[] memory keys = new address[](1);
@@ -127,17 +122,56 @@ contract InputSettlerCompactTestBase is Test {
         uint256 amount;
     }
 
-    function getLockHash(
+    function lockToUint(
+        Lock memory lock
+    ) internal pure returns (uint256[2] memory arr) {
+        bytes12 lockTag = lock.lockTag;
+        address lockToken = lock.token;
+        uint256 elem0;
+        assembly {
+            elem0 := add(lockTag, lockToken)
+        }
+        arr[0] = elem0;
+        arr[1] = lock.amount;
+    }
+
+    function locksToUints(
+        Lock[] memory locks
+    ) internal pure returns (uint256[2][] memory arr) {
+        arr = new uint256[2][](locks.length);
+        for (uint256 i; i < locks.length; ++i) {
+            arr[i] = lockToUint(locks[i]);
+        }
+    }
+
+    function uintToLock(
+        uint256[2] memory idAndAmount
+    ) internal pure returns (Lock memory lock) {
+        lock = Lock(bytes12(bytes32(idAndAmount[0])), address(uint160(idAndAmount[0])), idAndAmount[1]);
+    }
+
+    function uintsToLocks(
         uint256[2][] memory idsAndAmounts
-    ) public pure returns (bytes32) {
-        bytes32[] memory lockHashes = new bytes32[](idsAndAmounts.length);
+    ) internal pure returns (Lock[] memory locks) {
+        locks = new Lock[](idsAndAmounts.length);
         for (uint256 i; i < idsAndAmounts.length; ++i) {
-            uint256[2] memory idsAndAmount = idsAndAmounts[i];
-            Lock memory lock = Lock({
-                lockTag: bytes12(bytes32(idsAndAmount[0])),
-                token: address(uint160(idsAndAmount[0])),
-                amount: idsAndAmount[1]
-            });
+            locks[i] = uintToLock(idsAndAmounts[i]);
+        }
+    }
+
+    struct Element {
+        address arbiter;
+        uint256 chainId;
+        Lock[] commitments;
+    }
+
+    function getLocksHash(
+        Lock[] memory locks
+    ) internal pure returns (bytes32) {
+        uint256 numLocks = locks.length;
+        bytes32[] memory lockHashes = new bytes32[](numLocks);
+        for (uint256 i; i < numLocks; ++i) {
+            Lock memory lock = locks[i];
             lockHashes[i] = keccak256(
                 abi.encode(
                     keccak256(bytes("Lock(bytes12 lockTag,address token,uint256 amount)")),
@@ -147,38 +181,86 @@ contract InputSettlerCompactTestBase is Test {
                 )
             );
         }
-
         return keccak256(abi.encodePacked(lockHashes));
     }
 
-    function getCompactBatchWitnessSignature(
-        uint256 privateKey,
-        address arbiter,
+    function getElementHash(
+        Element memory element,
+        bytes32 witness
+    ) internal pure returns (bytes32) {
+        console.logBytes(
+            abi.encode(
+                keccak256(
+                    bytes(
+                        "Element(address arbiter,uint256 chainId,Lock[] commitments,Mandate mandate)Lock(bytes12 lockTag,address token,uint256 amount)Mandate(uint32 fillDeadline,address inputOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes callbackData,bytes context)"
+                    )
+                ),
+                element.arbiter,
+                element.chainId,
+                getLocksHash(element.commitments),
+                witness
+            )
+        );
+        return keccak256(
+            abi.encode(
+                keccak256(
+                    bytes(
+                        "Element(address arbiter,uint256 chainId,Lock[] commitments,Mandate mandate)Lock(bytes12 lockTag,address token,uint256 amount)Mandate(uint32 fillDeadline,address inputOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes callbackData,bytes context)"
+                    )
+                ),
+                element.arbiter,
+                element.chainId,
+                getLocksHash(element.commitments),
+                witness
+            )
+        );
+    }
+
+    function getElementsHashes(
+        Element[] memory elements,
+        bytes32 witness
+    ) internal pure returns (bytes32[] memory elementHashes) {
+        uint256 numElements = elements.length;
+        elementHashes = new bytes32[](numElements);
+        for (uint256 i; i < numElements; ++i) {
+            elementHashes[i] = getElementHash(elements[i], witness);
+        }
+    }
+
+    function getCompactMultichainClaimHash(
         address sponsor,
         uint256 nonce,
         uint256 expires,
-        uint256[2][] memory idsAndAmounts,
+        Element[] memory elements,
         bytes32 witness
-    ) internal view returns (bytes memory sig) {
+    ) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                keccak256(
+                    bytes(
+                        "MultichainCompact(address sponsor,uint256 nonce,uint256 expires,Element[] elements)Element(address arbiter,uint256 chainId,Lock[] commitments,Mandate mandate)Lock(bytes12 lockTag,address token,uint256 amount)Mandate(uint32 fillDeadline,address inputOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes callbackData,bytes context)"
+                    )
+                ),
+                sponsor,
+                nonce,
+                expires,
+                keccak256(abi.encodePacked(getElementsHashes(elements, witness)))
+            )
+        );
+    }
+
+    function getCompactMultichainWitnessSignature(
+        bytes32 domainSeparator,
+        uint256 privateKey,
+        address sponsor,
+        uint256 nonce,
+        uint256 expires,
+        Element[] memory elements,
+        bytes32 witness
+    ) internal pure returns (bytes memory sig) {
         bytes32 msgHash = keccak256(
             abi.encodePacked(
-                "\x19\x01",
-                DOMAIN_SEPARATOR,
-                keccak256(
-                    abi.encode(
-                        keccak256(
-                            bytes(
-                                "BatchCompact(address arbiter,address sponsor,uint256 nonce,uint256 expires,Lock[] commitments,Mandate mandate)Lock(bytes12 lockTag,address token,uint256 amount)Mandate(uint32 fillDeadline,address inputOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes callbackData,bytes context)"
-                            )
-                        ),
-                        arbiter,
-                        sponsor,
-                        nonce,
-                        expires,
-                        getLockHash(idsAndAmounts),
-                        witness
-                    )
-                )
+                "\x19\x01", domainSeparator, getCompactMultichainClaimHash(sponsor, nonce, expires, elements, witness)
             )
         );
 
@@ -187,7 +269,9 @@ contract InputSettlerCompactTestBase is Test {
     }
 
     function witnessHash(
-        StandardOrder memory order
+        uint256 fillDeadline,
+        address inputOracle,
+        MandateOutput[] memory outputs
     ) internal pure returns (bytes32) {
         return keccak256(
             abi.encode(
@@ -196,14 +280,14 @@ contract InputSettlerCompactTestBase is Test {
                         "Mandate(uint32 fillDeadline,address inputOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes callbackData,bytes context)"
                     )
                 ),
-                order.fillDeadline,
-                order.inputOracle,
-                hashOutputsForMemory(order.outputs)
+                fillDeadline,
+                inputOracle,
+                outputsHash(outputs)
             )
         );
     }
 
-    function hashOutputsForMemory(
+    function outputsHash(
         MandateOutput[] memory outputs
     ) internal pure returns (bytes32) {
         bytes32[] memory hashes = new bytes32[](outputs.length);
@@ -211,7 +295,11 @@ contract InputSettlerCompactTestBase is Test {
             MandateOutput memory output = outputs[i];
             hashes[i] = keccak256(
                 abi.encode(
-                    MandateOutputType.MANDATE_OUTPUT_TYPE_HASH,
+                    keccak256(
+                        bytes(
+                            "MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes callbackData,bytes context)"
+                        )
+                    ),
                     output.oracle,
                     output.settler,
                     output.chainId,
@@ -253,26 +341,13 @@ contract InputSettlerCompactTestBase is Test {
         validVM = abi.encodePacked(hex"01" hex"00000000" hex"01", uint8(0), r, s, v - 27, postvalidVM);
     }
 
-    function getOrderPurchaseSignature(
-        uint256 privateKey,
-        OrderPurchase calldata orderPurchase
-    ) external view returns (bytes memory sig) {
-        bytes32 domainSeparator = InputSettlerBase(inputSettlerCompact).DOMAIN_SEPARATOR();
-        bytes32 msgHash = keccak256(
-            abi.encodePacked("\x19\x01", domainSeparator, OrderPurchaseType.hashOrderPurchase(orderPurchase))
-        );
-
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
-        return bytes.concat(r, s, bytes1(v));
-    }
-
     function getOrderOpenSignature(
         uint256 privateKey,
         bytes32 orderId,
         bytes32 destination,
         bytes calldata call
     ) external view returns (bytes memory sig) {
-        bytes32 domainSeparator = InputSettlerBase(inputSettlerCompact).DOMAIN_SEPARATOR();
+        bytes32 domainSeparator = EIP712(inputSettlerMultichainCompact).DOMAIN_SEPARATOR();
         bytes32 msgHash = keccak256(
             abi.encodePacked("\x19\x01", domainSeparator, AllowOpenType.hashAllowOpen(orderId, destination, call))
         );
@@ -295,9 +370,22 @@ contract InputSettlerCompactTestBase is Test {
                 | (EfficiencyLib.asUint256(allocatorId) << 160) | EfficiencyLib.asUint256(tkn));
     }
 
-    function hashOrderPurchase(
-        OrderPurchase calldata orderPurchase
-    ) external pure returns (bytes32) {
-        return OrderPurchaseType.hashOrderPurchase(orderPurchase);
+    function getOutputToFillFromMandateOutput(
+        uint48 fillDeadline,
+        MandateOutput memory output
+    ) internal pure returns (bytes memory) {
+        return abi.encodePacked(
+            fillDeadline, // fill deadline
+            output.oracle, // oracle
+            output.settler, // settler
+            uint256(output.chainId), // chainId
+            output.token, // token
+            output.amount, // amount
+            output.recipient, // recipient
+            uint16(output.callbackData.length), // call length
+            output.callbackData, // call
+            uint16(output.context.length), // context length
+            output.context // context
+        );
     }
 }

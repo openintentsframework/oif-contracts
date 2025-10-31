@@ -22,6 +22,7 @@ import { OrderPurchase } from "../types/OrderPurchaseType.sol";
 import { StandardOrder, StandardOrderType } from "../types/StandardOrderType.sol";
 
 import { InputSettlerPurchase } from "../InputSettlerPurchase.sol";
+
 import { Permit2WitnessType } from "./Permit2WitnessType.sol";
 
 /**
@@ -396,7 +397,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
         bytes32 orderId = order.orderIdentifier();
         bytes32 orderOwner = _purchaseGetOrderOwner(orderId, solveParams);
-        _orderOwnerIsCaller(orderOwner);
+        _validateIsCaller(orderOwner);
 
         _validateFills(order.fillDeadline, order.inputOracle, order.outputs, orderId, solveParams);
 
