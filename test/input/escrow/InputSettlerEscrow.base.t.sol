@@ -96,7 +96,7 @@ contract InputSettlerEscrowTestBase is Permit2Test {
             abi.encode(
                 keccak256(
                     bytes(
-                        "Permit2Witness(uint32 expires,address inputOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes callbackData,bytes context)"
+                        "MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes callbackData,bytes context)Permit2Witness(uint32 expires,address inputOracle,MandateOutput[] outputs)"
                     )
                 ),
                 order.expires,
