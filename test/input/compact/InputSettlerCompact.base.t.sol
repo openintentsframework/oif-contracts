@@ -36,10 +36,7 @@ interface EIP712 {
 event PackagePublished(uint32 nonce, bytes payload, uint8 consistencyLevel);
 
 contract ExportedMessages is Messages, Setters {
-    function storeGuardianSetPub(
-        Structs.GuardianSet memory set,
-        uint32 index
-    ) public {
+    function storeGuardianSetPub(Structs.GuardianSet memory set, uint32 index) public {
         return super.storeGuardianSet(set, index);
     }
 
@@ -226,10 +223,7 @@ contract InputSettlerCompactTestBase is Test {
         return keccak256(abi.encodePacked(hashes));
     }
 
-    function encodeMessage(
-        bytes32 remoteIdentifier,
-        bytes[] calldata payloads
-    ) external pure returns (bytes memory) {
+    function encodeMessage(bytes32 remoteIdentifier, bytes[] calldata payloads) external pure returns (bytes memory) {
         return MessageEncodingLib.encodeMessage(remoteIdentifier, payloads);
     }
 
@@ -258,9 +252,8 @@ contract InputSettlerCompactTestBase is Test {
         OrderPurchase calldata orderPurchase
     ) external view returns (bytes memory sig) {
         bytes32 domainSeparator = InputSettlerBase(inputSettlerCompact).DOMAIN_SEPARATOR();
-        bytes32 msgHash = keccak256(
-            abi.encodePacked("\x19\x01", domainSeparator, OrderPurchaseType.hashOrderPurchase(orderPurchase))
-        );
+        bytes32 msgHash =
+            keccak256(abi.encodePacked("\x19\x01", domainSeparator, OrderPurchaseType.hashOrderPurchase(orderPurchase)));
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
         return bytes.concat(r, s, bytes1(v));
@@ -291,8 +284,10 @@ contract InputSettlerCompactTestBase is Test {
         uint96 allocatorId = IdLib.toAllocatorId(alloca);
 
         // Derive resource lock ID (pack scope, reset period, allocator ID, & token).
-        id = ((EfficiencyLib.asUint256(scope) << 255) | (EfficiencyLib.asUint256(resetPeriod) << 252)
-                | (EfficiencyLib.asUint256(allocatorId) << 160) | EfficiencyLib.asUint256(tkn));
+        id = (
+            (EfficiencyLib.asUint256(scope) << 255) | (EfficiencyLib.asUint256(resetPeriod) << 252)
+                | (EfficiencyLib.asUint256(allocatorId) << 160) | EfficiencyLib.asUint256(tkn)
+        );
     }
 
     function hashOrderPurchase(

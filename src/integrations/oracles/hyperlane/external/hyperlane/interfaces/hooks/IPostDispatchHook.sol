@@ -52,10 +52,7 @@ interface IPostDispatchHook {
      * @param metadata The metadata required for the hook
      * @param message The message passed from the Mailbox.dispatch() call
      */
-    function postDispatch(
-        bytes calldata metadata,
-        bytes calldata message
-    ) external payable;
+    function postDispatch(bytes calldata metadata, bytes calldata message) external payable;
 
     /**
      * @notice Compute the payment required by the postDispatch call
@@ -63,8 +60,5 @@ interface IPostDispatchHook {
      * @param message The message passed from the Mailbox.dispatch() call
      * @return Quoted payment for the postDispatch call
      */
-    function quoteDispatch(
-        bytes calldata metadata,
-        bytes calldata message
-    ) external view returns (uint256);
+    function quoteDispatch(bytes calldata metadata, bytes calldata message) external view returns (uint256);
 }

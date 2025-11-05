@@ -32,10 +32,7 @@ contract SequencerSignatureVerifierV2 {
 
     error InvalidSequencerSignature();
 
-    constructor(
-        address sequencer_,
-        bytes32 chainId_
-    ) {
+    constructor(address sequencer_, bytes32 chainId_) {
         SEQUENCER = sequencer_;
         CHAIN_ID = chainId_;
     }
@@ -52,9 +49,9 @@ contract SequencerSignatureVerifierV2 {
     ) internal view {
         if (
             ECDSA.recover(
-                    keccak256(bytes.concat(bytes32(0), CHAIN_ID, keccak256(abi.encodePacked(appHash, peptideHeight)))),
-                    bytes(abi.encodePacked(r, s, v))
-                ) != SEQUENCER
+                keccak256(bytes.concat(bytes32(0), CHAIN_ID, keccak256(abi.encodePacked(appHash, peptideHeight)))),
+                bytes(abi.encodePacked(r, s, v))
+            ) != SEQUENCER
         ) revert InvalidSequencerSignature();
     }
 }

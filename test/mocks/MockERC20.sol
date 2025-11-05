@@ -13,11 +13,7 @@ contract MockERC20 is ERC20, IERC3009, EIP712 {
     uint8 internal _decimals;
     bytes32 internal immutable _nameHash;
 
-    constructor(
-        string memory name_,
-        string memory symbol_,
-        uint8 decimals_
-    ) ERC20(name_, symbol_) EIP712(name_, "1") {
+    constructor(string memory name_, string memory symbol_, uint8 decimals_) ERC20(name_, symbol_) EIP712(name_, "1") {
         _name = name_;
         _symbol = symbol_;
         _decimals = decimals_;
@@ -32,48 +28,27 @@ contract MockERC20 is ERC20, IERC3009, EIP712 {
         return _decimals;
     }
 
-    function mint(
-        address to,
-        uint256 value
-    ) public virtual {
+    function mint(address to, uint256 value) public virtual {
         _mint(to, value);
     }
 
-    function burn(
-        address from,
-        uint256 value
-    ) public virtual {
+    function burn(address from, uint256 value) public virtual {
         _burn(from, value);
     }
 
-    function directTransfer(
-        address from,
-        address to,
-        uint256 amount
-    ) public virtual {
+    function directTransfer(address from, address to, uint256 amount) public virtual {
         _transfer(from, to, amount);
     }
 
-    function directSpendAllowance(
-        address owner,
-        address spender,
-        uint256 amount
-    ) public virtual {
+    function directSpendAllowance(address owner, address spender, uint256 amount) public virtual {
         _spendAllowance(owner, spender, amount);
     }
 
-    function transfer(
-        address to,
-        uint256 amount
-    ) public virtual override returns (bool) {
+    function transfer(address to, uint256 amount) public virtual override returns (bool) {
         return super.transfer(to, amount);
     }
 
-    function transferFrom(
-        address from,
-        address to,
-        uint256 amount
-    ) public virtual override returns (bool) {
+    function transferFrom(address from, address to, uint256 amount) public virtual override returns (bool) {
         return super.transferFrom(from, to, amount);
     }
 
@@ -95,10 +70,7 @@ contract MockERC20 is ERC20, IERC3009, EIP712 {
 
     string internal constant _INVALID_SIGNATURE_ERROR = "EIP3009: invalid signature";
 
-    function authorizationState(
-        address authorizer,
-        bytes32 nonce
-    ) external view returns (bool) {
+    function authorizationState(address authorizer, bytes32 nonce) external view returns (bool) {
         return _authorizationStates[authorizer][nonce];
     }
 

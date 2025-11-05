@@ -33,11 +33,7 @@ abstract contract MailboxClient {
         _;
     }
 
-    constructor(
-        address mailbox,
-        address customHook,
-        address ism
-    ) {
+    constructor(address mailbox, address customHook, address ism) {
         if (mailbox == address(0)) revert InvalidMailbox();
 
         MAILBOX = IMailbox(mailbox);

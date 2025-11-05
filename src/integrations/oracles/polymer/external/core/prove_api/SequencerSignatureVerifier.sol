@@ -31,10 +31,7 @@ contract SequencerSignatureVerifier is ISignatureVerifier {
         // to
     bytes32 public immutable CHAIN_ID; // Chain ID of the L2 chain for which the sequencer signs over
 
-    constructor(
-        address sequencer_,
-        bytes32 chainId_
-    ) {
+    constructor(address sequencer_, bytes32 chainId_) {
         SEQUENCER = sequencer_;
         CHAIN_ID = chainId_;
     }
@@ -71,13 +68,13 @@ contract SequencerSignatureVerifier is ISignatureVerifier {
         // b = keccak((l2 block number ) + ( l2 apphash) + ( l1 origin hash))
         if (
             ECDSA.recover(
-                    keccak256(
-                        bytes.concat(
-                            bytes32(0), CHAIN_ID, keccak256(bytes.concat(bytes32(l2BlockNumber), appHash, l1BlockHash))
-                        )
-                    ),
-                    signature
-                ) != SEQUENCER
+                keccak256(
+                    bytes.concat(
+                        bytes32(0), CHAIN_ID, keccak256(bytes.concat(bytes32(l2BlockNumber), appHash, l1BlockHash))
+                    )
+                ),
+                signature
+            ) != SEQUENCER
         ) revert InvalidSequencerSignature();
     }
 }

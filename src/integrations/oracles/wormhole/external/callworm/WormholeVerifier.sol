@@ -46,11 +46,7 @@ contract WormholeVerifier is GettersGetter {
      * in the case that the vm is securely parsed and the hash field can be trusted, checkHash can be set to false
      * as the check would be redundant
      */
-    function verifyVMInternal(
-        uint32 guardianSetIndex,
-        bytes calldata signatures,
-        bytes32 bodyHash
-    ) internal view {
+    function verifyVMInternal(uint32 guardianSetIndex, bytes calldata signatures, bytes32 bodyHash) internal view {
         /// @dev Obtain the current guardianSet for the guardianSetIndex provided
         Structs.GuardianSet memory guardianSet = getGuardianSet(guardianSetIndex);
 

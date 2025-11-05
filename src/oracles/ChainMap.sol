@@ -42,10 +42,7 @@ abstract contract ChainMap is Ownable {
      * @param protocolChainIdentifier Messaging protocol's chain identifier.
      * @param chainId "Canonical" chain id. For EVM, should be block.chainid.
      */
-    function setChainMap(
-        uint256 protocolChainIdentifier,
-        uint256 chainId
-    ) external onlyOwner {
+    function setChainMap(uint256 protocolChainIdentifier, uint256 chainId) external onlyOwner {
         if (protocolChainIdentifier == 0) revert ZeroValue();
         if (chainId == 0) revert ZeroValue();
 

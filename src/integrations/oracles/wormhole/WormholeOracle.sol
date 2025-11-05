@@ -30,10 +30,7 @@ contract WormholeOracle is ChainMap, BaseInputOracle, WormholeVerifier {
 
     IWormhole public immutable WORMHOLE;
 
-    constructor(
-        address _owner,
-        address _wormhole
-    ) payable ChainMap(_owner) WormholeVerifier(_wormhole) {
+    constructor(address _owner, address _wormhole) payable ChainMap(_owner) WormholeVerifier(_wormhole) {
         WORMHOLE = IWormhole(_wormhole);
     }
 
@@ -45,10 +42,7 @@ contract WormholeOracle is ChainMap, BaseInputOracle, WormholeVerifier {
      * @param payloads List of payloads to broadcast.
      * @return refund If too much value has been sent, the excess will be returned to msg.sender.
      */
-    function submit(
-        address source,
-        bytes[] calldata payloads
-    ) public payable returns (uint256 refund) {
+    function submit(address source, bytes[] calldata payloads) public payable returns (uint256 refund) {
         if (!IAttester(source).hasAttested(payloads)) revert NotAllPayloadsValid();
         return _submit(source, payloads);
     }
@@ -61,10 +55,7 @@ contract WormholeOracle is ChainMap, BaseInputOracle, WormholeVerifier {
      * @param payloads List of payloads that have been checked for validity and are to be broadcasted.
      * @return refund If too much value has been sent, the excess will be returned to msg.sender.
      */
-    function _submit(
-        address source,
-        bytes[] calldata payloads
-    ) internal returns (uint256 refund) {
+    function _submit(address source, bytes[] calldata payloads) internal returns (uint256 refund) {
         bytes memory message = MessageEncodingLib.encodeMessage(source.toIdentifier(), payloads);
 
         uint256 packageCost = WORMHOLE.messageFee();

@@ -99,10 +99,7 @@ abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
      * @param timestamp The timestamp when the fill occurred.
      * @return fillRecordHash The computed hash used to track fills.
      */
-    function _getFillRecordHash(
-        bytes32 solver,
-        uint32 timestamp
-    ) internal pure returns (bytes32 fillRecordHash) {
+    function _getFillRecordHash(bytes32 solver, uint32 timestamp) internal pure returns (bytes32 fillRecordHash) {
         fillRecordHash = keccak256(abi.encodePacked(solver, timestamp));
     }
 
@@ -112,10 +109,7 @@ abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
      * @param outputHash The hash of the output to check.
      * @return payloadHash The fill record hash if the output has been filled, zero otherwise.
      */
-    function getFillRecord(
-        bytes32 orderId,
-        bytes32 outputHash
-    ) public view returns (bytes32 payloadHash) {
+    function getFillRecord(bytes32 orderId, bytes32 outputHash) public view returns (bytes32 payloadHash) {
         payloadHash = _fillRecords[orderId][outputHash];
     }
 
@@ -125,10 +119,7 @@ abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
      * @param output The MandateOutput struct to check.
      * @return payloadHash The fill record hash if the output has been filled, zero otherwise.
      */
-    function getFillRecord(
-        bytes32 orderId,
-        MandateOutput calldata output
-    ) public view returns (bytes32 payloadHash) {
+    function getFillRecord(bytes32 orderId, MandateOutput calldata output) public view returns (bytes32 payloadHash) {
         payloadHash = _fillRecords[orderId][MandateOutputEncodingLib.getMandateOutputHash(output)];
     }
 

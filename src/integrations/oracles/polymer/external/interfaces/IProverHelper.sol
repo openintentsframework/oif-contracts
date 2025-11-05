@@ -18,10 +18,5 @@ interface IProverHelper {
         bytes[] memory dataList
     ) external pure returns (bytes memory);
 
-    function proveStorage(
-        bytes memory _key,
-        bytes memory _val,
-        bytes[] memory _proof,
-        bytes32 _root
-    ) external pure;
+    function proveStorage(bytes memory _key, bytes memory _val, bytes[] memory _proof, bytes32 _root) external pure;
 }

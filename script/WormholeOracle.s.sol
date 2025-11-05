@@ -6,10 +6,7 @@ import { Script } from "forge-std/Script.sol";
 import { WormholeOracle } from "../src/integrations/oracles/wormhole/WormholeOracle.sol";
 
 contract DeployWormholeOracle is Script {
-    function deploy(
-        address owner,
-        address wormholeOracle
-    ) external {
+    function deploy(address owner, address wormholeOracle) external {
         vm.broadcast();
         address(new WormholeOracle{ salt: bytes32(0) }(owner, wormholeOracle));
     }
@@ -40,10 +37,7 @@ contract DeployWormholeOracle is Script {
         setMap(WormholeOracle(wormholeOracle), wormholeMaps);
     }
 
-    function setMap(
-        WormholeOracle wormholeOracle,
-        uint256[2][] memory map
-    ) internal {
+    function setMap(WormholeOracle wormholeOracle, uint256[2][] memory map) internal {
         // Check if each chain has already been set. Otherwise set it.
         uint256 numMaps = map.length;
         for (uint256 i; i < numMaps; ++i) {

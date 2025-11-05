@@ -8,9 +8,5 @@ interface IOutputCallback {
     /**
      * @notice If configured, is called when the output is filled on the output chain.
      */
-    function outputFilled(
-        bytes32 token,
-        uint256 amount,
-        bytes calldata executionData
-    ) external;
+    function outputFilled(bytes32 token, uint256 amount, bytes calldata executionData) external;
 }

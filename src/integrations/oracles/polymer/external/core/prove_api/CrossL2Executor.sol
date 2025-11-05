@@ -45,10 +45,7 @@ contract CrossL2Executor {
      * @dev Calls validateEvent on the prover contract and compares returned topics with expectedTopics
      *      If topics match, emits ValidationSuccess event. If not, reverts with TopicsDoNotMatch.
      */
-    function executeValidateEvent(
-        bytes calldata proof,
-        bytes calldata expectedTopics
-    ) external {
+    function executeValidateEvent(bytes calldata proof, bytes calldata expectedTopics) external {
         (uint32 chainId, address emittingContract, bytes memory topics, bytes memory unindexedData) =
             prover.validateEvent(proof);
 

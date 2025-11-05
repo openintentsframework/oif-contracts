@@ -107,10 +107,7 @@ contract BtcPrism is IBtcPrism {
      * Submits a new Bitcoin chain segment. Must be heavier (not necessarily
      * longer) than the chain rooted at getBlockHash(getLatestBlockHeight()).
      */
-    function submit(
-        uint256 blockHeight,
-        bytes calldata blockHeaders
-    ) public {
+    function submit(uint256 blockHeight, bytes calldata blockHeaders) public {
         unchecked {
             require(blockHeight > 2016); // Is needed for unchecked math.
 
@@ -194,10 +191,7 @@ contract BtcPrism is IBtcPrism {
         }
     }
 
-    function getWorkInPeriod(
-        uint256 period,
-        uint256 height
-    ) private view returns (uint256) {
+    function getWorkInPeriod(uint256 period, uint256 height) private view returns (uint256) {
         unchecked {
             uint256 target = periodToTarget[period];
             // unchecked: The maximum target is around 2^224 < 2**256
@@ -216,10 +210,7 @@ contract BtcPrism is IBtcPrism {
         }
     }
 
-    function submitBlock(
-        uint256 blockHeight,
-        bytes calldata blockHeader
-    ) private {
+    function submitBlock(uint256 blockHeight, bytes calldata blockHeader) private {
         unchecked {
             require(blockHeight > 2016);
 

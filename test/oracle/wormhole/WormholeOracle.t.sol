@@ -12,10 +12,7 @@ contract WormholeOracleTest is Test {
         wormholeOracle = new WormholeOracle(address(this), address(1));
     }
 
-    function test_set_chain_map(
-        uint16 messagingProtocolChainIdentifier,
-        uint256 chainId
-    ) external {
+    function test_set_chain_map(uint16 messagingProtocolChainIdentifier, uint256 chainId) external {
         vm.assume(messagingProtocolChainIdentifier != 0);
         vm.assume(chainId != 0);
         wormholeOracle.setChainMap(uint256(messagingProtocolChainIdentifier), chainId);

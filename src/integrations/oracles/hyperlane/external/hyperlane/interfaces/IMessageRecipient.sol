@@ -2,9 +2,5 @@
 pragma solidity >=0.6.11;
 
 interface IMessageRecipient {
-    function handle(
-        uint32 _origin,
-        bytes32 _sender,
-        bytes calldata _message
-    ) external payable;
+    function handle(uint32 _origin, bytes32 _sender, bytes calldata _message) external payable;
 }

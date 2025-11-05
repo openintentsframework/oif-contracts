@@ -10,10 +10,7 @@ import "../../../src/integrations/oracles/wormhole/external/wormhole/Setters.sol
 import "../../../src/integrations/oracles/wormhole/external/wormhole/Structs.sol";
 
 contract ExportedMessages is Messages, Setters {
-    function storeGuardianSetPub(
-        Structs.GuardianSet memory set,
-        uint32 index
-    ) public {
+    function storeGuardianSetPub(Structs.GuardianSet memory set, uint32 index) public {
         return super.storeGuardianSet(set, index);
     }
 }

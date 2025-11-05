@@ -106,10 +106,7 @@ abstract contract InputSettlerBase is EIP712 {
      * @param fillDeadline The fill deadline timestamp to validate.
      * @param expires The expiry timestamp to validate against.
      */
-    function _validateFillDeadlineBeforeExpiry(
-        uint32 fillDeadline,
-        uint32 expires
-    ) internal pure {
+    function _validateFillDeadlineBeforeExpiry(uint32 fillDeadline, uint32 expires) internal pure {
         if (fillDeadline > expires) revert FillDeadlineAfterExpiry(fillDeadline, expires);
     }
 
