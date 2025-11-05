@@ -291,7 +291,8 @@ contract InputSettlerCompactTestBase is Test {
         uint96 allocatorId = IdLib.toAllocatorId(alloca);
 
         // Derive resource lock ID (pack scope, reset period, allocator ID, & token).
-        id = ((EfficiencyLib.asUint256(scope) << 255) | (EfficiencyLib.asUint256(resetPeriod) << 252)
+        id =
+        ((EfficiencyLib.asUint256(scope) << 255) | (EfficiencyLib.asUint256(resetPeriod) << 252)
                 | (EfficiencyLib.asUint256(allocatorId) << 160) | EfficiencyLib.asUint256(tkn));
     }
 
