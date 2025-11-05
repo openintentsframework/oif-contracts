@@ -20,9 +20,9 @@ enum LightClientType {
     SimTestLightClient, // Note: not deployed on any mainnets
     OptimisticLightClient, // Our native opstack light client
     SequencerLightClient, // Our native sequencer light client, which does not check l1 origin check to cut down on
-        // latency
+    // latency
     ReOrgResistantSequencerLightClient // Our native sequencer light client, which checks for l1 origin checks to be
-        // re-org resistant
+    // re-org resistant
 }
 
 interface IClientUpdates {

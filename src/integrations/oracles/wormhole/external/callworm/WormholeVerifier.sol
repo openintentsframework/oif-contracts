@@ -113,10 +113,10 @@ contract WormholeVerifier is GettersGetter {
                     // bytes32 r = bytes32(signatures[index: index + 32]);
                     r := calldataload(add(signatures.offset, index))
                     index := add(index, 0x20) // index += 32;
-                        // bytes32 s = bytes32(signatures[index: index + 32]);
+                    // bytes32 s = bytes32(signatures[index: index + 32]);
                     s := calldataload(add(signatures.offset, index))
                     index := add(index, 0x20) // index += 32;
-                        // bytes1(signatures[index:index + 1])
+                    // bytes1(signatures[index:index + 1])
                     v1 := calldataload(add(signatures.offset, index))
                     index := add(index, 0x01) // index += 1;
                 }
