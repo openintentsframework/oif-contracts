@@ -67,7 +67,7 @@ contract InputSettlerCompactTestCrossChain is Test {
     using LibAddress for address;
 
     address inputSettlerCompact;
-    OutputSettlerSimple outputSettlerCoin;
+    OutputSettlerSimple outputSettlerSimple;
 
     // Oracles
     address alwaysYesOracle;
@@ -108,7 +108,7 @@ contract InputSettlerCompactTestCrossChain is Test {
         DOMAIN_SEPARATOR = theCompact.DOMAIN_SEPARATOR();
 
         inputSettlerCompact = address(new InputSettlerCompact(address(theCompact)));
-        outputSettlerCoin = new OutputSettlerSimple();
+        outputSettlerSimple = new OutputSettlerSimple();
         alwaysYesOracle = address(new AlwaysYesOracle());
 
         token = new MockERC20("Mock ERC20", "MOCK", 18);
@@ -125,9 +125,9 @@ contract InputSettlerCompactTestCrossChain is Test {
         vm.prank(swapper);
         token.approve(address(theCompact), type(uint256).max);
         vm.prank(solver);
-        anotherToken.approve(address(outputSettlerCoin), type(uint256).max);
+        anotherToken.approve(address(outputSettlerSimple), type(uint256).max);
         vm.prank(solver);
-        token.approve(address(outputSettlerCoin), type(uint256).max);
+        token.approve(address(outputSettlerSimple), type(uint256).max);
 
         // Oracles
 
@@ -378,7 +378,7 @@ contract InputSettlerCompactTestCrossChain is Test {
         inputs[0] = [tokenId, amount];
         MandateOutput[] memory outputs = new MandateOutput[](1);
         outputs[0] = MandateOutput({
-            settler: address(outputSettlerCoin).toIdentifier(),
+            settler: address(outputSettlerSimple).toIdentifier(),
             oracle: inputOracle.toIdentifier(),
             chainId: block.chainid,
             token: address(anotherToken).toIdentifier(),
@@ -432,7 +432,7 @@ contract InputSettlerCompactTestCrossChain is Test {
             //bytes32 orderId = IInputSettlerCompact(inputSettlerCompact).orderIdentifier(order);
 
             vm.prank(solver);
-            outputSettlerCoin.fill(orderId, outputs[0], type(uint48).max, fillerData);
+            outputSettlerSimple.fill(orderId, outputs[0], type(uint48).max, fillerData);
 
             vm.snapshotGasLastCall("inputSettler", "IntegrationCoinFill");
         }
@@ -450,10 +450,10 @@ contract InputSettlerCompactTestCrossChain is Test {
             );
 
             bytes memory expectedMessageEmitted =
-                this.encodeMessage(address(outputSettlerCoin).toIdentifier(), payloads);
+                this.encodeMessage(address(outputSettlerSimple).toIdentifier(), payloads);
             vm.expectEmit();
             emit PackagePublished(0, expectedMessageEmitted, 15);
-            wormholeOracle.submit(address(outputSettlerCoin), payloads);
+            wormholeOracle.submit(address(outputSettlerSimple), payloads);
 
             vm.snapshotGasLastCall("inputSettler", "IntegrationWormholeSubmit");
             bytes memory vaa =
@@ -486,7 +486,7 @@ contract InputSettlerCompactTestCrossChain is Test {
         inputs[0] = [tokenId, amount];
         MandateOutput[] memory outputs = new MandateOutput[](2);
         outputs[0] = MandateOutput({
-            settler: address(outputSettlerCoin).toIdentifier(),
+            settler: address(outputSettlerSimple).toIdentifier(),
             oracle: address(wormholeOracle).toIdentifier(),
             chainId: block.chainid,
             token: address(anotherToken).toIdentifier(),
@@ -496,7 +496,7 @@ contract InputSettlerCompactTestCrossChain is Test {
             context: hex""
         });
         outputs[1] = MandateOutput({
-            settler: address(outputSettlerCoin).toIdentifier(),
+            settler: address(outputSettlerSimple).toIdentifier(),
             oracle: address(wormholeOracle).toIdentifier(),
             chainId: block.chainid,
             token: address(token).toIdentifier(),
@@ -537,10 +537,10 @@ contract InputSettlerCompactTestCrossChain is Test {
             bytes32 orderId = IInputSettlerCompact(inputSettlerCompact).orderIdentifier(order);
 
             vm.prank(solver);
-            outputSettlerCoin.fill(orderId, outputs[0], type(uint48).max, fillerData1);
+            outputSettlerSimple.fill(orderId, outputs[0], type(uint48).max, fillerData1);
 
             vm.prank(solver);
-            outputSettlerCoin.fill(orderId, outputs[1], type(uint48).max, fillerData2);
+            outputSettlerSimple.fill(orderId, outputs[1], type(uint48).max, fillerData2);
 
             bytes[] memory payloads = new bytes[](2);
             payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
@@ -568,7 +568,7 @@ contract InputSettlerCompactTestCrossChain is Test {
 
             vm.expectEmit();
             emit PackagePublished(0, expectedMessageEmitted, 15);
-            wormholeOracle.submit(address(outputSettlerCoin), payloads);
+            wormholeOracle.submit(address(outputSettlerSimple), payloads);
 
             bytes memory vaa =
                 makeValidVAA(uint16(block.chainid), address(wormholeOracle).toIdentifier(), expectedMessageEmitted);

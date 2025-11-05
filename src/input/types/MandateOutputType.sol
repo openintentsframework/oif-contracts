@@ -64,13 +64,53 @@ library MandateOutputType {
         MandateOutput[] calldata outputs
     ) internal pure returns (bytes32) {
         unchecked {
-            bytes memory currentHash = new bytes(32 * outputs.length);
+            uint256 numOutputs = outputs.length;
+            bytes memory currentHash = new bytes(32 * numOutputs);
             uint256 p;
             assembly ("memory-safe") {
                 p := add(currentHash, 0x20)
             }
-            for (uint256 i = 0; i < outputs.length; ++i) {
+            for (uint256 i = 0; i < numOutputs; ++i) {
                 bytes32 outputHash = hashOutput(outputs[i]);
+                assembly ("memory-safe") {
+                    mstore(add(p, mul(i, 0x20)), outputHash)
+                }
+            }
+            return keccak256(currentHash);
+        }
+    }
+
+    // Memory copy of the above:
+    function hashOutputM(
+        MandateOutput memory output
+    ) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                MANDATE_OUTPUT_TYPE_HASH,
+                output.oracle,
+                output.settler,
+                output.chainId,
+                output.token,
+                output.amount,
+                output.recipient,
+                keccak256(output.callbackData),
+                keccak256(output.context)
+            )
+        );
+    }
+
+    function hashOutputsM(
+        MandateOutput[] memory outputs
+    ) internal pure returns (bytes32) {
+        unchecked {
+            uint256 numOutputs = outputs.length;
+            bytes memory currentHash = new bytes(32 * numOutputs);
+            uint256 p;
+            assembly ("memory-safe") {
+                p := add(currentHash, 0x20)
+            }
+            for (uint256 i = 0; i < numOutputs; ++i) {
+                bytes32 outputHash = hashOutputM(outputs[i]);
                 assembly ("memory-safe") {
                     mstore(add(p, mul(i, 0x20)), outputHash)
                 }

@@ -52,7 +52,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
         inputs[0] = [tokenId, amount];
         MandateOutput[] memory outputs = new MandateOutput[](1);
         outputs[0] = MandateOutput({
-            settler: address(outputSettlerCoin).toIdentifier(),
+            settler: address(outputSettlerSimple).toIdentifier(),
             oracle: address(alwaysYesOracle).toIdentifier(),
             chainId: block.chainid,
             token: address(anotherToken).toIdentifier(),
@@ -86,10 +86,10 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
 
         // Other callers are disallowed:
         vm.prank(non_solver);
-        vm.expectRevert(abi.encodeWithSignature("NotOrderOwner()"));
 
         InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
         solveParams[0] = InputSettlerBase.SolveParams({ solver: solverIdentifier, timestamp: uint32(block.timestamp) });
+        vm.expectRevert(abi.encodeWithSignature("UnexpectedCaller(bytes32)", solverIdentifier));
         IInputSettlerCompact(inputSettlerCompact).finalise(order, signature, solveParams, solverIdentifier, hex"");
 
         assertEq(token.balanceOf(solver), 0);
@@ -142,7 +142,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
         inputs[0] = [tokenId, amount];
         MandateOutput[] memory outputs = new MandateOutput[](1);
         outputs[0] = MandateOutput({
-            settler: address(outputSettlerCoin).toIdentifier(),
+            settler: address(outputSettlerSimple).toIdentifier(),
             oracle: inputOracle.toIdentifier(),
             chainId: block.chainid,
             token: address(anotherToken).toIdentifier(),
@@ -211,7 +211,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
         inputs[0] = [tokenId, amount];
         MandateOutput[] memory outputs = new MandateOutput[](1);
         outputs[0] = MandateOutput({
-            settler: address(outputSettlerCoin).toIdentifier(),
+            settler: address(outputSettlerSimple).toIdentifier(),
             oracle: address(alwaysYesOracle).toIdentifier(),
             chainId: block.chainid,
             token: address(anotherToken).toIdentifier(),
@@ -245,11 +245,11 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
 
         vm.prank(non_solver);
 
-        vm.expectRevert(abi.encodeWithSignature("NotOrderOwner()"));
         bytes32 solverIdentifier = solver.toIdentifier();
         bytes32 destinationIdentifier = destination.toIdentifier();
         InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
         solveParams[0] = InputSettlerBase.SolveParams({ solver: solverIdentifier, timestamp: uint32(block.timestamp) });
+        vm.expectRevert(abi.encodeWithSignature("UnexpectedCaller(bytes32)", solverIdentifier));
         IInputSettlerCompact(inputSettlerCompact).finalise(order, signature, solveParams, destinationIdentifier, hex"");
 
         assertEq(token.balanceOf(destination), 0);
@@ -291,7 +291,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
             inputs[0] = [tokenId, amount];
             MandateOutput[] memory outputs = new MandateOutput[](1);
             outputs[0] = MandateOutput({
-                settler: address(outputSettlerCoin).toIdentifier(),
+                settler: address(outputSettlerSimple).toIdentifier(),
                 oracle: address(alwaysYesOracle).toIdentifier(),
                 chainId: block.chainid,
                 token: address(anotherToken).toIdentifier(),

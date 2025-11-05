@@ -57,6 +57,10 @@ abstract contract InputSettlerBase is EIP712 {
      * @dev Fill deadline is after expiry deadline.
      */
     error FillDeadlineAfterExpiry(uint32 fillDeadline, uint32 expires);
+    /**
+     * @dev msg.sender was expected to be `expectedCaller`.
+     */
+    error UnexpectedCaller(bytes32 expectedCaller);
 
     /**
      * @notice Emitted when an order is finalised.
@@ -136,6 +140,17 @@ abstract contract InputSettlerBase is EIP712 {
             isZero := iszero(shl(96, destination))
         }
         if (isZero) revert NoDestination();
+    }
+
+    /**
+     * @notice Enforces a specific caller
+     * @dev Only reads the rightmost 20 bytes to allow providing additional destination context
+     * @param expectedCaller Expected caller. The leftmost 12 bytes are not read.
+     */
+    function _validateIsCaller(
+        bytes32 expectedCaller
+    ) internal view {
+        if (LibAddress.fromIdentifier(expectedCaller) != msg.sender) revert UnexpectedCaller(expectedCaller);
     }
 
     // --- Timestamp Helpers --- //
