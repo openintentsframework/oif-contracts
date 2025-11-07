@@ -105,15 +105,6 @@ library MultichainCompactOrderType {
                 witnessHash(order)
             )
         );
-        console.logBytes(
-            abi.encode(
-                ELEMENTS_COMPACT_TYPEHASH_WITH_WITNESS,
-                address(this),
-                block.chainid,
-                inputsToLocksHash(order.inputs),
-                witnessHash(order)
-            )
-        );
         // Insert the element hash into the array of the other provided element.
         bytes32 hashOfElements = insertAndHash(elementHash, order.chainIndex, order.additionalChains);
 

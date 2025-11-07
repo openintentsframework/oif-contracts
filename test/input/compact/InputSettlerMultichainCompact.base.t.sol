@@ -188,19 +188,6 @@ contract InputSettlerMultichainCompactTestBase is Test {
         Element memory element,
         bytes32 witness
     ) internal pure returns (bytes32) {
-        console.logBytes(
-            abi.encode(
-                keccak256(
-                    bytes(
-                        "Element(address arbiter,uint256 chainId,Lock[] commitments,Mandate mandate)Lock(bytes12 lockTag,address token,uint256 amount)Mandate(uint32 fillDeadline,address inputOracle,MandateOutput[] outputs)MandateOutput(bytes32 oracle,bytes32 settler,uint256 chainId,bytes32 token,uint256 amount,bytes32 recipient,bytes callbackData,bytes context)"
-                    )
-                ),
-                element.arbiter,
-                element.chainId,
-                getLocksHash(element.commitments),
-                witness
-            )
-        );
         return keccak256(
             abi.encode(
                 keccak256(
