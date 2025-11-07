@@ -342,7 +342,7 @@ library BtcProof {
 
         uint256 version = uint8(bytes1(rawTx[0]));
         if (version < 1 || version > 2) return false; // invalid version
-            // Then check that the next 3 bytes are 0.
+        // Then check that the next 3 bytes are 0.
         if (bytes1(rawTx[1]) != bytes1(0)) return false;
         if (bytes1(rawTx[2]) != bytes1(0)) return false;
         if (bytes1(rawTx[3]) != bytes1(0)) return false;
@@ -364,7 +364,7 @@ library BtcProof {
             uint256 nInScriptBytes = uint8(bytes1(rawTx[offset]));
             if (nInScriptBytes + offset > size) return false;
             offset += nInScriptBytes + 1; // (+1 from varInt)
-                // seqNo doesn't matter
+            // seqNo doesn't matter
             offset += 4;
         }
 
