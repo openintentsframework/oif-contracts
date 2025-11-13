@@ -276,4 +276,19 @@ contract BroadcasterOracleTest is Test {
             this.encodeMessageCalldata(address(outputSettler).toIdentifier(), payloads)
         );
     }
+
+    function test_submit_reverts() public {
+        Receiver receiver = new Receiver();
+
+        broadcasterOracle = new BroadcasterOracle(receiver, new Broadcaster(), owner);
+
+        IReceiver.RemoteReadArgs memory remoteReadArgs;
+
+        bytes[] memory payloads = new bytes[](65536);
+
+        address broadcasterOracleSubmitter;
+
+        vm.expectRevert(abi.encodeWithSelector(BroadcasterOracle.TooManyPayloads.selector, 65536));
+        broadcasterOracle.submit(address(broadcasterOracleSubmitter), payloads);
+    }
 }
