@@ -118,11 +118,11 @@ contract BroadcasterOracle is BaseInputOracle, ChainMap {
     /**
      * @notice Hashes an array of payload hashes.
      * @param payloadHashes The payload hashes to hash.
-     * @return digest The hashed payload hashes.
+     * @return The hashed payload hashes.
      */
     function _hashPayloadHashes(
         bytes32[] memory payloadHashes
-    ) internal pure returns (bytes32 digest) {
+    ) internal pure returns (bytes32) {
         assembly {
             // len = payloadHashes.length
             let len := mload(payloadHashes)
@@ -139,11 +139,11 @@ contract BroadcasterOracle is BaseInputOracle, ChainMap {
     /**
      * @notice Generates a message from the payloads.
      * @param payloads The payloads to generate the message from.
-     * @return message The message generated from the payloads.
+     * @return The message generated from the payloads.
      */
     function _getMessage(
         bytes[] calldata payloads
-    ) internal pure returns (bytes32 message) {
+    ) internal pure returns (bytes32) {
         bytes32[] memory payloadHashes = new bytes32[](payloads.length);
         for (uint256 i = 0; i < payloads.length; i++) {
             payloadHashes[i] = keccak256(payloads[i]);
