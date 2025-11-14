@@ -82,7 +82,7 @@ contract BroadcasterOracle is BaseInputOracle, ChainMap {
         (bytes32 application, bytes32[] memory payloadHashes) =
             MessageEncodingLib.getHashesOfEncodedPayloads(messageData);
 
-        bytes32 message = _hashPayloadHashes(payloadHashes);
+        bytes32 message = keccak256(abi.encode(application, _hashPayloadHashes(payloadHashes)));
 
         bytes32 broadcasterId = bytes32(reverseChainIdMap[remoteChainId]);
 
@@ -148,7 +148,7 @@ contract BroadcasterOracle is BaseInputOracle, ChainMap {
         for (uint256 i = 0; i < payloads.length; i++) {
             payloadHashes[i] = keccak256(payloads[i]);
         }
-        return _hashPayloadHashes(payloadHashes);
+        return keccak256(abi.encode(source, _hashPayloadHashes(payloadHashes)));
     }
 }
 
