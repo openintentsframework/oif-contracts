@@ -11,6 +11,9 @@ fuzz.runs = 10_000
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
 
+fs_permissions = [{ access = 'read', path = './test/oracle/broadcaster/payloads/ethereum-sepolia'}]
+
+
 
 [fmt]
 sort_imports = true

@@ -15,6 +15,7 @@ import { Receiver } from "broadcaster/Receiver.sol";
 import { IReceiver } from "broadcaster/interfaces/IReceiver.sol";
 import { ChildToParentProver as ArbChildToParentProver } from "broadcaster/provers/arbitrum/ChildToParentProver.sol";
 import { Test, console } from "forge-std/Test.sol";
+import {stdJson} from "forge-std/StdJson.sol";
 import { RLP } from "openzeppelin/utils/RLP.sol";
 
 interface IBuffer {
@@ -57,6 +58,7 @@ contract MockBuffer is IBuffer {
 }
 
 contract BroadcasterOracleTest is Test {
+    using stdJson for string;
     using LibAddress for address;
 
     BroadcasterOracle public broadcasterOracle;
@@ -85,8 +87,24 @@ contract BroadcasterOracleTest is Test {
         return MessageEncodingLib.encodeMessage(identifier, payloads);
     }
 
+    function _hashPayloadHashes(
+        bytes32[] memory payloadHashes
+    ) internal pure returns (bytes32 digest) {
+        assembly {
+            // len = payloadHashes.length
+            let len := mload(payloadHashes)
+            // pointer to first element (skip the length word)
+            let start := add(payloadHashes, 0x20)
+            // total bytes = len * 32
+            let size := mul(len, 0x20)
+            // keccak256 over the packed elements
+            digest := keccak256(start, size)
+        }
+        return digest;
+    }
+
     function _getInputForVerifyMessage()
-        internal
+        internal pure
         returns (bytes memory input, uint256 expectedSlot, bytes32 blockHash, address knownAccount)
     {
         bytes32 message = 0xbd64b342ddb178f28ccbff1f868eaab0fce1beee88c46c4f732462e2b72ca440; //
@@ -141,7 +159,7 @@ contract BroadcasterOracleTest is Test {
         return (input, expectedSlot, keccak256(rlpBlockHeader), knownAccount);
     }
 
-    function _getRlpBlockHeader() internal returns (bytes memory rlpBlockHeader) {
+    function _getRlpBlockHeader() internal pure returns (bytes memory rlpBlockHeader) {
         BlockHeaders.L1BlockHeader memory blockHeader = BlockHeaders.L1BlockHeader({
             parentHash: 0x9c58771b8262377a4b04efd4c0cd54965b6992634876a9ff0637bdfe181a4710,
             sha3Uncles: 0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347,
@@ -173,18 +191,19 @@ contract BroadcasterOracleTest is Test {
 
     function _getPayloadForVerifyMessage()
         internal
+        view
         returns (bytes memory payload, address broadcasterOracleSubmitter, address outputSettler)
     {
         broadcasterOracleSubmitter = 0x11e14F08Bd326521A3C1f59eE4Be0EB64C04908D;
         outputSettler = 0x674Cd8B4Bec9b6e9767FAa8d897Fd6De0729dd66;
         MockERC20 token = MockERC20(0x287E1E51Dad0736Dc5de7dEaC0751C21b3d88d6e);
 
-        uint256 amount = 0.01 ether;
+        uint256 amount = 1 ether;
         address filler = 0x9a56fFd72F4B526c523C733F1F74197A51c495E1;
         MandateOutput memory output = MandateOutput({
             oracle: address(broadcasterOracleSubmitter).toIdentifier(),
             settler: address(outputSettler).toIdentifier(),
-            chainId: block.chainid,
+            chainId: 11155111,
             token: bytes32(abi.encode(address(token))),
             amount: amount,
             recipient: bytes32(abi.encode(filler)),
@@ -195,7 +214,7 @@ contract BroadcasterOracleTest is Test {
         payload = MandateOutputEncodingLib.encodeFillDescriptionMemory(
             filler.toIdentifier(),
             keccak256(bytes("orderId")),
-            uint32(1761574848),
+            uint32(1764086688),
             output.token,
             output.amount,
             output.recipient,
@@ -206,8 +225,8 @@ contract BroadcasterOracleTest is Test {
         return (payload, broadcasterOracleSubmitter, outputSettler);
     }
 
-    function test_verifyMessage() public {
-        //vm.selectFork(arbitrumForkId);
+
+    function test_verifyMessage_from_Ethereum_into_Arbitrum() public {
         Receiver receiver = new Receiver();
 
         ArbChildToParentProver childToParentProver = new ArbChildToParentProver(block.chainid);
@@ -219,14 +238,40 @@ contract BroadcasterOracleTest is Test {
         vm.prank(owner);
         blockHashProverPointer.setImplementationAddress(address(childToParentProver));
 
-        bytes32 expectedValue = 0x0000000000000000000000000000000000000000000000000000000068ff80bc;
+        bytes[] memory payloads = new bytes[](1);
+        address broadcasterOracleSubmitter;
+        address outputSettler;
+        (payloads[0], broadcasterOracleSubmitter, outputSettler) = _getPayloadForVerifyMessage();
 
-        uint256 blockNumber = 9502200; // block number on parent chain
+        console.log("outputSettler", outputSettler);
+        console.log("broadcasterOracleSubmitter", broadcasterOracleSubmitter);
 
-        (bytes memory input, uint256 expectedSlot, bytes32 blockHash, address knownAccount) =
-            _getInputForVerifyMessage();
+        bytes32 expectedValue = 0x000000000000000000000000000000000000000000000000000000006925D3A0; // timestamp: 1764086688
 
-        bytes32 expectedBlockHash = 0xf5823c7b8d8cca94817b68fc7d1ecfa24ce36803cfdf714f8002add2eb1854ea;
+        bytes32[] memory payloadHashes = new bytes32[](1);
+        payloadHashes[0] = keccak256(payloads[0]);
+        bytes32 expectedMessage = keccak256(abi.encode(outputSettler, _hashPayloadHashes(payloadHashes)));
+
+        console.log("expectedMessage");
+        console.logBytes32(expectedMessage);
+        address publisher = address(outputSettler);
+        uint256 expectedSlot = uint256(keccak256(abi.encode(expectedMessage, publisher)));
+
+        string memory path = "test/oracle/broadcaster/payloads/ethereum-sepolia/broadcast_proof_block_9704829.json";
+
+        string memory json = vm.readFile(path);
+        uint256 blockNumber = json.readUint(".blockNumber");
+        bytes32 blockHash = json.readBytes32(".blockHash");
+        address account = json.readAddress(".account");
+        uint256 slot = json.readUint(".slot");
+        bytes32 value = bytes32(json.readUint(".slotValue"));
+        bytes memory rlpBlockHeader = json.readBytes(".rlpBlockHeader");
+        bytes memory rlpAccountProof = json.readBytes(".rlpAccountProof");
+        bytes memory rlpStorageProof = json.readBytes(".rlpStorageProof");
+
+        assertEq(expectedSlot, slot, "slot mismatch");
+
+        bytes32 expectedBlockHash = keccak256(rlpBlockHeader);
 
         assertEq(blockHash, expectedBlockHash);
 
@@ -236,6 +281,8 @@ contract BroadcasterOracleTest is Test {
 
         vm.prank(aliasedPusher);
         buffer.receiveHashes(blockNumber, blockHashes);
+
+        bytes memory input = abi.encode(rlpBlockHeader, account, expectedSlot, rlpAccountProof, rlpStorageProof);
 
         IReceiver.RemoteReadArgs memory remoteReadArgs;
         {
@@ -248,10 +295,7 @@ contract BroadcasterOracleTest is Test {
             remoteReadArgs = IReceiver.RemoteReadArgs({ route: route, bhpInputs: bhpInputs, storageProof: input });
         }
 
-        bytes[] memory payloads = new bytes[](1);
-        address broadcasterOracleSubmitter;
-        address outputSettler;
-        (payloads[0], broadcasterOracleSubmitter, outputSettler) = _getPayloadForVerifyMessage();
+        
         uint256 broadcasterRemoteAccountId = uint256(
             keccak256(
                 abi.encode(
@@ -261,7 +305,7 @@ contract BroadcasterOracleTest is Test {
                             address(blockHashProverPointer)
                         )
                     ),
-                    knownAccount
+                    account
                 )
             )
         );
