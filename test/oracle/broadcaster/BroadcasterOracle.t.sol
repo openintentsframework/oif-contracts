@@ -86,7 +86,7 @@ contract BroadcasterOracleTest is Test {
 
     function _getPayloadForVerifyMessage()
         internal
-        view
+        pure
         returns (bytes memory payload, address broadcasterOracleSubmitter, address outputSettler)
     {
         broadcasterOracleSubmitter = 0x947E5E61F63d51e3B7498dfEe96A28B190eD5e8B;
@@ -147,6 +147,18 @@ contract BroadcasterOracleTest is Test {
         buffer.receiveHashes(blockNumber, blockHashes);
 
         input = abi.encode(rlpBlockHeader, account, expectedSlot, rlpAccountProof, rlpStorageProof);
+    }
+
+    function test_broadcasterOracle_reverts_with_invalid_receiver() public {
+        Broadcaster broadcaster = new Broadcaster();
+        vm.expectRevert(BroadcasterOracle.InvalidReceiver.selector);
+        new BroadcasterOracle(IReceiver(address(0)), broadcaster, owner);
+    }
+
+    function test_broadcasterOracle_reverts_with_invalid_broadcaster() public {
+        Receiver receiver = new Receiver();
+        vm.expectRevert(BroadcasterOracle.InvalidBroadcaster.selector);
+        new BroadcasterOracle(receiver, IBroadcaster(address(0)), owner);
     }
 
     function test_submitOutput() public {
