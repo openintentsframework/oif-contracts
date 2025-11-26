@@ -140,7 +140,8 @@ contract BroadcasterOracleTest is Test {
         address outputSettler;
         (payloads[0], broadcasterOracleSubmitter, outputSettler) = _getPayloadForVerifyMessage();
 
-        bytes32 expectedValue = 0x000000000000000000000000000000000000000000000000000000006926193C; // timestamp: 1764104508
+        bytes32 expectedValue = 0x000000000000000000000000000000000000000000000000000000006926193C; // timestamp:
+        // 1764104508
 
         bytes32[] memory payloadHashes = new bytes32[](1);
         payloadHashes[0] = keccak256(payloads[0]);
