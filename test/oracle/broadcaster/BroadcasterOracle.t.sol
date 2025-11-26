@@ -123,40 +123,15 @@ contract BroadcasterOracleTest is Test {
         return (payload, broadcasterOracleSubmitter, outputSettler);
     }
 
-    function test_verifyMessage_from_Ethereum_into_Arbitrum() public {
-        Receiver receiver = new Receiver();
-
-        ArbChildToParentProver childToParentProver = new ArbChildToParentProver(block.chainid);
-
-        BlockHashProverPointer blockHashProverPointer = new BlockHashProverPointer(owner);
-
-        broadcasterOracle = new BroadcasterOracle(receiver, new Broadcaster(), owner);
-
-        vm.prank(owner);
-        blockHashProverPointer.setImplementationAddress(address(childToParentProver));
-
-        bytes[] memory payloads = new bytes[](1);
-        address broadcasterOracleSubmitter;
-        address outputSettler;
-        (payloads[0], broadcasterOracleSubmitter, outputSettler) = _getPayloadForVerifyMessage();
-
-        bytes32 expectedValue = 0x000000000000000000000000000000000000000000000000000000006926193C; // timestamp:
-        // 1764104508
-
-        bytes32[] memory payloadHashes = new bytes32[](1);
-        payloadHashes[0] = keccak256(payloads[0]);
-        bytes32 expectedMessage = keccak256(abi.encode(outputSettler, keccak256(abi.encodePacked(payloadHashes))));
-        address publisher = address(broadcasterOracleSubmitter);
-        uint256 expectedSlot = uint256(keccak256(abi.encode(expectedMessage, publisher)));
-
+    function _buildInputForVerifyMessage(
+        uint256 expectedSlot
+    ) internal returns (bytes memory input, uint256 blockNumber, address account) {
         string memory path = "test/oracle/broadcaster/payloads/ethereum-sepolia/broadcast_proof_block_9706376.json";
-
         string memory json = vm.readFile(path);
-        uint256 blockNumber = json.readUint(".blockNumber");
+        blockNumber = json.readUint(".blockNumber");
         bytes32 blockHash = json.readBytes32(".blockHash");
-        address account = json.readAddress(".account");
+        account = json.readAddress(".account");
         uint256 slot = json.readUint(".slot");
-        bytes32 value = bytes32(json.readUint(".slotValue"));
         bytes memory rlpBlockHeader = json.readBytes(".rlpBlockHeader");
         bytes memory rlpAccountProof = json.readBytes(".rlpAccountProof");
         bytes memory rlpStorageProof = json.readBytes(".rlpStorageProof");
@@ -174,7 +149,36 @@ contract BroadcasterOracleTest is Test {
         vm.prank(aliasedPusher);
         buffer.receiveHashes(blockNumber, blockHashes);
 
-        bytes memory input = abi.encode(rlpBlockHeader, account, expectedSlot, rlpAccountProof, rlpStorageProof);
+        input = abi.encode(rlpBlockHeader, account, expectedSlot, rlpAccountProof, rlpStorageProof);
+    }
+
+    function test_verifyMessage_from_Ethereum_into_Arbitrum() public {
+        Receiver receiver = new Receiver();
+
+        ArbChildToParentProver childToParentProver = new ArbChildToParentProver(block.chainid);
+
+        BlockHashProverPointer blockHashProverPointer = new BlockHashProverPointer(owner);
+
+        broadcasterOracle = new BroadcasterOracle(receiver, new Broadcaster(), owner);
+
+        vm.prank(owner);
+        blockHashProverPointer.setImplementationAddress(address(childToParentProver));
+
+        bytes[] memory payloads = new bytes[](1);
+        address broadcasterOracleSubmitter;
+        address outputSettler;
+        (payloads[0], broadcasterOracleSubmitter, outputSettler) = _getPayloadForVerifyMessage();
+
+        bytes memory input;
+        uint256 blockNumber;
+        address account;
+        {
+            bytes32[] memory payloadHashes = new bytes32[](1);
+            payloadHashes[0] = keccak256(payloads[0]);
+            bytes32 expectedMessage = keccak256(abi.encode(outputSettler, keccak256(abi.encodePacked(payloadHashes))));
+            uint256 expectedSlot = uint256(keccak256(abi.encode(expectedMessage, address(broadcasterOracleSubmitter))));
+            (input, blockNumber, account) = _buildInputForVerifyMessage(expectedSlot);
+        }
 
         IReceiver.RemoteReadArgs memory remoteReadArgs;
         {
