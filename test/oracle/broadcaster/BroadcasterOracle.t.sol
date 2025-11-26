@@ -6,6 +6,7 @@ import { BroadcasterOracle } from "../../../src/integrations/oracles/broadcaster
 import { LibAddress } from "../../../src/libs/LibAddress.sol";
 import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
 import { MessageEncodingLib } from "../../../src/libs/MessageEncodingLib.sol";
+import { OutputSettlerBase } from "../../../src/output/OutputSettlerBase.sol";
 import { OutputSettlerSimple } from "../../../src/output/simple/OutputSettlerSimple.sol";
 import { MockERC20 } from "../../../test/mocks/MockERC20.sol";
 import { BlockHeaders } from "broadcaster-test/utils/BlockHeaders.sol";
@@ -38,7 +39,6 @@ contract MockBuffer is IBuffer {
         uint256 firstBlockNumber,
         bytes32[] memory blockHashes
     ) external {
-        // Implementation
         for (uint256 i = 0; i < blockHashes.length; i++) {
             parentChainBlockHashes[firstBlockNumber + i] = blockHashes[i];
         }
@@ -47,8 +47,6 @@ contract MockBuffer is IBuffer {
     function parentChainBlockHash(
         uint256 parentChainBlockNumber
     ) external view returns (bytes32) {
-        // Implementation
-
         if (parentChainBlockHashes[parentChainBlockNumber] == bytes32(0)) {
             revert UnknownParentChainBlockHash(parentChainBlockNumber);
         }
@@ -89,7 +87,7 @@ contract BroadcasterOracleTest is Test {
 
     function _getPayloadForVerifyMessage()
         internal
-        pure
+        view
         returns (bytes memory payload, address broadcasterOracleSubmitter, address outputSettler)
     {
         broadcasterOracleSubmitter = 0x947E5E61F63d51e3B7498dfEe96A28B190eD5e8B;
@@ -102,9 +100,9 @@ contract BroadcasterOracleTest is Test {
             oracle: address(broadcasterOracleSubmitter).toIdentifier(),
             settler: address(outputSettler).toIdentifier(),
             chainId: 11155111,
-            token: bytes32(abi.encode(address(token))),
+            token: address(token).toIdentifier(),
             amount: amount,
-            recipient: bytes32(abi.encode(filler)),
+            recipient: filler.toIdentifier(),
             callbackData: bytes(""),
             context: bytes("")
         });
@@ -150,6 +148,59 @@ contract BroadcasterOracleTest is Test {
         buffer.receiveHashes(blockNumber, blockHashes);
 
         input = abi.encode(rlpBlockHeader, account, expectedSlot, rlpAccountProof, rlpStorageProof);
+    }
+
+    function test_submitOutput() public {
+        Receiver receiver = new Receiver();
+        Broadcaster broadcaster = new Broadcaster();
+        broadcasterOracle = new BroadcasterOracle(receiver, broadcaster, owner);
+
+        OutputSettlerSimple outputSettler = new OutputSettlerSimple();
+
+        MockERC20 token = new MockERC20("TEST", "TEST", 18);
+        address filler = makeAddr("filler");
+        token.mint(filler, 1 ether);
+        vm.prank(filler);
+        token.approve(address(outputSettler), 1 ether);
+
+        address broadcasterOracleSubmitter = makeAddr("broadcasterOracleSubmitter");
+
+        uint256 amount = 1 ether;
+        MandateOutput memory output = MandateOutput({
+            oracle: address(broadcasterOracle).toIdentifier(),
+            settler: address(outputSettler).toIdentifier(),
+            chainId: block.chainid,
+            token: bytes32(abi.encode(address(token))),
+            amount: amount,
+            recipient: bytes32(abi.encode(filler)),
+            callbackData: bytes(""),
+            context: bytes("")
+        });
+
+        bytes memory fillerData = abi.encodePacked(filler.toIdentifier());
+
+        bytes32 orderId = keccak256(bytes("orderId"));
+
+        vm.expectEmit();
+        emit OutputSettlerBase.OutputFilled(orderId, filler.toIdentifier(), uint32(block.timestamp), output, amount);
+        vm.prank(filler);
+        outputSettler.fill(orderId, output, type(uint48).max, fillerData);
+
+        bytes[] memory payloads = new bytes[](1);
+        payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
+            filler.toIdentifier(),
+            orderId,
+            uint32(block.timestamp),
+            output.token,
+            output.amount,
+            output.recipient,
+            bytes(""),
+            bytes("")
+        );
+
+        bytes memory expectedPayload = this.encodeMessageCalldata(address(outputSettler).toIdentifier(), payloads);
+
+        broadcasterOracle.submit(address(outputSettler), payloads);
     }
 
     function test_verifyMessage_from_Ethereum_into_Arbitrum() public {
