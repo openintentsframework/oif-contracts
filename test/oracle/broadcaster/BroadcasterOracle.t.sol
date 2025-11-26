@@ -371,4 +371,51 @@ contract BroadcasterOracleTest is Test {
             this.encodeMessageCalldata(address(outputSettler).toIdentifier(), payloads)
         );
     }
+
+    function test_verifyMessage_from_Ethereum_into_Arbitrum_reverts_with_invalid_broadcaster_id() public {
+        Receiver receiver = new Receiver();
+
+        ArbChildToParentProver childToParentProver = new ArbChildToParentProver(block.chainid);
+
+        BlockHashProverPointer blockHashProverPointer = new BlockHashProverPointer(owner);
+
+        broadcasterOracle = new BroadcasterOracle(receiver, new Broadcaster(), owner);
+
+        vm.prank(owner);
+        blockHashProverPointer.setImplementationAddress(address(childToParentProver));
+
+        bytes[] memory payloads = new bytes[](1);
+        address broadcasterOracleSubmitter;
+        address outputSettler;
+        (payloads[0], broadcasterOracleSubmitter, outputSettler) = _getPayloadForVerifyMessage();
+
+        bytes memory input;
+        uint256 blockNumber;
+        address account;
+        {
+            bytes32[] memory payloadHashes = new bytes32[](1);
+            payloadHashes[0] = keccak256(payloads[0]);
+            bytes32 expectedMessage = keccak256(abi.encode(outputSettler, keccak256(abi.encodePacked(payloadHashes))));
+            uint256 expectedSlot = uint256(keccak256(abi.encode(expectedMessage, address(broadcasterOracleSubmitter))));
+            (input, blockNumber, account) = _buildInputForVerifyMessage(expectedSlot);
+        }
+
+        IReceiver.RemoteReadArgs memory remoteReadArgs;
+        {
+            address[] memory route = new address[](1);
+            route[0] = address(blockHashProverPointer);
+
+            bytes[] memory bhpInputs = new bytes[](1);
+            bhpInputs[0] = abi.encode(blockNumber);
+
+            remoteReadArgs = IReceiver.RemoteReadArgs({ route: route, bhpInputs: bhpInputs, storageProof: input });
+        }
+
+        vm.prank(owner);
+        broadcasterOracle.setChainMap(123456, 1);
+
+        bytes memory messageData = this.encodeMessageCalldata(address(outputSettler).toIdentifier(), payloads);
+        vm.expectRevert(BroadcasterOracle.InvalidBroadcasterId.selector);
+        broadcasterOracle.verifyMessage(remoteReadArgs, 1, address(broadcasterOracleSubmitter), messageData);
+    }
 }
