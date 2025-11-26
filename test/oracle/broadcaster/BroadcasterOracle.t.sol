@@ -6,6 +6,7 @@ import { BroadcasterOracle } from "../../../src/integrations/oracles/broadcaster
 import { LibAddress } from "../../../src/libs/LibAddress.sol";
 import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
 import { MessageEncodingLib } from "../../../src/libs/MessageEncodingLib.sol";
+import { BaseInputOracle } from "../../../src/oracles/BaseInputOracle.sol";
 import { OutputSettlerBase } from "../../../src/output/OutputSettlerBase.sol";
 import { OutputSettlerSimple } from "../../../src/output/simple/OutputSettlerSimple.sol";
 import { MockERC20 } from "../../../test/mocks/MockERC20.sol";
@@ -356,6 +357,13 @@ contract BroadcasterOracleTest is Test {
         vm.prank(owner);
         broadcasterOracle.setChainMap(broadcasterRemoteAccountId, 1);
 
+        vm.expectEmit();
+        emit BaseInputOracle.OutputProven(
+            1,
+            address(broadcasterOracleSubmitter).toIdentifier(),
+            address(outputSettler).toIdentifier(),
+            keccak256(payloads[0])
+        );
         broadcasterOracle.verifyMessage(
             remoteReadArgs,
             1,
