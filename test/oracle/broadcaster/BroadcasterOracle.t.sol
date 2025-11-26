@@ -286,7 +286,7 @@ contract BroadcasterOracleTest is Test {
 
         bytes[] memory payloads = new bytes[](1);
 
-        payloads[0] = payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
+        payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
             bytes32(0),
             keccak256(bytes("orderId")),
             uint32(block.timestamp),
