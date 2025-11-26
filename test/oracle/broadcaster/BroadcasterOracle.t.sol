@@ -9,15 +9,14 @@ import { MessageEncodingLib } from "../../../src/libs/MessageEncodingLib.sol";
 import { OutputSettlerBase } from "../../../src/output/OutputSettlerBase.sol";
 import { OutputSettlerSimple } from "../../../src/output/simple/OutputSettlerSimple.sol";
 import { MockERC20 } from "../../../test/mocks/MockERC20.sol";
-import { BlockHeaders } from "broadcaster-test/utils/BlockHeaders.sol";
 import { BlockHashProverPointer } from "broadcaster/BlockHashProverPointer.sol";
 import { Broadcaster } from "broadcaster/Broadcaster.sol";
 import { Receiver } from "broadcaster/Receiver.sol";
+import { IBroadcaster } from "broadcaster/interfaces/IBroadcaster.sol";
 import { IReceiver } from "broadcaster/interfaces/IReceiver.sol";
 import { ChildToParentProver as ArbChildToParentProver } from "broadcaster/provers/arbitrum/ChildToParentProver.sol";
 import { stdJson } from "forge-std/StdJson.sol";
 import { Test, console } from "forge-std/Test.sol";
-import { RLP } from "openzeppelin/utils/RLP.sol";
 
 interface IBuffer {
     error UnknownParentChainBlockHash(uint256 parentChainBlockNumber);
@@ -163,7 +162,61 @@ contract BroadcasterOracleTest is Test {
         vm.prank(filler);
         token.approve(address(outputSettler), 1 ether);
 
-        address broadcasterOracleSubmitter = makeAddr("broadcasterOracleSubmitter");
+        uint256 amount = 1 ether;
+        MandateOutput memory output = MandateOutput({
+            oracle: address(broadcasterOracle).toIdentifier(),
+            settler: address(outputSettler).toIdentifier(),
+            chainId: block.chainid,
+            token: bytes32(abi.encode(address(token))),
+            amount: amount,
+            recipient: bytes32(abi.encode(filler)),
+            callbackData: bytes(""),
+            context: bytes("")
+        });
+
+        bytes memory fillerData = abi.encodePacked(filler.toIdentifier());
+
+        bytes32 orderId = keccak256(bytes("orderId"));
+
+        vm.expectEmit();
+        emit OutputSettlerBase.OutputFilled(orderId, filler.toIdentifier(), uint32(block.timestamp), output, amount);
+        vm.prank(filler);
+        outputSettler.fill(orderId, output, type(uint48).max, fillerData);
+
+        bytes[] memory payloads = new bytes[](1);
+        payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
+            filler.toIdentifier(),
+            orderId,
+            uint32(block.timestamp),
+            output.token,
+            output.amount,
+            output.recipient,
+            bytes(""),
+            bytes("")
+        );
+
+        bytes32[] memory payloadHashes = new bytes32[](1);
+        payloadHashes[0] = keccak256(payloads[0]);
+        bytes32 expectedMessage =
+            keccak256(abi.encode(address(outputSettler), keccak256(abi.encodePacked(payloadHashes))));
+
+        vm.expectEmit();
+        emit IBroadcaster.MessageBroadcast(expectedMessage, address(broadcasterOracle));
+        broadcasterOracle.submit(address(outputSettler), payloads);
+    }
+
+    function test_submitOutput_reverts_with_duplicated_message() public {
+        Receiver receiver = new Receiver();
+        Broadcaster broadcaster = new Broadcaster();
+        broadcasterOracle = new BroadcasterOracle(receiver, broadcaster, owner);
+
+        OutputSettlerSimple outputSettler = new OutputSettlerSimple();
+
+        MockERC20 token = new MockERC20("TEST", "TEST", 18);
+        address filler = makeAddr("filler");
+        token.mint(filler, 1 ether);
+        vm.prank(filler);
+        token.approve(address(outputSettler), 1 ether);
 
         uint256 amount = 1 ether;
         MandateOutput memory output = MandateOutput({
@@ -198,8 +251,40 @@ contract BroadcasterOracleTest is Test {
             bytes("")
         );
 
-        bytes memory expectedPayload = this.encodeMessageCalldata(address(outputSettler).toIdentifier(), payloads);
+        bytes32[] memory payloadHashes = new bytes32[](1);
+        payloadHashes[0] = keccak256(payloads[0]);
+        bytes32 expectedMessage =
+            keccak256(abi.encode(address(outputSettler), keccak256(abi.encodePacked(payloadHashes))));
 
+        vm.expectEmit();
+        emit IBroadcaster.MessageBroadcast(expectedMessage, address(broadcasterOracle));
+        broadcasterOracle.submit(address(outputSettler), payloads);
+
+        vm.expectRevert(Broadcaster.MessageAlreadyBroadcasted.selector);
+        broadcasterOracle.submit(address(outputSettler), payloads);
+    }
+
+    function test_submitOutput_reverts_with_not_all_payloads_valid() public {
+        Receiver receiver = new Receiver();
+        Broadcaster broadcaster = new Broadcaster();
+        broadcasterOracle = new BroadcasterOracle(receiver, broadcaster, owner);
+
+        OutputSettlerSimple outputSettler = new OutputSettlerSimple();
+
+        bytes[] memory payloads = new bytes[](1);
+
+        payloads[0] = payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
+            bytes32(0),
+            keccak256(bytes("orderId")),
+            uint32(block.timestamp),
+            bytes32(0),
+            0,
+            bytes32(0),
+            bytes(""),
+            bytes("")
+        );
+
+        vm.expectRevert(BroadcasterOracle.NotAllPayloadsValid.selector);
         broadcasterOracle.submit(address(outputSettler), payloads);
     }
 
