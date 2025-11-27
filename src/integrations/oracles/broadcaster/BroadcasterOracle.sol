@@ -21,6 +21,7 @@ import { IReceiver } from "broadcaster/interfaces/IReceiver.sol";
  */
 contract BroadcasterOracle is BaseInputOracle, ChainMap {
     using LibAddress for address;
+    using LibAddress for bytes32;
 
     /// @dev The receiver contract that will be used to verify the messages. ERC 7888 compliant.
     IReceiver private immutable _receiver;
@@ -82,8 +83,8 @@ contract BroadcasterOracle is BaseInputOracle, ChainMap {
         (bytes32 application, bytes32[] memory payloadHashes) =
             MessageEncodingLib.getHashesOfEncodedPayloads(messageData);
 
-        bytes32 message = keccak256(abi.encode(application, _hashPayloadHashes(payloadHashes)));
-
+        bytes32 payloadsHash = _hashPayloadHashes(payloadHashes);
+        bytes32 message = _getMessage(application.fromIdentifier(), payloadsHash);
         bytes32 broadcasterId = bytes32(reverseChainIdMap[remoteChainId]);
 
         (bytes32 actualBroadcasterId,) = receiver().verifyBroadcastMessage(broadcasterReadArgs, message, remoteOracle);
@@ -110,7 +111,14 @@ contract BroadcasterOracle is BaseInputOracle, ChainMap {
     ) public {
         if (!IAttester(source).hasAttested(payloads)) revert NotAllPayloadsValid();
 
-        bytes32 message = _getMessage(source, payloads);
+        bytes32[] memory payloadHashes = new bytes32[](payloads.length);
+        for (uint256 i = 0; i < payloads.length; i++) {
+            payloadHashes[i] = keccak256(payloads[i]);
+        }
+
+        bytes32 payloadsHash = _hashPayloadHashes(payloadHashes);
+
+        bytes32 message = _getMessage(source, payloadsHash);
 
         broadcaster().broadcastMessage(message);
     }
@@ -139,18 +147,14 @@ contract BroadcasterOracle is BaseInputOracle, ChainMap {
     /**
      * @notice Generates a message from the payloads.
      * @param source The address of the application that has attested the payloads.
-     * @param payloads The payloads to generate the message from.
+     * @param payloadsHash The hash of the payloads hashes.
      * @return message The message generated from the payloads and source.
      */
     function _getMessage(
         address source,
-        bytes[] calldata payloads
+        bytes32 payloadsHash
     ) internal pure returns (bytes32 message) {
-        bytes32[] memory payloadHashes = new bytes32[](payloads.length);
-        for (uint256 i = 0; i < payloads.length; i++) {
-            payloadHashes[i] = keccak256(payloads[i]);
-        }
-        return keccak256(abi.encode(source, _hashPayloadHashes(payloadHashes)));
+        return keccak256(abi.encode(source, payloadsHash));
     }
 }
 
