@@ -116,9 +116,8 @@ contract BroadcasterOracle is BaseInputOracle, ChainMap {
             payloadHashes[i] = keccak256(payloads[i]);
         }
 
-        bytes32 payloadsHash = _hashPayloadHashes(payloadHashes);
-
-        bytes32 message = _getMessage(source, payloadsHash);
+        bytes32 payloadsHashesDigest = _hashPayloadHashes(payloadHashes);
+        bytes32 message = _getMessage(source, payloadsHashesDigest);
 
         broadcaster().broadcastMessage(message);
     }
@@ -147,14 +146,14 @@ contract BroadcasterOracle is BaseInputOracle, ChainMap {
     /**
      * @notice Generates a message from the payloads.
      * @param source The address of the application that has attested the payloads.
-     * @param payloadsHash The hash of the payloads hashes.
+     * @param payloadsHashesDigest The hash of the payloads hashes.
      * @return message The message generated from the payloads and source.
      */
     function _getMessage(
         address source,
-        bytes32 payloadsHash
+        bytes32 payloadsHashesDigest
     ) internal pure returns (bytes32 message) {
-        return keccak256(abi.encode(source, payloadsHash));
+        return keccak256(abi.encode(source, payloadsHashesDigest));
     }
 }
 
