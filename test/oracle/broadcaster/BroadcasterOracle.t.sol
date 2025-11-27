@@ -308,7 +308,12 @@ contract BroadcasterOracleTest is Test {
 
         BlockHashProverPointer blockHashProverPointer = new BlockHashProverPointer(owner);
 
-        broadcasterOracle = new BroadcasterOracle(receiver, new Broadcaster(), owner);
+        Broadcaster broadcaster = new Broadcaster();
+
+        broadcasterOracle = new BroadcasterOracle(receiver, broadcaster, owner);
+
+        assertEq(address(broadcasterOracle.receiver()), address(receiver));
+        assertEq(address(broadcasterOracle.broadcaster()), address(broadcaster));
 
         vm.prank(owner);
         blockHashProverPointer.setImplementationAddress(address(childToParentProver));
