@@ -83,8 +83,8 @@ contract BroadcasterOracle is BaseInputOracle, ChainMap {
         (bytes32 application, bytes32[] memory payloadHashes) =
             MessageEncodingLib.getHashesOfEncodedPayloads(messageData);
 
-        bytes32 payloadsHash = _hashPayloadHashes(payloadHashes);
-        bytes32 message = _getMessage(application.fromIdentifier(), payloadsHash);
+        bytes32 payloadsHashesDigest = _hashPayloadHashes(payloadHashes);
+        bytes32 message = _getMessage(application.fromIdentifier(), payloadsHashesDigest);
         bytes32 broadcasterId = bytes32(reverseChainIdMap[remoteChainId]);
 
         (bytes32 actualBroadcasterId,) = receiver().verifyBroadcastMessage(broadcasterReadArgs, message, remoteOracle);
