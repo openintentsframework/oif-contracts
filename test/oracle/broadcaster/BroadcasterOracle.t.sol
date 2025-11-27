@@ -423,4 +423,71 @@ contract BroadcasterOracleTest is Test {
         vm.expectRevert(BroadcasterOracle.InvalidBroadcasterId.selector);
         broadcasterOracle.verifyMessage(remoteReadArgs, 1, address(broadcasterOracleSubmitter), messageData);
     }
+
+    function test_verifyMessage_from_Ethereum_into_Arbitrum_reverts_with_invalid_application() public {
+        Receiver receiver = new Receiver();
+
+        ArbChildToParentProver childToParentProver = new ArbChildToParentProver(block.chainid);
+
+        BlockHashProverPointer blockHashProverPointer = new BlockHashProverPointer(owner);
+
+        Broadcaster broadcaster = new Broadcaster();
+
+        broadcasterOracle = new BroadcasterOracle(receiver, broadcaster, owner);
+
+        assertEq(address(broadcasterOracle.receiver()), address(receiver));
+        assertEq(address(broadcasterOracle.broadcaster()), address(broadcaster));
+
+        vm.prank(owner);
+        blockHashProverPointer.setImplementationAddress(address(childToParentProver));
+
+        bytes[] memory payloads = new bytes[](1);
+        address broadcasterOracleSubmitter;
+        address outputSettler;
+        (payloads[0], broadcasterOracleSubmitter, outputSettler) = _getPayloadForVerifyMessage();
+
+        bytes memory input;
+        uint256 blockNumber;
+        address account;
+        {
+            bytes32[] memory payloadHashes = new bytes32[](1);
+            payloadHashes[0] = keccak256(payloads[0]);
+            bytes32 expectedMessage = keccak256(abi.encode(outputSettler, keccak256(abi.encodePacked(payloadHashes))));
+            uint256 expectedSlot = uint256(keccak256(abi.encode(expectedMessage, address(broadcasterOracleSubmitter))));
+            (input, blockNumber, account) = _buildInputForVerifyMessage(expectedSlot);
+        }
+
+        IReceiver.RemoteReadArgs memory remoteReadArgs;
+        {
+            address[] memory route = new address[](1);
+            route[0] = address(blockHashProverPointer);
+
+            bytes[] memory bhpInputs = new bytes[](1);
+            bhpInputs[0] = abi.encode(blockNumber);
+
+            remoteReadArgs = IReceiver.RemoteReadArgs({ route: route, bhpInputs: bhpInputs, storageProof: input });
+        }
+
+        uint256 broadcasterRemoteAccountId = uint256(
+            keccak256(
+                abi.encode(
+                    keccak256(
+                        abi.encode(
+                            bytes32(0x0000000000000000000000000000000000000000000000000000000000000000),
+                            address(blockHashProverPointer)
+                        )
+                    ),
+                    account
+                )
+            )
+        );
+
+        vm.prank(owner);
+        broadcasterOracle.setChainMap(broadcasterRemoteAccountId, 1);
+
+        address invalidApplication = makeAddr("invalidApplication");
+        bytes memory messageData = this.encodeMessageCalldata(invalidApplication.toIdentifier(), payloads);
+        vm.expectRevert(Receiver.WrongMessageSlot.selector);
+        broadcasterOracle.verifyMessage(remoteReadArgs, 1, invalidApplication, messageData);
+    }
 }
