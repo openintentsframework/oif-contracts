@@ -83,8 +83,8 @@ contract BroadcasterOracle is BaseInputOracle, ChainMap {
         (bytes32 application, bytes32[] memory payloadHashes) =
             MessageEncodingLib.getHashesOfEncodedPayloads(messageData);
 
-        bytes32 payloadsHashesDigest = _hashPayloadHashes(payloadHashes);
-        bytes32 message = _getMessage(application.fromIdentifier(), payloadsHashesDigest);
+        bytes32 payloadHashesDigest = _hashPayloadHashes(payloadHashes);
+        bytes32 message = _getMessage(application.fromIdentifier(), payloadHashesDigest);
         bytes32 broadcasterId = bytes32(reverseChainIdMap[remoteChainId]);
 
         (bytes32 actualBroadcasterId,) = receiver().verifyBroadcastMessage(broadcasterReadArgs, message, remoteOracle);
@@ -116,8 +116,8 @@ contract BroadcasterOracle is BaseInputOracle, ChainMap {
             payloadHashes[i] = keccak256(payloads[i]);
         }
 
-        bytes32 payloadsHashesDigest = _hashPayloadHashes(payloadHashes);
-        bytes32 message = _getMessage(source, payloadsHashesDigest);
+        bytes32 payloadHashesDigest = _hashPayloadHashes(payloadHashes);
+        bytes32 message = _getMessage(source, payloadHashesDigest);
 
         broadcaster().broadcastMessage(message);
     }
@@ -146,14 +146,14 @@ contract BroadcasterOracle is BaseInputOracle, ChainMap {
     /**
      * @notice Generates a message from the payloads.
      * @param source The address of the application that has attested the payloads.
-     * @param payloadsHashesDigest The hash of the payloads hashes.
+     * @param payloadHashesDigest The hash of the payloads hashes.
      * @return message The message generated from the payloads and source.
      */
     function _getMessage(
         address source,
-        bytes32 payloadsHashesDigest
+        bytes32 payloadHashesDigest
     ) internal pure returns (bytes32 message) {
-        return keccak256(abi.encode(source, payloadsHashesDigest));
+        return keccak256(abi.encode(source, payloadHashesDigest));
     }
 }
 
