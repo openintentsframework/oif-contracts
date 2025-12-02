@@ -36,6 +36,8 @@ contract BroadcasterOracle is BaseInputOracle, ChainMap {
     error InvalidBroadcaster();
     /// @dev Error thrown when the receiver is invalid.
     error InvalidReceiver();
+    /// @dev Error thrown when the number of payloads is too large.
+    error TooManyPayloads(uint256 size);
 
     constructor(
         IReceiver receiver_,
@@ -109,6 +111,7 @@ contract BroadcasterOracle is BaseInputOracle, ChainMap {
         address source,
         bytes[] calldata payloads
     ) public {
+        if (payloads.length > type(uint16).max) revert TooManyPayloads(payloads.length);
         if (!IAttester(source).hasAttested(payloads)) revert NotAllPayloadsValid();
 
         bytes32[] memory payloadHashes = new bytes32[](payloads.length);
