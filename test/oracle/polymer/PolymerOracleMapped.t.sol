@@ -370,4 +370,82 @@ contract PolymerOracleMappedTest is Test {
         emit OutputProven(remoteChainId, programID, application2, payloadHash2);
         polymerOracleMapped.receiveSolanaMessage(mockProof2);
     }
+
+    function test_receiveSolanaMessage_wrong_chain_id_mapped_reverts() public {
+        uint32 wrongChainId = 1; // Not Solana (should be 2)
+        bytes32 programID = keccak256("solana-program");
+        bytes32 application = makeAddr("settler").toIdentifier();
+        bytes32 payloadHash = keccak256("test-payload-hash");
+
+        string memory logMessage = string.concat(
+            "Application: 0x",
+            _bytes32ToHex(application),
+            ", PayloadHash: 0x",
+            _bytes32ToHex(payloadHash)
+        );
+
+        string[] memory logMessages = new string[](1);
+        logMessages[0] = logMessage;
+
+        bytes memory mockProof =
+            mockCrossL2ProverV2.generateAndEmitSolProof(wrongChainId, programID, logMessages);
+
+        // Should revert on chainId check before mapping is even consulted.
+        vm.expectRevert("Must be from Solana");
+        polymerOracleMapped.receiveSolanaMessage(mockProof);
+    }
+
+    function test_receiveSolanaMessage_invalid_hex_reverts() public {
+        uint32 solanaChainId = 2;
+        bytes32 programID = keccak256("solana-program");
+        bytes32 application = makeAddr("settler").toIdentifier();
+        bytes32 payloadHash = keccak256("test-payload-hash");
+
+        // Build an invalid hex string (64 non-hex characters, e.g. 'g')
+        string memory badHex =
+            "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg"; // 64 chars
+
+        string memory logMessage = string.concat(
+            "Application: 0x",
+            badHex,
+            ", PayloadHash: 0x",
+            _bytes32ToHex(payloadHash)
+        );
+
+        string[] memory logMessages = new string[](1);
+        logMessages[0] = logMessage;
+
+        bytes memory mockProof =
+            mockCrossL2ProverV2.generateAndEmitSolProof(solanaChainId, programID, logMessages);
+
+        uint256 remoteChainId = uint256(solanaChainId);
+        vm.prank(owner);
+        polymerOracleMapped.setChainMap(remoteChainId, remoteChainId);
+
+        // _hexStringToBytes32 should revert on invalid hex character
+        vm.expectRevert(bytes("Invalid hex char"));
+        polymerOracleMapped.receiveSolanaMessage(mockProof);
+    }
+
+    function test_receiveSolanaMessage_malformed_log_reverts() public {
+        uint32 solanaChainId = 2;
+        bytes32 programID = keccak256("solana-program");
+
+        // Missing required "Application: " prefix / separator; will not match parser pattern
+        string memory logMessage = "Malformed log that does not match expected format";
+
+        string[] memory logMessages = new string[](1);
+        logMessages[0] = logMessage;
+
+        bytes memory mockProof =
+            mockCrossL2ProverV2.generateAndEmitSolProof(solanaChainId, programID, logMessages);
+
+        uint256 remoteChainId = uint256(solanaChainId);
+        vm.prank(owner);
+        polymerOracleMapped.setChainMap(remoteChainId, remoteChainId);
+
+        // No log line will be recognised as valid; expect dedicated error
+        vm.expectRevert("No valid log message found in proof");
+        polymerOracleMapped.receiveSolanaMessage(mockProof);
+    }
 }
