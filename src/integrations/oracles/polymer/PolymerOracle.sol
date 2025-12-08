@@ -114,9 +114,7 @@ contract PolymerOracle is BaseInputOracle {
         uint256 start = 0;
 
         // Optional 0x / 0X prefix.
-        if (s.length >= 2 && s[0] == "0" && (s[1] == "x" || s[1] == "X")) {
-            start = 2;
-        }
+        if (s.length >= 2 && s[0] == "0" && (s[1] == "x" || s[1] == "X")) start = 2;
 
         require(s.length == start + 64, "Invalid hex length");
 
@@ -128,11 +126,12 @@ contract PolymerOracle is BaseInputOracle {
         }
         return result;
     }
-    
-    /**  @dev the log emitted is in the format:
-     "Prove: program: <programID>, Application: <application>, PayloadHash: <payloadHash>"
-     The prover validates it and return a log in the format:
-     Application: <application>, PayloadHash: <payloadHash>"
+
+    /**
+     * @dev the log emitted is in the format:
+     *  "Prove: program: <programID>, Application: <application>, PayloadHash: <payloadHash>"
+     *  The prover validates it and return a log in the format:
+     *  Application: <application>, PayloadHash: <payloadHash>"
      */
     function _processSolanaMessage(
         bytes calldata proof
@@ -142,7 +141,7 @@ contract PolymerOracle is BaseInputOracle {
         require(chainId == 2, "Must be from Solana");
 
         uint256 remoteChainId = _getChainId(uint256(chainId));
-        
+
         bytes memory appSep = bytes("Application: ");
         bytes memory hashSep = bytes(", PayloadHash: ");
 
@@ -171,9 +170,7 @@ contract PolymerOracle is BaseInputOracle {
             idx += hexLen;
 
             // Sanity: must be at end of line
-            if (idx != logBytes.length) {
-                continue;
-            }
+            if (idx != logBytes.length) continue;
 
             bytes32 application = _hexStringToBytes32(applicationStr);
             bytes32 payloadHash = _hexStringToBytes32(payloadHashStr);

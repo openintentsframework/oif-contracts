@@ -292,7 +292,9 @@ contract PolymerOracleMappedTest is Test {
     /**
      * @dev Helper function to convert bytes32 to hex string (64 characters, lowercase, no 0x prefix)
      */
-    function _bytes32ToHex(bytes32 value) internal pure returns (string memory) {
+    function _bytes32ToHex(
+        bytes32 value
+    ) internal pure returns (string memory) {
         bytes memory hexChars = "0123456789abcdef";
         bytes memory result = new bytes(64);
         for (uint256 i = 0; i < 32; i++) {
@@ -310,17 +312,13 @@ contract PolymerOracleMappedTest is Test {
 
         // Create log message in the format: "Application: 0x<64 hex>, PayloadHash: 0x<64 hex>"
         string memory logMessage = string.concat(
-            "Application: 0x",
-            _bytes32ToHex(application),
-            ", PayloadHash: 0x",
-            _bytes32ToHex(payloadHash)
+            "Application: 0x", _bytes32ToHex(application), ", PayloadHash: 0x", _bytes32ToHex(payloadHash)
         );
 
         string[] memory logMessages = new string[](1);
         logMessages[0] = logMessage;
 
-        bytes memory mockProof =
-            mockCrossL2ProverV2.generateAndEmitSolProof(solanaChainId, programID, logMessages);
+        bytes memory mockProof = mockCrossL2ProverV2.generateAndEmitSolProof(solanaChainId, programID, logMessages);
 
         uint256 remoteChainId = uint256(solanaChainId);
 
@@ -343,17 +341,11 @@ contract PolymerOracleMappedTest is Test {
         bytes32 payloadHash2 = keccak256("test-payload-hash-2");
 
         string memory logMessage1 = string.concat(
-            "Application: 0x",
-            _bytes32ToHex(application1),
-            ", PayloadHash: 0x",
-            _bytes32ToHex(payloadHash1)
+            "Application: 0x", _bytes32ToHex(application1), ", PayloadHash: 0x", _bytes32ToHex(payloadHash1)
         );
 
         string memory logMessage2 = string.concat(
-            "Application: 0x",
-            _bytes32ToHex(application2),
-            ", PayloadHash: 0x",
-            _bytes32ToHex(payloadHash2)
+            "Application: 0x", _bytes32ToHex(application2), ", PayloadHash: 0x", _bytes32ToHex(payloadHash2)
         );
 
         string[] memory logMessages1 = new string[](1);
@@ -362,10 +354,8 @@ contract PolymerOracleMappedTest is Test {
         string[] memory logMessages2 = new string[](1);
         logMessages2[0] = logMessage2;
 
-        bytes memory mockProof1 =
-            mockCrossL2ProverV2.generateAndEmitSolProof(solanaChainId, programID, logMessages1);
-        bytes memory mockProof2 =
-            mockCrossL2ProverV2.generateAndEmitSolProof(solanaChainId, programID, logMessages2);
+        bytes memory mockProof1 = mockCrossL2ProverV2.generateAndEmitSolProof(solanaChainId, programID, logMessages1);
+        bytes memory mockProof2 = mockCrossL2ProverV2.generateAndEmitSolProof(solanaChainId, programID, logMessages2);
 
         uint256 remoteChainId = uint256(solanaChainId);
 
