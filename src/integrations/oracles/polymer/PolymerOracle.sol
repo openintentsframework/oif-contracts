@@ -55,8 +55,8 @@ contract PolymerOracle is BaseInputOracle {
         // signature.
         bytes32 eventSignature = bytes32(Bytes.slice(topics, 0, 32));
         if (eventSignature != OutputSettlerBase.OutputFilled.selector) revert WrongEventSignature();
-        // OrderId is topic[1] which is 32 to 64 bytes.
 
+        // OrderId is topic[1] which is 32 to 64 bytes.
         bytes32 orderId = bytes32(Bytes.slice(topics, 32, 64));
 
         (bytes32 solver, uint32 timestamp, MandateOutput memory output,) =

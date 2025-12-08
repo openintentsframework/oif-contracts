@@ -133,13 +133,27 @@ contract MockCrossL2ProverV2 is CrossL2ProverV2 {
         logMessages = new string[](numLogMessages);
 
         // Parse log messages
+        //
+        // Layout in `proof` starting at byte 214 (after header, signature, chainId, heights, txSignature, programID):
+        //   For each log i:
+        //     - 2 bytes: big-endian end offset of this log within the proof buffer (absolute index, not length)
+        //     - N bytes: UTF-8 bytes of the log string itself
+        //
+        // So the first log looks like:
+        //   [ log0_end (2 bytes) ][ log0_bytes ... up to log0_end-1 ]
+        // The second log immediately follows, starting at log0_end, with its own 2-byte end offset, etc.
         uint256 currLogMessageStart = 214;
-        uint256 currentLogMessageEnd = 214; // Edge case for 0 log messages
+        uint256 currentLogMessageEnd = 214; // Initialised for the 0-log edge case
 
         for (uint256 i = 0; i < logMessages.length; ++i) {
+            // Read the absolute end offset of this log's bytes
             currentLogMessageEnd = uint16(bytes2(proof[currLogMessageStart:currLogMessageStart + 2]));
             require(currentLogMessageEnd <= proof.length, "Log message end exceeds proof length");
+
+            // Slice out the log string bytes (skip the 2-byte end offset)
             logMessages[i] = string(proof[currLogMessageStart + 2:currentLogMessageEnd]);
+
+            // Next log starts where this one ends
             currLogMessageStart = currentLogMessageEnd;
         }
 
