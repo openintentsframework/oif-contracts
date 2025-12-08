@@ -54,4 +54,8 @@ interface ICrossL2ProverV2 {
     function inspectPolymerState(
         bytes calldata proof
     ) external pure returns (bytes32 stateRoot, uint64 height, bytes memory signature);
+
+    function validateSolLogs(
+        bytes calldata proof
+    ) external view returns (uint32 chainId, bytes32 programID, string[] memory logMessages);
 }
