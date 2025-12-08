@@ -81,6 +81,7 @@ contract PolymerOracle is BaseInputOracle {
         uint256 start,
         uint256 len
     ) internal pure returns (string memory) {
+        require(start + len <= data.length, "Substring out of bounds");
         bytes memory result = new bytes(len);
         for (uint256 i = 0; i < len; ++i) {
             result[i] = data[start + i];
@@ -148,6 +149,7 @@ contract PolymerOracle is BaseInputOracle {
         uint256 hexLen = 66; // 32 bytes + "0x"
         uint256 expectedLen = appSep.length + hexLen + hashSep.length + hexLen;
 
+        bool foundValidLog = false;
         for (uint256 i = 0; i < logMessages.length; i++) {
             bytes memory logBytes = bytes(logMessages[i]);
 
@@ -156,6 +158,27 @@ contract PolymerOracle is BaseInputOracle {
                 // Maybe there is another log message thas has the same length
                 continue;
             }
+
+            // Validate format: check prefix and separator
+            bool hasValidPrefix = true;
+            for (uint256 j = 0; j < appSep.length; j++) {
+                if (logBytes[j] != appSep[j]) {
+                    hasValidPrefix = false;
+                    break;
+                }
+            }
+            if (!hasValidPrefix) continue;
+
+            bool hasValidSeparator = true;
+            uint256 sepStart = appSep.length + hexLen;
+            for (uint256 j = 0; j < hashSep.length; j++) {
+                if (logBytes[sepStart + j] != hashSep[j]) {
+                    hasValidSeparator = false;
+                    break;
+                }
+            }
+            if (!hasValidSeparator) continue;
+
             uint256 idx = appSep.length;
 
             // Application: next 64 hex chars
@@ -179,9 +202,11 @@ contract PolymerOracle is BaseInputOracle {
 
             emit OutputProven(remoteChainId, returnedProgramID, application, payloadHash);
 
+            foundValidLog = true;
             // Only one log message should be processed
             break;
         }
+        require(foundValidLog, "No valid log message found in proof");
     }
 
     function receiveMessage(
@@ -199,12 +224,20 @@ contract PolymerOracle is BaseInputOracle {
         }
     }
 
+    /**
+     * @notice Processes a single Solana proof and updates the attestation state.
+     * @param proof The proof data from Solana to be processed.
+     */
     function receiveSolanaMessage(
         bytes calldata proof
     ) external {
         _processSolanaMessage(proof);
     }
 
+    /**
+     * @notice Processes multiple Solana proofs and updates the attestation state for each.
+     * @param proofs An array of proof data from Solana to be processed.
+     */
     function receiveSolanaMessage(
         bytes[] calldata proofs
     ) external {

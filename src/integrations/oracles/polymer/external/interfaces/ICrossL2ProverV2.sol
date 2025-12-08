@@ -55,6 +55,13 @@ interface ICrossL2ProverV2 {
         bytes calldata proof
     ) external pure returns (bytes32 stateRoot, uint64 height, bytes memory signature);
 
+    /**
+     * @notice Validates a proof and extracts Solana log messages from the provided proof.
+     * @param proof The proof data containing the necessary information to validate and extract logs.
+     * @return chainId The chain ID that the proof is for.
+     * @return programID The Solana program ID that emitted the logs.
+     * @return logMessages The array of log messages emitted by the program in the transaction.
+     */
     function validateSolLogs(
         bytes calldata proof
     ) external view returns (uint32 chainId, bytes32 programID, string[] memory logMessages);
