@@ -131,8 +131,8 @@ contract PolymerOracle is BaseInputOracle {
     /**
      * @dev the log emitted is in the format:
      *  "Prove: program: <programID>, Application: <application>, PayloadHash: <payloadHash>"
-     *  The prover validates it and return a log in the format:
-     *  Application: <application>, PayloadHash: <payloadHash>"
+     *  The prover validates it and returns a log in the format:
+     *  "Application: <application>, PayloadHash: <payloadHash>"
      */
     function _processSolanaMessage(
         bytes calldata proof
@@ -155,7 +155,7 @@ contract PolymerOracle is BaseInputOracle {
 
             // Quick check: line length
             if (logBytes.length != expectedLen) {
-                // Maybe there is another log message thas has the same length
+                // Maybe there is another log message that has the same length
                 continue;
             }
 
