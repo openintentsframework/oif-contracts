@@ -128,6 +128,56 @@ contract PolymerOracle is BaseInputOracle {
         return result;
     }
 
+    /// @dev Returns true if `data` contains `prefix` starting at `start`.
+    function _hasPrefix(
+        bytes memory data,
+        bytes memory prefix,
+        uint256 start
+    ) internal pure returns (bool) {
+        if (data.length < start + prefix.length) return false;
+        for (uint256 i = 0; i < prefix.length; ++i) {
+            if (data[start + i] != prefix[i]) return false;
+        }
+        return true;
+    }
+
+    /// @dev Validates and parses a single Solana log line.
+    /// Expects the format: "Application: 0x<64 hex>, PayloadHash: 0x<64 hex>".
+    /// Returns (true, application, payloadHash) if the line matches, otherwise (false, 0, 0).
+    function _isValidLog(
+        bytes memory applicationSeparator,
+        bytes memory payloadHashSeparator,
+        uint256 expectedLen,
+        bytes memory logBytes
+    ) internal pure returns (bool isValid, bytes32 application, bytes32 payloadHash) {
+        // Quick length check
+        if (logBytes.length != expectedLen) return (false, bytes32(0), bytes32(0));
+
+        // Must start with "Application: "
+        if (!_hasPrefix(logBytes, applicationSeparator, 0)) return (false, bytes32(0), bytes32(0));
+
+        // Application: "0x" + 64 hex chars → 66 characters
+        uint256 idx = applicationSeparator.length;
+        string memory applicationStr = _substring(logBytes, idx, 66);
+        idx += 66;
+
+        // Expect exact ", PayloadHash: " separator
+        if (!_hasPrefix(logBytes, payloadHashSeparator, idx)) return (false, bytes32(0), bytes32(0));
+        idx += payloadHashSeparator.length;
+
+        // PayloadHash: "0x" + 64 hex chars → 66 characters
+        string memory payloadHashStr = _substring(logBytes, idx, 66);
+        idx += 66;
+
+        // Sanity: must be at end of line
+        if (idx != logBytes.length) return (false, bytes32(0), bytes32(0));
+
+        // Parse hex strings into bytes32
+        application = _hexStringToBytes32(applicationStr);
+        payloadHash = _hexStringToBytes32(payloadHashStr);
+        isValid = true;
+    }
+
     /**
      * @dev the log emitted is in the format:
      *  "Prove: program: <programID>, Application: <application>, PayloadHash: <payloadHash>"
@@ -146,66 +196,23 @@ contract PolymerOracle is BaseInputOracle {
         bytes memory appSep = bytes("Application: ");
         bytes memory hashSep = bytes(", PayloadHash: ");
 
-        uint256 hexLen = 66; // 32 bytes + "0x"
+        uint256 hexLen = 66; // 32 bytes as hex plus "0x" prefix
         uint256 expectedLen = appSep.length + hexLen + hashSep.length + hexLen;
 
         bool foundValidLog = false;
         for (uint256 i = 0; i < logMessages.length; i++) {
             bytes memory logBytes = bytes(logMessages[i]);
 
-            // Quick check: line length
-            if (logBytes.length != expectedLen) {
-                // Maybe there is another log message that has the same length
-                continue;
-            }
-
-            // Validate format: check prefix and separator
-            bool hasValidPrefix = true;
-            for (uint256 j = 0; j < appSep.length; j++) {
-                if (logBytes[j] != appSep[j]) {
-                    hasValidPrefix = false;
-                    break;
-                }
-            }
-            if (!hasValidPrefix) continue;
-
-            bool hasValidSeparator = true;
-            uint256 sepStart = appSep.length + hexLen;
-            for (uint256 j = 0; j < hashSep.length; j++) {
-                if (logBytes[sepStart + j] != hashSep[j]) {
-                    hasValidSeparator = false;
-                    break;
-                }
-            }
-            if (!hasValidSeparator) continue;
-
-            uint256 idx = appSep.length;
-
-            // Application: next 64 hex chars
-            string memory applicationStr = _substring(logBytes, idx, hexLen);
-            idx += hexLen;
-
-            // Skip ", PayloadHash: "
-            idx += hashSep.length;
-
-            // Payload hash: final 64 hex chars
-            string memory payloadHashStr = _substring(logBytes, idx, hexLen);
-            idx += hexLen;
-
-            // Sanity: must be at end of line
-            if (idx != logBytes.length) continue;
-
-            bytes32 application = _hexStringToBytes32(applicationStr);
-            bytes32 payloadHash = _hexStringToBytes32(payloadHashStr);
+            (bool ok, bytes32 application, bytes32 payloadHash) = _isValidLog(appSep, hashSep, expectedLen, logBytes);
+            if (!ok) continue;
 
             _attestations[remoteChainId][returnedProgramID][application][payloadHash] = true;
-
             emit OutputProven(remoteChainId, returnedProgramID, application, payloadHash);
 
             foundValidLog = true;
-            // Only one log message should be processed
             break;
         }
+
         require(foundValidLog, "No valid log message found in proof");
     }
 
