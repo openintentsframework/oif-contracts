@@ -9,6 +9,7 @@ import { PolymerOracle } from "src/integrations/oracles/polymer/PolymerOracle.so
 import { PolymerOracleMapped } from "src/integrations/oracles/polymer/PolymerOracleMapped.sol";
 import { MockCrossL2ProverV2 } from "src/integrations/oracles/polymer/external/mocks/MockCrossL2ProverV2.sol";
 import { LibAddress } from "src/libs/LibAddress.sol";
+import { HexBytes } from "src/libs/HexBytesLib.sol";
 
 import { MockERC20 } from "../../mocks/MockERC20.sol";
 import { InputSettlerBase } from "src/input/InputSettlerBase.sol";
@@ -387,7 +388,7 @@ contract PolymerOracleMappedTest is Test {
         bytes memory mockProof = mockCrossL2ProverV2.generateAndEmitSolProof(wrongChainId, programID, logMessages);
 
         // Should revert on chainId check before mapping is even consulted.
-        vm.expectRevert("Must be from Solana");
+        vm.expectRevert(PolymerOracle.NotSolanaMessage.selector);
         polymerOracleMapped.receiveSolanaMessage(mockProof);
     }
 
@@ -411,8 +412,8 @@ contract PolymerOracleMappedTest is Test {
         vm.prank(owner);
         polymerOracleMapped.setChainMap(remoteChainId, remoteChainId);
 
-        // _hexStringToBytes32 should revert on invalid hex character
-        vm.expectRevert(bytes("Invalid hex char"));
+        // hexStringToBytes32 should revert on invalid hex character
+        vm.expectRevert(HexBytes.InvalidHexChar.selector);
         polymerOracleMapped.receiveSolanaMessage(mockProof);
     }
 
@@ -433,7 +434,7 @@ contract PolymerOracleMappedTest is Test {
         polymerOracleMapped.setChainMap(remoteChainId, remoteChainId);
 
         // No log line will be recognised as valid; expect dedicated error
-        vm.expectRevert("No valid log message found in proof");
+        vm.expectRevert(PolymerOracle.NoValidLogFound.selector);
         polymerOracleMapped.receiveSolanaMessage(mockProof);
     }
 }

@@ -18,7 +18,7 @@
 pragma solidity ^0.8.0;
 
 import { RLPReader } from "../optimism/rlp/RLPReader.sol";
-import { Bytes } from "openzeppelin/utils/Bytes.sol";
+import { Bytes } from "@openzeppelin/contracts/utils/Bytes.sol";
 import { Strings } from "openzeppelin/utils/Strings.sol";
 
 /**

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import { HexBytes } from "../../../libs/HexBytesLib.sol";
 import { LibAddress } from "../../../libs/LibAddress.sol";
-import { Bytes } from "openzeppelin/utils/Bytes.sol";
+import { Bytes } from "@openzeppelin/contracts/utils/Bytes.sol";
 
 import { MandateOutput, MandateOutputEncodingLib } from "../../../libs/MandateOutputEncodingLib.sol";
 
@@ -18,7 +19,10 @@ contract PolymerOracle is BaseInputOracle {
     using LibAddress for address;
 
     error WrongEventSignature();
+    error NotSolanaMessage();
+    error NoValidLogFound();
 
+    uint256 constant POLYMER_SOLANA_CHAIN_ID = 2;
     ICrossL2ProverV2 CROSS_L2_PROVER;
 
     constructor(
@@ -75,107 +79,39 @@ contract PolymerOracle is BaseInputOracle {
 
     /// ************** Solana Processing ************** ///
 
-    /// @dev Helper to take a substring of `data` from `start` (inclusive) with length `len`.
-    function _substring(
-        bytes memory data,
-        uint256 start,
-        uint256 len
-    ) internal pure returns (string memory) {
-        require(start + len <= data.length, "Substring out of bounds");
-        bytes memory result = new bytes(len);
-        for (uint256 i = 0; i < len; ++i) {
-            result[i] = data[start + i];
-        }
-        return string(result);
-    }
-
-    /// @dev Converts a single hex character into its value.
-    function _fromHexChar(
-        uint8 c
-    ) internal pure returns (uint8) {
-        if (c >= 48 && c <= 57) {
-            // '0' - '9'
-            return c - 48;
-        } else if (c >= 97 && c <= 102) {
-            // 'a' - 'f'
-            return 10 + (c - 97);
-        } else if (c >= 65 && c <= 70) {
-            // 'A' - 'F'
-            return 10 + (c - 65);
-        } else {
-            revert("Invalid hex char");
-        }
-    }
-
-    /// @dev Parses a hex string (with or without 0x prefix) into a bytes32.
-    function _hexStringToBytes32(
-        string memory str
-    ) internal pure returns (bytes32) {
-        bytes memory s = bytes(str);
-        uint256 start = 0;
-
-        // Optional 0x / 0X prefix.
-        if (s.length >= 2 && s[0] == "0" && (s[1] == "x" || s[1] == "X")) start = 2;
-
-        require(s.length == start + 64, "Invalid hex length");
-
-        bytes32 result;
-        for (uint256 i = 0; i < 32; ++i) {
-            uint8 high = _fromHexChar(uint8(s[start + 2 * i])); // first hex char
-            uint8 low = _fromHexChar(uint8(s[start + 2 * i + 1])); // second hex char
-            result |= bytes32(uint256(uint8((high << 4) | low)) << (248 - i * 8)); // Combine without overwriting
-        }
-        return result;
-    }
-
-    /// @dev Returns true if `data` contains `prefix` starting at `start`.
-    function _hasPrefix(
-        bytes memory data,
-        bytes memory prefix,
-        uint256 start
-    ) internal pure returns (bool) {
-        if (data.length < start + prefix.length) return false;
-        for (uint256 i = 0; i < prefix.length; ++i) {
-            if (data[start + i] != prefix[i]) return false;
-        }
-        return true;
-    }
-
     /// @dev Validates and parses a single Solana log line.
     /// Expects the format: "Application: 0x<64 hex>, PayloadHash: 0x<64 hex>".
-    /// Returns (true, application, payloadHash) if the line matches, otherwise (false, 0, 0).
+    /// Returns (application, payloadHash) if the line matches, otherwise (0, 0).
     function _isValidLog(
         bytes memory applicationSeparator,
         bytes memory payloadHashSeparator,
         uint256 expectedLen,
         bytes memory logBytes
-    ) internal pure returns (bool isValid, bytes32 application, bytes32 payloadHash) {
+    ) internal pure returns (bytes32 application, bytes32 payloadHash) {
         // Quick length check
-        if (logBytes.length != expectedLen) return (false, bytes32(0), bytes32(0));
+        if (logBytes.length != expectedLen) return (bytes32(0), bytes32(0));
 
-        // Must start with "Application: "
-        if (!_hasPrefix(logBytes, applicationSeparator, 0)) return (false, bytes32(0), bytes32(0));
+        if (!HexBytes.hasPrefix(logBytes, applicationSeparator, 0)) return (bytes32(0), bytes32(0));
 
         // Application: "0x" + 64 hex chars → 66 characters
         uint256 idx = applicationSeparator.length;
-        string memory applicationStr = _substring(logBytes, idx, 66);
+        string memory applicationStr = string(HexBytes.sliceFromBytes(logBytes, idx, 66));
         idx += 66;
 
         // Expect exact ", PayloadHash: " separator
-        if (!_hasPrefix(logBytes, payloadHashSeparator, idx)) return (false, bytes32(0), bytes32(0));
+        if (!HexBytes.hasPrefix(logBytes, payloadHashSeparator, idx)) return (bytes32(0), bytes32(0));
         idx += payloadHashSeparator.length;
 
         // PayloadHash: "0x" + 64 hex chars → 66 characters
-        string memory payloadHashStr = _substring(logBytes, idx, 66);
+        string memory payloadHashStr = string(HexBytes.sliceFromBytes(logBytes, idx, 66));
         idx += 66;
 
         // Sanity: must be at end of line
-        if (idx != logBytes.length) return (false, bytes32(0), bytes32(0));
+        if (idx != logBytes.length) return (bytes32(0), bytes32(0));
 
         // Parse hex strings into bytes32
-        application = _hexStringToBytes32(applicationStr);
-        payloadHash = _hexStringToBytes32(payloadHashStr);
-        isValid = true;
+        application = HexBytes.hexStringToBytes32(applicationStr);
+        payloadHash = HexBytes.hexStringToBytes32(payloadHashStr);
     }
 
     /**
@@ -189,7 +125,8 @@ contract PolymerOracle is BaseInputOracle {
     ) internal {
         (uint32 chainId, bytes32 returnedProgramID, string[] memory logMessages) =
             CROSS_L2_PROVER.validateSolLogs(proof);
-        require(chainId == 2, "Must be from Solana");
+
+        require(chainId == POLYMER_SOLANA_CHAIN_ID, NotSolanaMessage());
 
         uint256 remoteChainId = _getChainId(uint256(chainId));
 
@@ -203,17 +140,20 @@ contract PolymerOracle is BaseInputOracle {
         for (uint256 i = 0; i < logMessages.length; i++) {
             bytes memory logBytes = bytes(logMessages[i]);
 
-            (bool ok, bytes32 application, bytes32 payloadHash) = _isValidLog(appSep, hashSep, expectedLen, logBytes);
-            if (!ok) continue;
+            (bytes32 application, bytes32 payloadHash) = _isValidLog(appSep, hashSep, expectedLen, logBytes);
+            // It is okay to do a single check here since both of the return values are bytes32(0) if the log is
+            // invalid.
+            if (application == bytes32(0)) continue;
 
             _attestations[remoteChainId][returnedProgramID][application][payloadHash] = true;
             emit OutputProven(remoteChainId, returnedProgramID, application, payloadHash);
 
             foundValidLog = true;
+            // Only one valid log per proof is allowed.
             break;
         }
 
-        require(foundValidLog, "No valid log message found in proof");
+        require(foundValidLog, NoValidLogFound());
     }
 
     function receiveMessage(
