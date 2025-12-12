@@ -8,8 +8,8 @@ import { MandateOutput } from "src/input/types/MandateOutputType.sol";
 import { PolymerOracle } from "src/integrations/oracles/polymer/PolymerOracle.sol";
 import { PolymerOracleMapped } from "src/integrations/oracles/polymer/PolymerOracleMapped.sol";
 import { MockCrossL2ProverV2 } from "src/integrations/oracles/polymer/external/mocks/MockCrossL2ProverV2.sol";
-import { LibAddress } from "src/libs/LibAddress.sol";
 import { HexBytes } from "src/libs/HexBytesLib.sol";
+import { LibAddress } from "src/libs/LibAddress.sol";
 
 import { MockERC20 } from "../../mocks/MockERC20.sol";
 import { InputSettlerBase } from "src/input/InputSettlerBase.sol";
