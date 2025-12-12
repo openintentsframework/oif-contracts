@@ -112,6 +112,57 @@ contract MockCrossL2ProverV2 is CrossL2ProverV2 {
     }
 
     /**
+     * @dev Modified validateSolLogs for testing. Skips signature and membership verification
+     * to focus on proof structure and log message parsing.
+     */
+    function validateSolLogs(
+        bytes calldata proof
+    ) external pure override returns (uint32 chainId, bytes32 programID, string[] memory logMessages) {
+        // Extract chainId from proof[97:101]
+        chainId = uint32(bytes4(proof[97:101]));
+
+        // Skip sequencer signature verification (normally done with _verifySequencerSignature)
+        // In production, this ensures the proof is signed by the sequencer, but for testing,
+        // we assume a valid signature.
+
+        // Extract programID from proof[182:214]
+        programID = bytes32(proof[182:214]);
+
+        // Extract number of log messages from proof[117]
+        uint8 numLogMessages = uint8(proof[117]);
+        logMessages = new string[](numLogMessages);
+
+        // Parse log messages
+        //
+        // Layout in `proof` starting at byte 214 (after header, signature, chainId, heights, txSignature, programID):
+        //   For each log i:
+        //     - 2 bytes: big-endian end offset of this log within the proof buffer (absolute index, not length)
+        //     - N bytes: UTF-8 bytes of the log string itself
+        //
+        // So the first log looks like:
+        //   [ log0_end (2 bytes) ][ log0_bytes ... up to log0_end-1 ]
+        // The second log immediately follows, starting at log0_end, with its own 2-byte end offset, etc.
+        uint256 currLogMessageStart = 214;
+        uint256 currentLogMessageEnd = 214; // Initialised for the 0-log edge case
+
+        for (uint256 i = 0; i < logMessages.length; ++i) {
+            // Read the absolute end offset of this log's bytes
+            currentLogMessageEnd = uint16(bytes2(proof[currLogMessageStart:currLogMessageStart + 2]));
+            require(currentLogMessageEnd <= proof.length, "Log message end exceeds proof length");
+
+            // Slice out the log string bytes (skip the 2-byte end offset)
+            logMessages[i] = string(proof[currLogMessageStart + 2:currentLogMessageEnd]);
+
+            // Next log starts where this one ends
+            currLogMessageStart = currentLogMessageEnd;
+        }
+
+        // Skip IAVL proof verification (normally done with verifyMembership)
+        // In production, this checks the log's inclusion in the state root, but for testing,
+        // we assume membership is valid.
+    }
+
+    /**
      * @dev Helper function to generate a mock proof for testing.
      * @param chainId_ Source chain ID.
      * @param numTopics Number of topics in the event.
@@ -182,6 +233,110 @@ contract MockCrossL2ProverV2 is CrossL2ProverV2 {
 
         // iavlProof (dummy, 32 bytes)
         for (uint256 i = eventEnd; i < proof.length; i++) {
+            proof[i] = bytes1(0);
+        }
+
+        return proof;
+    }
+
+    /**
+     * @dev Generates a mock Solana proof and emits it for local testing.
+     * @param chainId_ Source chain ID (should be 2 for Solana).
+     * @param programID Solana program ID that emitted the logs.
+     * @param logMessages Array of log message strings.
+     * @return Mock proof bytes.
+     */
+    function generateAndEmitSolProof(
+        uint32 chainId_,
+        bytes32 programID,
+        string[] memory logMessages
+    ) external returns (bytes memory) {
+        require(logMessages.length > 0, "At least one log message required");
+
+        bytes memory proof = generateMockSolProof(chainId_, programID, logMessages);
+
+        emit ProofGenerated(proof);
+        return proof;
+    }
+
+    /**
+     * @dev Helper function to generate a mock Solana proof for testing.
+     * @param chainId_ Source chain ID (should be 2 for Solana).
+     * @param programID Solana program ID that emitted the logs.
+     * @param logMessages_ Array of log message strings.
+     * @return Mock proof bytes.
+     */
+    function generateMockSolProof(
+        uint32 chainId_,
+        bytes32 programID,
+        string[] memory logMessages_
+    ) public pure returns (bytes memory) {
+        require(logMessages_.length > 0, "At least one log message required");
+        require(logMessages_.length <= 255, "Too many log messages");
+
+        // Calculate total length of all log messages
+        uint256 totalLogLength = 0;
+        for (uint256 i = 0; i < logMessages_.length; i++) {
+            totalLogLength += bytes(logMessages_[i]).length + 2; // +2 for the 2-byte length prefix
+        }
+
+        // Calculate proof length:
+        // - Fixed header: 214 bytes (state root + signature + chainId + heights + numLogs + txSig + programID)
+        // - Log messages: totalLogLength bytes
+        // - IAVL proof: 32 bytes (dummy)
+        uint256 proofLength = 214 + totalLogLength + 32;
+
+        bytes memory proof = new bytes(proofLength);
+
+        // Leave fixed fields with dummy values (already 0)
+        // - stateRoot (32 bytes): dummy
+        // - signature (65 bytes): dummy
+
+        // Populate chainId (4 bytes) at proof[97:101]
+        bytes4 chainIdBytes = bytes4(chainId_);
+        for (uint256 i = 0; i < 4; i++) {
+            proof[97 + i] = chainIdBytes[i];
+        }
+
+        // peptideHeight (proof[101:109]) - dummy value of 100
+        proof[108] = bytes1(uint8(100));
+
+        // blockHeight (proof[109:117]) - dummy value of 200
+        proof[116] = bytes1(uint8(200));
+
+        // number of log messages (proof[117])
+        proof[117] = bytes1(uint8(logMessages_.length));
+
+        // txSignature high (proof[118:150]) - dummy value
+        // txSignature low (proof[150:182]) - dummy value
+        // (already 0)
+
+        // programID (proof[182:214])
+        for (uint256 i = 0; i < 32; i++) {
+            proof[182 + i] = programID[i];
+        }
+
+        // Encode log messages starting at proof[214]
+        uint256 offset = 214;
+        for (uint256 i = 0; i < logMessages_.length; i++) {
+            bytes memory logBytes = bytes(logMessages_[i]);
+            uint256 logEnd = offset + 2 + logBytes.length;
+
+            // Write 2-byte length prefix (big endian)
+            bytes2 logEndBytes = bytes2(uint16(logEnd));
+            proof[offset] = logEndBytes[0];
+            proof[offset + 1] = logEndBytes[1];
+
+            // Write log message content
+            for (uint256 j = 0; j < logBytes.length; j++) {
+                proof[offset + 2 + j] = logBytes[j];
+            }
+
+            offset = logEnd;
+        }
+
+        // IAVL proof (dummy, 32 bytes)
+        for (uint256 i = offset; i < proof.length; i++) {
             proof[i] = bytes1(0);
         }
 
