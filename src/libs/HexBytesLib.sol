@@ -2,17 +2,21 @@
 pragma solidity ^0.8.26;
 import { Bytes } from "@openzeppelin/contracts/utils/Bytes.sol";
 
-/// @title HexBytes
-/// @notice Utility functions for working with hex-encoded data in bytes and string form.
-/// @dev Provides helpers for parsing hex strings and matching/slicing byte arrays.
+/**
+ * @title HexBytes
+ * @notice Utility functions for working with hex-encoded data in bytes and string form.
+ * @dev Provides helpers for parsing hex strings and matching/slicing byte arrays.
+ */
 library HexBytes {
     error InvalidHexChar();
     error InvalidHexBytes32Length();
 
-    /// @notice Converts a single ASCII hex character to its numeric value.
-    /// @dev Accepts characters in the ranges '0'-'9', 'a'-'f', and 'A'-'F'; reverts with `InvalidHexChar` otherwise.
-    /// @param c The ASCII code of the hex character.
-    /// @return The numeric value corresponding to `c` in the range [0, 15].
+    /**
+     * @notice Converts a single ASCII hex character to its numeric value.
+     * @dev Accepts characters in the ranges '0'-'9', 'a'-'f', and 'A'-'F'; reverts with `InvalidHexChar` otherwise.
+     * @param c The ASCII code of the hex character.
+     * @return The numeric value corresponding to `c` in the range [0, 15].
+     */
     function fromHexChar(
         uint8 c
     ) internal pure returns (uint8) {
@@ -28,13 +32,16 @@ library HexBytes {
         revert InvalidHexChar();
     }
 
-    /// @notice Parses a hex string into a `bytes32` value.
-    /// @dev
-    /// - Accepts an optional `"0x"` / `"0X"` prefix.
-    /// - Requires exactly 64 hex characters after the optional prefix; otherwise reverts with
-    /// `InvalidHexBytes32Length`. - Reverts with `InvalidHexChar` if any character is not a valid hex digit.
-    /// @param str The hex string to parse.
-    /// @return result The parsed `bytes32` value.
+    /**
+     * @notice Parses a hex string into a `bytes32` value.
+     * @dev
+     * - Accepts an optional `"0x"` / `"0X"` prefix.
+     * - Requires exactly 64 hex characters after the optional prefix; otherwise reverts with
+     *   `InvalidHexBytes32Length`.
+     * - Reverts with `InvalidHexChar` if any character is not a valid hex digit.
+     * @param str The hex string to parse.
+     * @return result The parsed `bytes32` value.
+     */
     function hexStringToBytes32(
         string memory str
     ) internal pure returns (bytes32 result) {
@@ -51,12 +58,14 @@ library HexBytes {
         }
     }
 
-    /// @notice Returns a slice of `data` starting at `start` with length `len`.
-    /// @dev Thin wrapper around OpenZeppelin `Bytes.slice` that uses `(start, len)` instead of `(start, end)`.
-    /// @param data The source byte array.
-    /// @param start The starting index in `data` (inclusive).
-    /// @param len The number of bytes to include in the returned slice.
-    /// @return A new bytes array containing `len` bytes from `data` starting at `start`.
+    /**
+     * @notice Returns a slice of `data` starting at `start` with length `len`.
+     * @dev Thin wrapper around OpenZeppelin `Bytes.slice` that uses `(start, len)` instead of `(start, end)`.
+     * @param data The source byte array.
+     * @param start The starting index in `data` (inclusive).
+     * @param len The number of bytes to include in the returned slice.
+     * @return A new bytes array containing `len` bytes from `data` starting at `start`.
+     */
     function sliceFromBytes(
         bytes memory data,
         uint256 start,
@@ -68,14 +77,16 @@ library HexBytes {
         return Bytes.slice(data, start, start + len);
     }
 
-    /// @notice Checks whether `subject` has `prefix` starting at index `start`.
-    /// @dev Returns `false` if `start + prefix.length` exceeds `subject.length`.
-    /// @dev This function is inspired by
-    /// https://github.com/Vectorized/solady/blob/cbcfe0009477aa329574f17e8db0a05703bb8bdd/src/utils/LibBytes.sol#L382-L395.
-    /// @param subject The byte array to search within.
-    /// @param prefix The prefix to compare against.
-    /// @param start The starting index in `subject` at which to compare `prefix`.
-    /// @return result `true` if `subject[start : start + prefix.length]` equals `prefix`, otherwise `false`.
+    /**
+     * @notice Checks whether `subject` has `prefix` starting at index `start`.
+     * @dev Returns `false` if `start + prefix.length` exceeds `subject.length`.
+     * @dev This function is inspired by
+     * https://github.com/Vectorized/solady/blob/cbcfe0009477aa329574f17e8db0a05703bb8bdd/src/utils/LibBytes.sol#L382-L395.
+     * @param subject The byte array to search within.
+     * @param prefix The prefix to compare against.
+     * @param start The starting index in `subject` at which to compare `prefix`.
+     * @return result `true` if `subject[start : start + prefix.length]` equals `prefix`, otherwise `false`.
+     */
     function hasPrefix(
         bytes memory subject,
         bytes memory prefix,

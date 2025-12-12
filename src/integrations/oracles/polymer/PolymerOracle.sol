@@ -79,9 +79,11 @@ contract PolymerOracle is BaseInputOracle {
 
     /// ************** Solana Processing ************** ///
 
-    /// @dev Validates and parses a single Solana log line.
-    /// Expects the format: "Application: 0x<64 hex>, PayloadHash: 0x<64 hex>".
-    /// Returns (application, payloadHash) if the line matches, otherwise (0, 0).
+    /**
+     * @dev Validates and parses a single Solana log line.
+     * Expects the format: "Application: 0x<64 hex>, PayloadHash: 0x<64 hex>".
+     * Returns (application, payloadHash) if the line matches, otherwise (0, 0).
+     */
     function _isValidLog(
         bytes memory applicationSeparator,
         bytes memory payloadHashSeparator,
