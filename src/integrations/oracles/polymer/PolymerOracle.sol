@@ -79,11 +79,9 @@ contract PolymerOracle is BaseInputOracle {
 
     /// ************** Solana Processing ************** ///
 
-    /**
-     * @dev Validates and parses a single Solana log line.
-     * Expects the format: "Application: 0x<64 hex>, PayloadHash: 0x<64 hex>".
-     * Returns (application, payloadHash) if the line matches, otherwise (0, 0).
-     */
+    /// @dev Validates and parses a single Solana log line.
+    /// Expects the format: "Application: 0x<64 hex>, PayloadHash: 0x<64 hex>".
+    /// Returns (application, payloadHash) if the line matches, otherwise (0, 0).
     function _isValidLog(
         bytes memory applicationSeparator,
         bytes memory payloadHashSeparator,
@@ -145,7 +143,7 @@ contract PolymerOracle is BaseInputOracle {
             (bytes32 application, bytes32 payloadHash) = _isValidLog(appSep, hashSep, expectedLen, logBytes);
             // It is okay to do a single check here since both of the return values are bytes32(0) if the log is
             // invalid.
-            if (application == bytes32(0)) continue;
+            if (payloadHash == bytes32(0)) continue;
 
             _attestations[remoteChainId][returnedProgramID][application][payloadHash] = true;
             emit OutputProven(remoteChainId, returnedProgramID, application, payloadHash);

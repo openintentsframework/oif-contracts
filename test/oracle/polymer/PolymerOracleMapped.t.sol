@@ -372,6 +372,50 @@ contract PolymerOracleMappedTest is Test {
         polymerOracleMapped.receiveSolanaMessage(mockProof2);
     }
 
+    function test_receiveSolanaMessage_multiple_proofs_batch_mapped() public {
+        uint32 solanaChainId = 2;
+        bytes32 programID = keccak256("solana-program");
+
+        bytes32 application1 = makeAddr("settler1").toIdentifier();
+        bytes32 payloadHash1 = keccak256("test-payload-hash-1");
+
+        bytes32 application2 = makeAddr("settler2").toIdentifier();
+        bytes32 payloadHash2 = keccak256("test-payload-hash-2");
+
+        string memory logMessage1 = string.concat(
+            "Application: 0x", _bytes32ToHex(application1), ", PayloadHash: 0x", _bytes32ToHex(payloadHash1)
+        );
+
+        string memory logMessage2 = string.concat(
+            "Application: 0x", _bytes32ToHex(application2), ", PayloadHash: 0x", _bytes32ToHex(payloadHash2)
+        );
+
+        string[] memory logMessages1 = new string[](1);
+        logMessages1[0] = logMessage1;
+
+        string[] memory logMessages2 = new string[](1);
+        logMessages2[0] = logMessage2;
+
+        bytes memory mockProof1 = mockCrossL2ProverV2.generateAndEmitSolProof(solanaChainId, programID, logMessages1);
+        bytes memory mockProof2 = mockCrossL2ProverV2.generateAndEmitSolProof(solanaChainId, programID, logMessages2);
+
+        uint256 remoteChainId = uint256(solanaChainId);
+
+        vm.prank(owner);
+        polymerOracleMapped.setChainMap(remoteChainId, remoteChainId);
+
+        vm.expectEmit();
+        emit OutputProven(remoteChainId, programID, application1, payloadHash1);
+        vm.expectEmit();
+        emit OutputProven(remoteChainId, programID, application2, payloadHash2);
+
+        bytes[] memory proofs = new bytes[](2);
+        proofs[0] = mockProof1;
+        proofs[1] = mockProof2;
+
+        polymerOracleMapped.receiveSolanaMessage(proofs);
+    }
+
     function test_receiveSolanaMessage_wrong_chain_id_mapped_reverts() public {
         uint32 wrongChainId = 1; // Not Solana (should be 2)
         bytes32 programID = keccak256("solana-program");
