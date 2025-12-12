@@ -3,7 +3,7 @@ pragma solidity ^0.8.26;
 
 import { HexBytes } from "../../../libs/HexBytesLib.sol";
 import { LibAddress } from "../../../libs/LibAddress.sol";
-import { Bytes } from "@openzeppelin/contracts/utils/Bytes.sol";
+import { Bytes } from "openzeppelin/utils/Bytes.sol";
 
 import { MandateOutput, MandateOutputEncodingLib } from "../../../libs/MandateOutputEncodingLib.sol";
 
