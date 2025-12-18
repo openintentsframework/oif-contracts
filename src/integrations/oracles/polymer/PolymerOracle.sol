@@ -22,7 +22,13 @@ contract PolymerOracle is BaseInputOracle {
     error NotSolanaMessage();
     error NoValidLogFound();
 
-    uint256 constant POLYMER_SOLANA_CHAIN_ID = 2;
+    uint256 constant SOLANA_POLYMER_CHAIN_ID = 2;
+    bytes constant SOLANA_APPLICATION_SEPARATOR = bytes("Application: ");
+    bytes constant SOLANA_PAYLOAD_HASH_SEPARATOR = bytes(", PayloadHash: ");
+    uint256 constant SOLANA_HEX_STRING_LENGTH = 66; // 32 bytes as hex plus "0x" prefix
+    // 13 ("Application: ") + 66 (0x + 64 hex chars) + 15 (", PayloadHash: ") + 66 (0x + 64 hex chars) = 160
+    uint256 constant SOLANA_EXPECTED_LOG_LENGTH = 13 + 66 + 15 + 66;
+
     ICrossL2ProverV2 CROSS_L2_PROVER;
 
     constructor(
@@ -81,44 +87,41 @@ contract PolymerOracle is BaseInputOracle {
 
     /// @dev Validates and parses a single Solana log line.
     /// Expects the format: "Application: 0x<64 hex>, PayloadHash: 0x<64 hex>".
-    /// Returns (application, payloadHash) if the line matches, otherwise (0, 0).
+    /// Returns (application, payloadHash) if the log is valid, otherwise (0, 0).
     function _isValidLog(
-        bytes memory applicationSeparator,
-        bytes memory payloadHashSeparator,
-        uint256 expectedLen,
         bytes memory logBytes
     ) internal pure returns (bytes32 application, bytes32 payloadHash) {
         // Quick length check
-        if (logBytes.length != expectedLen) return (bytes32(0), bytes32(0));
+        if (logBytes.length != SOLANA_EXPECTED_LOG_LENGTH) return (bytes32(0), bytes32(0));
 
-        if (!HexBytes.hasPrefix(logBytes, applicationSeparator, 0)) return (bytes32(0), bytes32(0));
+        if (!HexBytes.hasPrefix(logBytes, SOLANA_APPLICATION_SEPARATOR, 0)) return (bytes32(0), bytes32(0));
 
         // Application: "0x" + 64 hex chars → 66 characters
-        uint256 idx = applicationSeparator.length;
-        string memory applicationStr = string(HexBytes.sliceFromBytes(logBytes, idx, 66));
+        uint256 idx = SOLANA_APPLICATION_SEPARATOR.length;
+        bytes memory applicationHexBytes = HexBytes.sliceFromBytes(logBytes, idx, 66);
         idx += 66;
 
         // Expect exact ", PayloadHash: " separator
-        if (!HexBytes.hasPrefix(logBytes, payloadHashSeparator, idx)) return (bytes32(0), bytes32(0));
-        idx += payloadHashSeparator.length;
+        if (!HexBytes.hasPrefix(logBytes, SOLANA_PAYLOAD_HASH_SEPARATOR, idx)) return (bytes32(0), bytes32(0));
+        idx += SOLANA_PAYLOAD_HASH_SEPARATOR.length;
 
         // PayloadHash: "0x" + 64 hex chars → 66 characters
-        string memory payloadHashStr = string(HexBytes.sliceFromBytes(logBytes, idx, 66));
+        bytes memory payloadHexBytes = HexBytes.sliceFromBytes(logBytes, idx, 66);
         idx += 66;
 
         // Sanity: must be at end of line
         if (idx != logBytes.length) return (bytes32(0), bytes32(0));
 
-        // Parse hex strings into bytes32
-        application = HexBytes.hexStringToBytes32(applicationStr);
-        payloadHash = HexBytes.hexStringToBytes32(payloadHashStr);
+        // Parse hex bytes into bytes32
+        application = HexBytes.hexBytesToBytes32(applicationHexBytes);
+        payloadHash = HexBytes.hexBytesToBytes32(payloadHexBytes);
     }
 
     /**
-     * @dev the log emitted is in the format:
+     * @dev The Solana program emits a log in the format:
      *  "Prove: program: <programID>, Application: <application>, PayloadHash: <payloadHash>"
-     *  The prover validates it and returns a log in the format:
-     *  "Application: <application>, PayloadHash: <payloadHash>"
+     *  where `<application>` and `<payloadHash>` are 32-byte values encoded as hex strings:
+     *  the ASCII characters `"0x"` followed by 64 lowercase hex characters (i.e. 0x + 32 bytes).
      */
     function _processSolanaMessage(
         bytes calldata proof
@@ -126,24 +129,18 @@ contract PolymerOracle is BaseInputOracle {
         (uint32 chainId, bytes32 returnedProgramID, string[] memory logMessages) =
             CROSS_L2_PROVER.validateSolLogs(proof);
 
-        require(chainId == POLYMER_SOLANA_CHAIN_ID, NotSolanaMessage());
+        require(chainId == SOLANA_POLYMER_CHAIN_ID, NotSolanaMessage());
 
         uint256 remoteChainId = _getChainId(uint256(chainId));
-
-        bytes memory appSep = bytes("Application: ");
-        bytes memory hashSep = bytes(", PayloadHash: ");
-
-        uint256 hexLen = 66; // 32 bytes as hex plus "0x" prefix
-        uint256 expectedLen = appSep.length + hexLen + hashSep.length + hexLen;
 
         bool foundValidLog = false;
         for (uint256 i = 0; i < logMessages.length; i++) {
             bytes memory logBytes = bytes(logMessages[i]);
 
-            (bytes32 application, bytes32 payloadHash) = _isValidLog(appSep, hashSep, expectedLen, logBytes);
+            (bytes32 application, bytes32 payloadHash) = _isValidLog(logBytes);
             // It is okay to do a single check here since both of the return values are bytes32(0) if the log is
             // invalid.
-            if (payloadHash == bytes32(0)) continue;
+            if (application == bytes32(0)) continue;
 
             _attestations[remoteChainId][returnedProgramID][application][payloadHash] = true;
             emit OutputProven(remoteChainId, returnedProgramID, application, payloadHash);

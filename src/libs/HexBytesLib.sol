@@ -4,8 +4,7 @@ import { Bytes } from "@openzeppelin/contracts/utils/Bytes.sol";
 
 /**
  * @title HexBytes
- * @notice Utility functions for working with hex-encoded data in bytes and string form.
- * @dev Provides helpers for parsing hex strings and matching/slicing byte arrays.
+ * @dev Provides helpers for parsing hex bytes32 in form of bytes and matching/slicing byte arrays.
  */
 library HexBytes {
     error InvalidHexChar();
@@ -39,21 +38,20 @@ library HexBytes {
      * - Requires exactly 64 hex characters after the optional prefix; otherwise reverts with
      *   `InvalidHexBytes32Length`.
      * - Reverts with `InvalidHexChar` if any character is not a valid hex digit.
-     * @param str The hex string to parse.
+     * @param hexBytes32 The hex bytes32 in form of bytes to parse.
      * @return result The parsed `bytes32` value.
      */
-    function hexStringToBytes32(
-        string memory str
+    function hexBytesToBytes32(
+        bytes memory hexBytes32
     ) internal pure returns (bytes32 result) {
-        bytes memory s = bytes(str);
         uint256 start = 0;
         // Optional 0x / 0X prefix.
-        if (s.length >= 2 && s[0] == "0" && ((s[1] | 0x20) == "x")) start = 2;
-        require(s.length == start + 64, InvalidHexBytes32Length());
+        if (hexBytes32.length >= 2 && hexBytes32[0] == "0" && ((hexBytes32[1] | 0x20) == "x")) start = 2;
+        require(hexBytes32.length == start + 64, InvalidHexBytes32Length());
 
         for (uint256 i = 0; i < 32; ++i) {
-            uint8 high = fromHexChar(uint8(s[start + 2 * i])); // first hex char
-            uint8 low = fromHexChar(uint8(s[start + 2 * i + 1])); // second hex char
+            uint8 high = fromHexChar(uint8(hexBytes32[start + 2 * i])); // first hex char
+            uint8 low = fromHexChar(uint8(hexBytes32[start + 2 * i + 1])); // second hex char
             result |= bytes32(uint256(uint8((high << 4) | low)) << (248 - i * 8)); // Combine without overwriting
         }
     }
