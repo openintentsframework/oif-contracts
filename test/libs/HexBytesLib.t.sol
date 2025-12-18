@@ -8,11 +8,15 @@ import { HexBytes } from "src/libs/HexBytesLib.sol";
 
 contract HexBytesLibTest is Test {
     // Helper wrappers so we can use `vm.expectRevert` on the library calls (revert must occur in a deeper frame).
-    function _call_fromHexChar(uint8 c) external pure {
+    function _call_fromHexChar(
+        uint8 c
+    ) external pure {
         HexBytes.fromHexChar(c);
     }
 
-    function _call_hexBytesToBytes32(bytes memory input) external pure {
+    function _call_hexBytesToBytes32(
+        bytes memory input
+    ) external pure {
         HexBytes.hexBytesToBytes32(input);
     }
 
@@ -103,8 +107,7 @@ contract HexBytesLibTest is Test {
     }
 
     function test_hexBytesToBytes32_mixed_pattern_with_prefix() public pure {
-        bytes memory input =
-            bytes("0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
+        bytes memory input = bytes("0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
 
         bytes32 result = HexBytes.hexBytesToBytes32(input);
         assertEq(result, hex"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
@@ -112,8 +115,7 @@ contract HexBytesLibTest is Test {
 
     function test_hexBytesToBytes32_invalid_length_short_reverts() public {
         // 62 hex chars instead of 64
-        bytes memory input =
-            bytes("00000000000000000000000000000000000000000000000000000000000000");
+        bytes memory input = bytes("00000000000000000000000000000000000000000000000000000000000000");
 
         vm.expectRevert(HexBytes.InvalidHexBytes32Length.selector);
         this._call_hexBytesToBytes32(input);
@@ -121,8 +123,7 @@ contract HexBytesLibTest is Test {
 
     function test_hexBytesToBytes32_invalid_length_long_reverts() public {
         // 66 hex chars instead of 64
-        bytes memory input =
-            bytes("000000000000000000000000000000000000000000000000000000000000000000");
+        bytes memory input = bytes("000000000000000000000000000000000000000000000000000000000000000000");
 
         vm.expectRevert(HexBytes.InvalidHexBytes32Length.selector);
         this._call_hexBytesToBytes32(input);
@@ -130,8 +131,7 @@ contract HexBytesLibTest is Test {
 
     function test_hexBytesToBytes32_invalid_hex_char_reverts() public {
         // Contains 'g', which is not valid hex
-        bytes memory input =
-            bytes("gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg");
+        bytes memory input = bytes("gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg");
 
         vm.expectRevert(HexBytes.InvalidHexChar.selector);
         this._call_hexBytesToBytes32(input);

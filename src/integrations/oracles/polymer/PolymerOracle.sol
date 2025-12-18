@@ -20,7 +20,6 @@ contract PolymerOracle is BaseInputOracle {
 
     error WrongEventSignature();
     error NotSolanaMessage();
-    error NoValidLogFound();
 
     uint256 constant SOLANA_POLYMER_CHAIN_ID = 2;
     bytes constant SOLANA_APPLICATION_SEPARATOR = bytes("Application: ");
@@ -133,7 +132,6 @@ contract PolymerOracle is BaseInputOracle {
 
         uint256 remoteChainId = _getChainId(uint256(chainId));
 
-        bool foundValidLog = false;
         for (uint256 i = 0; i < logMessages.length; i++) {
             bytes memory logBytes = bytes(logMessages[i]);
 
@@ -144,13 +142,7 @@ contract PolymerOracle is BaseInputOracle {
 
             _attestations[remoteChainId][returnedProgramID][application][payloadHash] = true;
             emit OutputProven(remoteChainId, returnedProgramID, application, payloadHash);
-
-            foundValidLog = true;
-            // Only one valid log per proof is allowed.
-            break;
         }
-
-        require(foundValidLog, NoValidLogFound());
     }
 
     function receiveMessage(

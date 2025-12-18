@@ -460,25 +460,4 @@ contract PolymerOracleMappedTest is Test {
         vm.expectRevert(HexBytes.InvalidHexChar.selector);
         polymerOracleMapped.receiveSolanaMessage(mockProof);
     }
-
-    function test_receiveSolanaMessage_malformed_log_reverts() public {
-        uint32 solanaChainId = 2;
-        bytes32 programID = keccak256("solana-program");
-
-        // Missing required "Application: " prefix / separator; will not match parser pattern
-        string memory logMessage = "Malformed log that does not match expected format";
-
-        string[] memory logMessages = new string[](1);
-        logMessages[0] = logMessage;
-
-        bytes memory mockProof = mockCrossL2ProverV2.generateAndEmitSolProof(solanaChainId, programID, logMessages);
-
-        uint256 remoteChainId = uint256(solanaChainId);
-        vm.prank(owner);
-        polymerOracleMapped.setChainMap(remoteChainId, remoteChainId);
-
-        // No log line will be recognised as valid; expect dedicated error
-        vm.expectRevert(PolymerOracle.NoValidLogFound.selector);
-        polymerOracleMapped.receiveSolanaMessage(mockProof);
-    }
 }
