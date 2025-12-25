@@ -1,0 +1,425 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.26;
+
+import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
+import {SafeERC20} from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
+import {LibAddress} from "../../libs/LibAddress.sol";
+import {IsContractLib} from "../../libs/IsContractLib.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+
+/**
+ * @title BondManager
+ * @notice Manages ERC20 token bonds for solvers with deposit, withdrawal, locking, and slashing functionality
+ */
+
+contract BondManager {
+    using SafeERC20 for IERC20;
+    using LibAddress for uint256;
+
+    // ------------------------- Errors -------------------------
+
+    error ZeroAmount();
+    error InvalidToken(address token);
+    error InvalidSender();
+    error AmountExceedsAvailableAmount(
+        address solver,
+        address token,
+        uint256 amount
+    );
+    error AmountExceedsLockedAmount(
+        address solver,
+        address token,
+        uint256 amount
+    );
+    error SlashBasisPointsTooHigh(uint256 slashBasisPoints);
+
+    // ------------------------- Types -------------------------
+
+    struct BondState {
+        /// @dev Amount available for new orders
+        uint256 availableAmount;
+        /// @dev Amount currently locked in active orders
+        uint256 lockedAmount;
+    }
+
+    // ------------------------- Events -------------------------
+
+    /// @notice Emitted when a solver deposits bond tokens
+    event BondDeposited(
+        address indexed solver,
+        address indexed token,
+        uint256 amount
+    );
+
+    /// @notice Emitted when a solver withdraws available bond tokens
+    event BondWithdrawn(
+        address indexed solver,
+        address indexed token,
+        uint256 amount
+    );
+
+    /// @notice Emitted when a solver's bond is locked
+    event BondLocked(
+        address indexed solver,
+        address indexed token,
+        uint256 amount
+    );
+
+    /// @notice Emitted when a solver's bond is unlocked
+    event BondUnlocked(
+        address indexed solver,
+        address indexed token,
+        uint256 amount
+    );
+
+    /// @notice Emitted when a failed solver's locked bond is penalized and transferred to the recipient
+    event BondPenalized(
+        address indexed solver,
+        address indexed recipient,
+        address indexed token,
+        uint256 amount
+    );
+
+    /// @notice Emitted when a failed solver's locked bond is slashed and transferred to the recipient
+    event BondSlashed(
+        address indexed solver,
+        address indexed recipient,
+        address indexed token,
+        uint256 amount
+    );
+
+    // ------------------------- Constants / Storage -------------------------
+
+    /// @dev Denominator for basis points calculations (100% = 10,000 BPS)
+    uint256 private constant BPS_DENOMINATOR = 10_000;
+    uint256 public immutable SLASH_BPS;
+
+    mapping(address solver => mapping(address token => BondState))
+        private _bondStates;
+
+    // ------------------------- Constructor -------------------------
+
+    /**
+     * @notice Initialize BondManager with slash basis points
+     * @param slashBasisPoints The penalty percentage in basis points (0-10000)
+     */
+    constructor(uint256 slashBasisPoints) {
+        if (slashBasisPoints > BPS_DENOMINATOR) {
+            revert SlashBasisPointsTooHigh(slashBasisPoints);
+        }
+        SLASH_BPS = slashBasisPoints;
+    }
+
+    // ---------------------- External Functions ----------------------
+
+    /**
+     * @notice Deposit ERC20 tokens as bond for the caller
+     * @param token The ERC20 token address to deposit
+     * @param amount The amount of tokens to deposit (must be > 0)
+     */
+    function depositBond(address token, uint256 amount) external {
+        _validateZeroAmount(amount);
+        _validateToken(token);
+
+        IERC20 tokenContract = IERC20(token);
+
+        uint256 beforeBalance = tokenContract.balanceOf(address(this));
+        tokenContract.safeTransferFrom(msg.sender, address(this), amount);
+        uint256 afterBalance = tokenContract.balanceOf(address(this));
+
+        uint256 receivedAmount = afterBalance - beforeBalance;
+        _validateZeroAmount(receivedAmount);
+
+        _bondStates[msg.sender][token].availableAmount += receivedAmount;
+        emit BondDeposited(msg.sender, token, receivedAmount);
+    }
+
+    /**
+     * @notice Withdraw available bond tokens to the caller
+     * @param token The ERC20 token address to withdraw from
+     * @param amount The amount of tokens to withdraw
+     */
+    function withdrawBond(address token, uint256 amount) external {
+        _validateZeroAmount(amount);
+        _validateToken(token);
+
+        BondState storage bondState = _bondStates[msg.sender][token];
+        if (amount > bondState.availableAmount) {
+            revert AmountExceedsAvailableAmount(msg.sender, token, amount);
+        }
+
+        bondState.availableAmount -= amount;
+        IERC20(token).safeTransfer(msg.sender, amount);
+
+        emit BondWithdrawn(msg.sender, token, amount);
+    }
+
+    /**
+     * @notice Get current bond state for a solver-token pair
+     * @param solver The solver address to query
+     * @param token The token address to query
+     * @return availableAmount Amount available for withdrawal or locking
+     * @return lockedAmount Amount currently locked
+     */
+    function getBondState(
+        address solver,
+        address token
+    ) external view returns (uint256 availableAmount, uint256 lockedAmount) {
+        BondState memory bondState = _bondStates[solver][token];
+        return (bondState.availableAmount, bondState.lockedAmount);
+    }
+
+    // ---------------------- Internal Functions ----------------------
+
+    /**
+     * @notice Lock bonds for a solver
+     * @param solver The solver address whose bonds will be locked
+     * @param token The token address to lock
+     * @param amount The amount of tokens to lock
+     */
+    function _lockBond(address solver, address token, uint256 amount) internal {
+        _validateZeroAmount(amount);
+        _validateToken(token);
+
+        BondState storage bondState = _bondStates[solver][token];
+
+        if (amount > bondState.availableAmount) {
+            revert AmountExceedsAvailableAmount(solver, token, amount);
+        }
+
+        bondState.availableAmount -= amount;
+        bondState.lockedAmount += amount;
+
+        emit BondLocked(solver, token, amount);
+    }
+
+    /**
+     * @notice Lock bonds for solver and transfer tokens from sender to solver
+     * @param sender The address to transfer tokens from
+     * @param solver The solver address whose bonds will be locked
+     * @param inputs The inputs of the order
+     */
+    function _lockBondsAndTransfer(
+        address sender,
+        address solver,
+        uint256[2][] calldata inputs
+    ) internal {
+        if (sender == address(this)) revert InvalidSender();
+
+        uint256 inputsLength = inputs.length;
+
+        for (uint256 i = 0; i < inputsLength; ++i) {
+            uint256[2] calldata input = inputs[i];
+            address token = input[0].validatedCleanAddress();
+            uint256 amount = input[1];
+
+            _lockBond(solver, token, amount);
+
+            IERC20(token).safeTransferFrom(sender, solver, amount);
+        }
+    }
+
+    /**
+     * @notice Unlock bonds of a solver
+     * @param solver The solver address whose bonds will be unlocked
+     * @param token The token address to unlock
+     * @param amount The amount of tokens to unlock
+     */
+    function _unlockBond(
+        address solver,
+        address token,
+        uint256 amount
+    ) internal {
+        _validateZeroAmount(amount);
+        _validateToken(token);
+
+        BondState storage bondState = _bondStates[solver][token];
+        if (amount > bondState.lockedAmount) {
+            revert AmountExceedsLockedAmount(solver, token, amount);
+        }
+
+        bondState.availableAmount += amount;
+        bondState.lockedAmount -= amount;
+
+        emit BondUnlocked(solver, token, amount);
+    }
+
+    /**
+     * @notice Unlock bonds for a solver across multiple tokens
+     * @param solver The solver address whose bonds will be unlocked
+     * @param inputs The inputs of the order
+     */
+    function _unlockBonds(
+        address solver,
+        uint256[2][] calldata inputs
+    ) internal {
+        uint256 inputsLength = inputs.length;
+
+        for (uint256 i = 0; i < inputsLength; ++i) {
+            uint256[2] calldata input = inputs[i];
+            address token = input[0].validatedCleanAddress();
+            uint256 amount = input[1];
+
+            _unlockBond(solver, token, amount);
+        }
+    }
+
+    /**
+     * @notice Unlock bonds for a solver and slash from their available balance
+     * @param solver The solver address whose bonds will be unlocked
+     * @param recipient The recipient address to receive the slashed tokens
+     * @param inputs The inputs of the order
+     */
+    function _unlockAndSlashBonds(
+        address solver,
+        address recipient,
+        uint256[2][] calldata inputs
+    ) internal {
+        uint256 inputsLength = inputs.length;
+
+        for (uint256 i = 0; i < inputsLength; ++i) {
+            uint256[2] calldata input = inputs[i];
+            address token = input[0].validatedCleanAddress();
+            uint256 amount = input[1];
+
+            _validateZeroAmount(amount);
+            _validateToken(token);
+
+            BondState storage bondState = _bondStates[solver][token];
+            if (amount > bondState.lockedAmount) {
+                revert AmountExceedsLockedAmount(solver, token, amount);
+            }
+
+            bondState.availableAmount += amount;
+            bondState.lockedAmount -= amount;
+
+            emit BondUnlocked(solver, token, amount);
+
+            uint256 slashAmount = _calculateSlashAmount(amount);
+            uint256 actualSlashAmount = Math.min(
+                slashAmount,
+                bondState.availableAmount
+            );
+
+            if (actualSlashAmount > 0) {
+                bondState.availableAmount -= actualSlashAmount;
+
+                IERC20(token).safeTransfer(recipient, actualSlashAmount);
+
+                emit BondSlashed(solver, recipient, token, actualSlashAmount);
+            }
+        }
+    }
+
+    /**
+     * @notice Penalize locked bonds and slash from available balance for a solver
+     * @param solver The solver address whose bonds will be penalized
+     * @param recipient The recipient address to receive the penalized and slashed tokens
+     * @param inputs The inputs of the order
+     */
+    function _penalizeAndSlashBonds(
+        address solver,
+        address recipient,
+        uint256[2][] calldata inputs
+    ) internal {
+        uint256 inputsLength = inputs.length;
+
+        for (uint256 i = 0; i < inputsLength; ++i) {
+            uint256[2] calldata input = inputs[i];
+            address token = input[0].validatedCleanAddress();
+            uint256 amount = input[1];
+
+            _validateZeroAmount(amount);
+            _validateToken(token);
+
+            BondState storage bondState = _bondStates[solver][token];
+
+            if (amount > bondState.lockedAmount) {
+                revert AmountExceedsLockedAmount(solver, token, amount);
+            }
+
+            bondState.lockedAmount -= amount;
+
+            uint256 slashAmount = _calculateSlashAmount(amount);
+            uint256 actualSlashAmount = Math.min(
+                slashAmount,
+                bondState.availableAmount
+            );
+
+            if (actualSlashAmount > 0) {
+                bondState.availableAmount -= actualSlashAmount;
+                emit BondSlashed(solver, recipient, token, actualSlashAmount);
+            }
+
+            IERC20(token).safeTransfer(recipient, amount + actualSlashAmount);
+
+            emit BondPenalized(solver, recipient, token, amount);
+        }
+    }
+
+    /**
+     * @notice Penalize locked bonds for a solver without slashing
+     * @param solver The solver address whose bonds will be penalized
+     * @param recipient The recipient address to receive the penalized tokens
+     * @param inputs The inputs of the order
+     */
+    function _penalizeBonds(
+        address solver,
+        address recipient,
+        uint256[2][] calldata inputs
+    ) internal {
+        uint256 inputsLength = inputs.length;
+
+        for (uint256 i = 0; i < inputsLength; ++i) {
+            uint256[2] calldata input = inputs[i];
+            address token = input[0].validatedCleanAddress();
+            uint256 amount = input[1];
+
+            _validateZeroAmount(amount);
+            _validateToken(token);
+
+            BondState storage bondState = _bondStates[solver][token];
+
+            if (amount > bondState.lockedAmount) {
+                revert AmountExceedsLockedAmount(solver, token, amount);
+            }
+
+            bondState.lockedAmount -= amount;
+
+            IERC20(token).safeTransfer(recipient, amount);
+
+            emit BondPenalized(solver, recipient, token, amount);
+        }
+    }
+
+    /**
+     * @dev Calculate slash amount using basis points with proper rounding
+     * @param amount The amount to calculate slash penalty for
+     * @return The calculated slash amount
+     */
+    function _calculateSlashAmount(
+        uint256 amount
+    ) private view returns (uint256) {
+        if (amount == 0 || SLASH_BPS == 0) {
+            return 0;
+        }
+        return Math.mulDiv(amount, SLASH_BPS, BPS_DENOMINATOR);
+    }
+
+    /**
+     * @dev Validate that the token address is valid and contains code
+     * @param token The token address to validate
+     */
+    function _validateToken(address token) internal view {
+        if (token == address(0)) revert InvalidToken(token);
+        IsContractLib.validateContainsCode(token);
+    }
+
+    /**
+     * @dev Validate that the amount is not zero
+     * @param amount The amount to validate
+     */
+    function _validateZeroAmount(uint256 amount) internal pure {
+        if (amount == 0) revert ZeroAmount();
+    }
+}
