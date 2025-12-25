@@ -6,6 +6,13 @@ import {SafeERC20} from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 import {LibAddress} from "../../libs/LibAddress.sol";
 import {IsContractLib} from "../../libs/IsContractLib.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {StandardOrder} from "../types/StandardOrderType.sol";
+import {Permit2WitnessType} from "../escrow/Permit2WitnessType.sol";
+import {
+    ISignatureTransfer
+} from "permit2/src/interfaces/ISignatureTransfer.sol";
+import {BytesLib} from "../../libs/BytesLib.sol";
+import {IERC3009} from "../../interfaces/IERC3009.sol";
 
 /**
  * @title BondManager
@@ -32,6 +39,7 @@ contract BondManager {
         uint256 amount
     );
     error SlashBasisPointsTooHigh(uint256 slashBasisPoints);
+    error SignatureAndInputsNotEqual();
 
     // ------------------------- Types -------------------------
 
@@ -90,12 +98,21 @@ contract BondManager {
 
     // ------------------------- Constants / Storage -------------------------
 
+    /// Signature types allowed.
+    bytes1 internal constant SIGNATURE_TYPE_PERMIT2 = 0x00;
+    bytes1 internal constant SIGNATURE_TYPE_3009 = 0x01;
+    bytes1 internal constant SIGNATURE_TYPE_SELF = 0xff;
+
     /// @dev Denominator for basis points calculations (100% = 10,000 BPS)
     uint256 private constant BPS_DENOMINATOR = 10_000;
     uint256 public immutable SLASH_BPS;
 
     mapping(address solver => mapping(address token => BondState))
         private _bondStates;
+
+    // Address of the Permit2 contract.
+    ISignatureTransfer constant PERMIT2 =
+        ISignatureTransfer(0x000000000022D473030F116dDEE9F6B43aC78BA3);
 
     // ------------------------- Constructor -------------------------
 
@@ -216,6 +233,138 @@ contract BondManager {
             _lockBond(solver, token, amount);
 
             IERC20(token).safeTransferFrom(sender, solver, amount);
+        }
+    }
+
+    /**
+     * @notice Helper function for using permit2 to lock bonds for solver and transfer tokens from signer to solver.
+     * @param order StandardOrder representing the intent.
+     * @param signer Provider of the permit2 funds and signer of the intent.
+     * @param signature permit2 signature with Permit2Witness representing `order` signed by `order.user`.
+     * @param solver The solver address whose bonds will be locked and who will receive the tokens.
+     */
+    function _lockBondsAndTransferWithPermit2(
+        StandardOrder calldata order,
+        address signer,
+        bytes calldata signature,
+        address solver
+    ) internal {
+        uint256 inputsLength = order.inputs.length;
+
+        ISignatureTransfer.TokenPermissions[]
+            memory permitted = new ISignatureTransfer.TokenPermissions[](
+                inputsLength
+            );
+        ISignatureTransfer.SignatureTransferDetails[]
+            memory transferDetails = new ISignatureTransfer.SignatureTransferDetails[](
+                inputsLength
+            );
+
+        for (uint256 i; i < inputsLength; ++i) {
+            uint256[2] calldata input = order.inputs[i];
+            address token = input[0].validatedCleanAddress();
+            uint256 amount = input[1];
+
+            _validateZeroAmount(amount);
+            _validateToken(token);
+
+            // Set the allowance. This is the explicit max allowed amount approved by the user.
+            permitted[i] = ISignatureTransfer.TokenPermissions({
+                token: token,
+                amount: amount
+            });
+            // Set our requested transfer. This has to be less than or equal to the allowance
+            transferDetails[i] = ISignatureTransfer.SignatureTransferDetails({
+                to: solver,
+                requestedAmount: amount
+            });
+
+            _lockBond(solver, token, amount);
+        }
+
+        ISignatureTransfer.PermitBatchTransferFrom
+            memory permitBatch = ISignatureTransfer.PermitBatchTransferFrom({
+                permitted: permitted,
+                nonce: order.nonce,
+                deadline: order.fillDeadline
+            });
+
+        PERMIT2.permitWitnessTransferFrom(
+            permitBatch,
+            transferDetails,
+            signer,
+            Permit2WitnessType.Permit2WitnessHash(order),
+            Permit2WitnessType.PERMIT2_PERMIT2_TYPESTRING,
+            signature
+        );
+    }
+
+    /**
+     * @notice Helper function for using ERC-3009 authorization to lock bonds for solver and transfer tokens from signer to solver.
+     * @dev For the `receiveWithAuthorization` call, the nonce is set as the orderId to select the order associated with the authorization.
+     * @param orderId The order identifier used as nonce for authorization.
+     * @param signer Provider of the ERC-3009 funds and signer of the authorization.
+     * @param _signature_ Either a single ERC-3009 signature or abi.encoded bytes[] of signatures.
+     * @param fillDeadline Deadline for calling the authorization.
+     * @param solver The solver address whose bonds will be locked and who will receive the tokens.
+     * @param inputs The inputs to be collected and locked.
+     */
+    function _lockBondsAndTransferWithAuthorization(
+        bytes32 orderId,
+        address signer,
+        bytes calldata _signature_,
+        uint32 fillDeadline,
+        address solver,
+        uint256[2][] calldata inputs
+    ) internal {
+        uint256 inputsLength = inputs.length;
+
+        if (inputsLength == 1) {
+            // If there is only 1 input, try using the provided signature as is.
+            uint256[2] calldata input = inputs[0];
+            address token = input[0].validatedCleanAddress();
+            uint256 amount = input[1];
+
+            _validateZeroAmount(amount);
+            _validateToken(token);
+
+            bytes memory callData = abi.encodeCall(
+                IERC3009.receiveWithAuthorization,
+                (signer, solver, amount, 0, fillDeadline, orderId, _signature_)
+            );
+            (bool success, ) = token.call(callData);
+
+            if (success) {
+                _lockBond(solver, token, amount);
+                return;
+            }
+            // Otherwise it could be because of a lot of reasons. One being the signature is abi.encoded as bytes[].
+        }
+        {
+            uint256 numSignatures = BytesLib.getLengthOfBytesArray(_signature_);
+            if (inputsLength != numSignatures)
+                revert SignatureAndInputsNotEqual();
+        }
+        for (uint256 i; i < inputsLength; ++i) {
+            uint256[2] calldata input = inputs[i];
+            address token = input[0].validatedCleanAddress();
+            uint256 amount = input[1];
+
+            _validateZeroAmount(amount);
+            _validateToken(token);
+
+            _lockBond(solver, token, amount);
+
+            bytes calldata signature = BytesLib.getBytesOfArray(_signature_, i);
+            IERC3009(token).receiveWithAuthorization({
+                from: signer,
+                to: solver,
+                value: amount,
+                validAfter: 0,
+                validBefore: fillDeadline,
+                nonce: orderId,
+                signature: signature
+            });
         }
     }
 

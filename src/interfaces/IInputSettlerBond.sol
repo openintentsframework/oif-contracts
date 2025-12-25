@@ -8,6 +8,14 @@ import {StandardOrder} from "../input/types/StandardOrderType.sol";
 import {InputSettlerBase} from "../input/InputSettlerBase.sol";
 
 interface IInputSettlerBond {
+    function openFor(
+        StandardOrder calldata order,
+        address sponsor,
+        bytes calldata signature,
+        address solver,
+        bytes calldata solverSignature
+    ) external;
+
     function open(
         StandardOrder calldata order,
         address solver,
