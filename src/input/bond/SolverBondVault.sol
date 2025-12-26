@@ -3,23 +3,27 @@ pragma solidity ^0.8.26;
 
 import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
 import {SafeERC20} from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
-import {LibAddress} from "../../libs/LibAddress.sol";
-import {IsContractLib} from "../../libs/IsContractLib.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {StandardOrder} from "../types/StandardOrderType.sol";
-import {Permit2WitnessType} from "../escrow/Permit2WitnessType.sol";
+import {Math} from "openzeppelin/utils/math/Math.sol";
+
 import {
     ISignatureTransfer
 } from "permit2/src/interfaces/ISignatureTransfer.sol";
-import {BytesLib} from "../../libs/BytesLib.sol";
+
 import {IERC3009} from "../../interfaces/IERC3009.sol";
 
+import {BytesLib} from "../../libs/BytesLib.sol";
+import {IsContractLib} from "../../libs/IsContractLib.sol";
+import {LibAddress} from "../../libs/LibAddress.sol";
+
+import {Permit2WitnessType} from "../escrow/Permit2WitnessType.sol";
+import {StandardOrder} from "../types/StandardOrderType.sol";
+
 /**
- * @title BondManager
- * @notice Manages ERC20 token bonds for solvers with deposit, withdrawal, locking, and slashing functionality
+ * @title SolverBondVault
+ * @notice Manages solver bond balances (deposit, withdraw, lock, unlock, penalize, slash) for ERC20 tokens.
  */
 
-contract BondManager {
+contract SolverBondVault {
     using SafeERC20 for IERC20;
     using LibAddress for uint256;
 
@@ -27,7 +31,6 @@ contract BondManager {
 
     error ZeroAmount();
     error InvalidToken(address token);
-    error InvalidSender();
     error AmountExceedsAvailableAmount(
         address solver,
         address token,
@@ -98,7 +101,7 @@ contract BondManager {
 
     // ------------------------- Constants / Storage -------------------------
 
-    /// Signature types allowed.
+    /// @dev Signature type prefix used by settlers that accept multiple authorization mechanisms.
     bytes1 internal constant SIGNATURE_TYPE_PERMIT2 = 0x00;
     bytes1 internal constant SIGNATURE_TYPE_3009 = 0x01;
     bytes1 internal constant SIGNATURE_TYPE_SELF = 0xff;
@@ -117,22 +120,21 @@ contract BondManager {
     // ------------------------- Constructor -------------------------
 
     /**
-     * @notice Initialize BondManager with slash basis points
+     * @notice Initialize SolverBondVault with slash basis points
      * @param slashBasisPoints The penalty percentage in basis points (0-10000)
      */
     constructor(uint256 slashBasisPoints) {
-        if (slashBasisPoints > BPS_DENOMINATOR) {
+        if (slashBasisPoints > BPS_DENOMINATOR)
             revert SlashBasisPointsTooHigh(slashBasisPoints);
-        }
         SLASH_BPS = slashBasisPoints;
     }
 
     // ---------------------- External Functions ----------------------
 
     /**
-     * @notice Deposit ERC20 tokens as bond for the caller
-     * @param token The ERC20 token address to deposit
-     * @param amount The amount of tokens to deposit (must be > 0)
+     * @notice Deposit ERC20 tokens as bond for the caller.
+     * @param token The ERC20 token address to deposit.
+     * @param amount The amount of tokens to deposit
      */
     function depositBond(address token, uint256 amount) external {
         _validateZeroAmount(amount);
@@ -140,11 +142,11 @@ contract BondManager {
 
         IERC20 tokenContract = IERC20(token);
 
-        uint256 beforeBalance = tokenContract.balanceOf(address(this));
+        uint256 balanceBefore = tokenContract.balanceOf(address(this));
         tokenContract.safeTransferFrom(msg.sender, address(this), amount);
-        uint256 afterBalance = tokenContract.balanceOf(address(this));
+        uint256 balanceAfter = tokenContract.balanceOf(address(this));
 
-        uint256 receivedAmount = afterBalance - beforeBalance;
+        uint256 receivedAmount = balanceAfter - balanceBefore;
         _validateZeroAmount(receivedAmount);
 
         _bondStates[msg.sender][token].availableAmount += receivedAmount;
@@ -152,18 +154,17 @@ contract BondManager {
     }
 
     /**
-     * @notice Withdraw available bond tokens to the caller
-     * @param token The ERC20 token address to withdraw from
-     * @param amount The amount of tokens to withdraw
+     * @notice Withdraw available bond tokens to the caller.
+     * @param token The ERC20 token address to withdraw from.
+     * @param amount The amount of tokens to withdraw.
      */
     function withdrawBond(address token, uint256 amount) external {
         _validateZeroAmount(amount);
         _validateToken(token);
 
         BondState storage bondState = _bondStates[msg.sender][token];
-        if (amount > bondState.availableAmount) {
+        if (amount > bondState.availableAmount)
             revert AmountExceedsAvailableAmount(msg.sender, token, amount);
-        }
 
         bondState.availableAmount -= amount;
         IERC20(token).safeTransfer(msg.sender, amount);
@@ -172,11 +173,11 @@ contract BondManager {
     }
 
     /**
-     * @notice Get current bond state for a solver-token pair
-     * @param solver The solver address to query
-     * @param token The token address to query
-     * @return availableAmount Amount available for withdrawal or locking
-     * @return lockedAmount Amount currently locked
+     * @notice Get current bond state for a solver-token pair.
+     * @param solver The solver address to query.
+     * @param token The token address to query.
+     * @return availableAmount Amount available for withdrawal or locking.
+     * @return lockedAmount Amount currently locked.
      */
     function getBondState(
         address solver,
@@ -189,10 +190,11 @@ contract BondManager {
     // ---------------------- Internal Functions ----------------------
 
     /**
-     * @notice Lock bonds for a solver
-     * @param solver The solver address whose bonds will be locked
-     * @param token The token address to lock
-     * @param amount The amount of tokens to lock
+     * @notice Lock bond balance for `solver`.
+     * @dev This only updates accounting (available -> locked). It does not transfer any ERC20 tokens.
+     * @param solver The solver address whose bonds will be locked.
+     * @param token The token address to lock.
+     * @param amount The amount of tokens to lock.
      */
     function _lockBond(address solver, address token, uint256 amount) internal {
         _validateZeroAmount(amount);
@@ -200,9 +202,8 @@ contract BondManager {
 
         BondState storage bondState = _bondStates[solver][token];
 
-        if (amount > bondState.availableAmount) {
+        if (amount > bondState.availableAmount)
             revert AmountExceedsAvailableAmount(solver, token, amount);
-        }
 
         bondState.availableAmount -= amount;
         bondState.lockedAmount += amount;
@@ -211,10 +212,10 @@ contract BondManager {
     }
 
     /**
-     * @notice Lock bonds for solver and transfer tokens from sender to solver
-     * @param sender The address to transfer tokens from
-     * @param solver The solver address whose bonds will be locked
-     * @param inputs The inputs of the order
+     * @notice Lock solver bonds and transfer `inputs` from `sender` to `solver`.
+     * @param sender The address to transfer tokens from.
+     * @param solver The solver address whose bonds will be locked.
+     * @param inputs The `[tokenId, amount]` inputs array.
      */
     function _lockBondsAndTransfer(
         address sender,
@@ -230,19 +231,18 @@ contract BondManager {
 
             _lockBond(solver, token, amount);
 
-            if (sender == address(this)) {
+            if (sender == address(this))
                 IERC20(token).safeTransfer(solver, amount);
-            } else {
-                IERC20(token).safeTransferFrom(sender, solver, amount);
-            }
+            else IERC20(token).safeTransferFrom(sender, solver, amount);
         }
     }
 
     /**
-     * @notice Helper function for using permit2 to lock bonds for solver and transfer tokens from signer to solver.
+     * @notice Lock solver bonds and collect `order.inputs` from `signer` via Permit2, sending directly to `solver`.
+     * @dev Reverts if Permit2 transfer fails or if any bond lock fails.
      * @param order StandardOrder representing the intent.
-     * @param signer Provider of the permit2 funds and signer of the intent.
-     * @param signature permit2 signature with Permit2Witness representing `order` signed by `order.user`.
+     * @param signer Provider of the Permit2 funds and signer of the intent.
+     * @param signature Permit2 signature over the witness (see `Permit2WitnessType`).
      * @param solver The solver address whose bonds will be locked and who will receive the tokens.
      */
     function _lockBondsAndTransferWithPermit2(
@@ -302,8 +302,9 @@ contract BondManager {
     }
 
     /**
-     * @notice Helper function for using ERC-3009 authorization to lock bonds for solver and transfer tokens from signer to solver.
-     * @dev For the `receiveWithAuthorization` call, the nonce is set as the orderId to select the order associated with the authorization.
+     * @notice Lock solver bonds and collect `inputs` from `signer` via ERC-3009, sending directly to `solver`.
+     * @dev For the `receiveWithAuthorization` call, the nonce is set as the orderId to select the order associated with
+     * the authorization.
      * @param orderId The order identifier used as nonce for authorization.
      * @param signer Provider of the ERC-3009 funds and signer of the authorization.
      * @param _signature_ Either a single ERC-3009 signature or abi.encoded bytes[] of signatures.
@@ -343,8 +344,10 @@ contract BondManager {
             // Otherwise it could be because of a lot of reasons. One being the signature is abi.encoded as bytes[].
         }
         {
-            uint256 numSignatures = BytesLib.getLengthOfBytesArray(_signature_);
-            if (inputsLength != numSignatures)
+            uint256 signaturesLength = BytesLib.getLengthOfBytesArray(
+                _signature_
+            );
+            if (inputsLength != signaturesLength)
                 revert SignatureAndInputsNotEqual();
         }
         for (uint256 i; i < inputsLength; ++i) {
@@ -385,9 +388,8 @@ contract BondManager {
         _validateToken(token);
 
         BondState storage bondState = _bondStates[solver][token];
-        if (amount > bondState.lockedAmount) {
+        if (amount > bondState.lockedAmount)
             revert AmountExceedsLockedAmount(solver, token, amount);
-        }
 
         bondState.availableAmount += amount;
         bondState.lockedAmount -= amount;
@@ -437,9 +439,8 @@ contract BondManager {
             _validateToken(token);
 
             BondState storage bondState = _bondStates[solver][token];
-            if (amount > bondState.lockedAmount) {
+            if (amount > bondState.lockedAmount)
                 revert AmountExceedsLockedAmount(solver, token, amount);
-            }
 
             bondState.availableAmount += amount;
             bondState.lockedAmount -= amount;
@@ -459,52 +460,6 @@ contract BondManager {
 
                 emit BondSlashed(solver, recipient, token, actualSlashAmount);
             }
-        }
-    }
-
-    /**
-     * @notice Penalize locked bonds and slash from available balance for a solver
-     * @param solver The solver address whose bonds will be penalized
-     * @param recipient The recipient address to receive the penalized and slashed tokens
-     * @param inputs The inputs of the order
-     */
-    function _penalizeAndSlashBonds(
-        address solver,
-        address recipient,
-        uint256[2][] calldata inputs
-    ) internal {
-        uint256 inputsLength = inputs.length;
-
-        for (uint256 i = 0; i < inputsLength; ++i) {
-            uint256[2] calldata input = inputs[i];
-            address token = input[0].validatedCleanAddress();
-            uint256 amount = input[1];
-
-            _validateZeroAmount(amount);
-            _validateToken(token);
-
-            BondState storage bondState = _bondStates[solver][token];
-
-            if (amount > bondState.lockedAmount) {
-                revert AmountExceedsLockedAmount(solver, token, amount);
-            }
-
-            bondState.lockedAmount -= amount;
-
-            uint256 slashAmount = _calculateSlashAmount(amount);
-            uint256 actualSlashAmount = Math.min(
-                slashAmount,
-                bondState.availableAmount
-            );
-
-            if (actualSlashAmount > 0) {
-                bondState.availableAmount -= actualSlashAmount;
-                emit BondSlashed(solver, recipient, token, actualSlashAmount);
-            }
-
-            IERC20(token).safeTransfer(recipient, amount + actualSlashAmount);
-
-            emit BondPenalized(solver, recipient, token, amount);
         }
     }
 
@@ -531,13 +486,57 @@ contract BondManager {
 
             BondState storage bondState = _bondStates[solver][token];
 
-            if (amount > bondState.lockedAmount) {
+            if (amount > bondState.lockedAmount)
                 revert AmountExceedsLockedAmount(solver, token, amount);
-            }
 
             bondState.lockedAmount -= amount;
 
             IERC20(token).safeTransfer(recipient, amount);
+
+            emit BondPenalized(solver, recipient, token, amount);
+        }
+    }
+
+    /**
+     * @notice Penalize locked bonds and slash from available balance for a solver
+     * @param solver The solver address whose bonds will be penalized
+     * @param recipient The recipient address to receive the penalized and slashed tokens
+     * @param inputs The inputs of the order
+     */
+    function _penalizeAndSlashBonds(
+        address solver,
+        address recipient,
+        uint256[2][] calldata inputs
+    ) internal {
+        uint256 inputsLength = inputs.length;
+
+        for (uint256 i = 0; i < inputsLength; ++i) {
+            uint256[2] calldata input = inputs[i];
+            address token = input[0].validatedCleanAddress();
+            uint256 amount = input[1];
+
+            _validateZeroAmount(amount);
+            _validateToken(token);
+
+            BondState storage bondState = _bondStates[solver][token];
+
+            if (amount > bondState.lockedAmount)
+                revert AmountExceedsLockedAmount(solver, token, amount);
+
+            bondState.lockedAmount -= amount;
+
+            uint256 slashAmount = _calculateSlashAmount(amount);
+            uint256 actualSlashAmount = Math.min(
+                slashAmount,
+                bondState.availableAmount
+            );
+
+            if (actualSlashAmount > 0) {
+                bondState.availableAmount -= actualSlashAmount;
+                emit BondSlashed(solver, recipient, token, actualSlashAmount);
+            }
+
+            IERC20(token).safeTransfer(recipient, amount + actualSlashAmount);
 
             emit BondPenalized(solver, recipient, token, amount);
         }
@@ -563,7 +562,15 @@ contract BondManager {
         }
     }
 
-    function _openForWithPermit2(
+    /**
+     * @notice Collect `order.inputs` from `signer` via Permit2 and send them to `to`.
+     * @dev This helper does not lock/unlock any bonds; callers should update bond accounting separately if needed.
+     * @param order StandardOrder containing inputs, nonce, and deadline used for Permit2.
+     * @param signer Address providing funds and signing the Permit2 message.
+     * @param signature Permit2 signature bytes (without the signature type prefix).
+     * @param to Recipient of the transferred tokens.
+     */
+    function _transferInputsWithPermit2(
         StandardOrder calldata order,
         address signer,
         bytes calldata signature,
@@ -616,7 +623,7 @@ contract BondManager {
         );
     }
 
-    function _openForWithAuthorization(
+    function _transferInputsWithAuthorization(
         bytes32 orderId,
         address signer,
         bytes calldata _signature_,
@@ -670,6 +677,8 @@ contract BondManager {
         }
     }
 
+    // ---------------------- Helper Functions ----------------------
+
     /**
      * @dev Calculate slash amount using basis points with proper rounding
      * @param amount The amount to calculate slash penalty for
@@ -678,9 +687,7 @@ contract BondManager {
     function _calculateSlashAmount(
         uint256 amount
     ) private view returns (uint256) {
-        if (amount == 0 || SLASH_BPS == 0) {
-            return 0;
-        }
+        if (amount == 0 || SLASH_BPS == 0) return 0;
         return Math.mulDiv(amount, SLASH_BPS, BPS_DENOMINATOR);
     }
 
