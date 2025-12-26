@@ -22,6 +22,10 @@ interface IInputSettlerBond {
         bytes calldata solverSignature
     ) external;
 
+    function open(StandardOrder calldata order) external;
+
+    function claim(StandardOrder calldata order) external;
+
     function finalise(
         StandardOrder calldata order,
         InputSettlerBase.SolveParams[] calldata solveParams

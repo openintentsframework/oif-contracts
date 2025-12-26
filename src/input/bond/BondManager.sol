@@ -221,8 +221,6 @@ contract BondManager {
         address solver,
         uint256[2][] calldata inputs
     ) internal {
-        if (sender == address(this)) revert InvalidSender();
-
         uint256 inputsLength = inputs.length;
 
         for (uint256 i = 0; i < inputsLength; ++i) {
@@ -232,7 +230,11 @@ contract BondManager {
 
             _lockBond(solver, token, amount);
 
-            IERC20(token).safeTransferFrom(sender, solver, amount);
+            if (sender == address(this)) {
+                IERC20(token).safeTransfer(solver, amount);
+            } else {
+                IERC20(token).safeTransferFrom(sender, solver, amount);
+            }
         }
     }
 

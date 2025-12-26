@@ -2,6 +2,8 @@
 pragma solidity ^0.8.26;
 
 import {EIP712} from "openzeppelin/utils/cryptography/EIP712.sol";
+import {IERC20} from "openzeppelin/token/ERC20/IERC20.sol";
+import {SafeERC20} from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 import {
     SignatureChecker
 } from "openzeppelin/utils/cryptography/SignatureChecker.sol";
@@ -42,11 +44,27 @@ contract InputSettlerBond is BondManager, InputSettlerBase, IInputSettlerBond {
     error ReentrancyDetected();
 
     /**
+     * @dev The order user is not the caller.
+     */
+    error NotOrderUser(address orderUser, address caller);
+
+    /**
      * @notice Emitted when an order is opened.
      * @param orderId The order identifier.
      * @param order The order.
      */
     event Open(bytes32 indexed orderId, StandardOrder order);
+
+    /**
+     * @notice Emitted when an order is claimed.
+     * @param orderId The order identifier.
+     * @param order The order.
+     */
+    event Claimed(
+        bytes32 indexed orderId,
+        address indexed solver,
+        StandardOrder order
+    );
 
     /**
      * @notice Emitted when an order is refunded.
@@ -61,7 +79,8 @@ contract InputSettlerBond is BondManager, InputSettlerBase, IInputSettlerBond {
 
     enum OrderStatus {
         None,
-        Locked,
+        Deposited,
+        Claimed,
         Settled,
         Refunded
     }
@@ -146,9 +165,9 @@ contract InputSettlerBond is BondManager, InputSettlerBase, IInputSettlerBond {
 
         _validateSolverSignature(solver, solverSignature, orderId);
 
-        // Mark order as locked. If we can't make the lock, we will
+        // Mark order as claimed. If we can't make the claim, we will
         // revert and it will unmark it. This acts as a reentry check.
-        orderStatus[orderId] = OrderStatus.Locked;
+        orderStatus[orderId] = OrderStatus.Claimed;
 
         _lockBondsAndTransfer(msg.sender, solver, order.inputs);
 
@@ -159,7 +178,43 @@ contract InputSettlerBond is BondManager, InputSettlerBase, IInputSettlerBond {
         });
 
         // Validate that there has been no reentrancy.
-        if (orderStatus[orderId] != OrderStatus.Locked)
+        if (orderStatus[orderId] != OrderStatus.Claimed)
+            revert ReentrancyDetected();
+
+        emit Open(orderId, order);
+    }
+
+    function open(StandardOrder calldata order) external {
+        _validateInputChain(order.originChainId);
+        _validateTimestampHasNotPassed(order.fillDeadline);
+        _validateTimestampHasNotPassed(order.expires);
+        _validateFillDeadlineBeforeExpiry(order.fillDeadline, order.expires);
+
+        bytes32 orderId = order.orderIdentifier();
+        _validateOrderStatus(orderId, OrderStatus.None);
+
+        // Mark order as deposited. If we can't make the deposit, we will
+        // revert and it will unmark it. This acts as a reentry check.
+        orderStatus[orderId] = OrderStatus.Deposited;
+
+        uint256 inputsLength = order.inputs.length;
+
+        for (uint256 i = 0; i < inputsLength; ++i) {
+            uint256[2] calldata input = order.inputs[i];
+
+            address token = input[0].validatedCleanAddress();
+            uint256 amount = input[1];
+
+            SafeERC20.safeTransferFrom(
+                IERC20(token),
+                msg.sender,
+                address(this),
+                amount
+            );
+        }
+
+        // Validate that there has been no reentrancy.
+        if (orderStatus[orderId] != OrderStatus.Deposited)
             revert ReentrancyDetected();
 
         emit Open(orderId, order);
@@ -195,9 +250,9 @@ contract InputSettlerBond is BondManager, InputSettlerBase, IInputSettlerBond {
 
         _validateSolverSignature(solver, solverSignature, orderId);
 
-        // Mark order as locked. If we can't make the lock, we will
+        // Mark order as claimed. If we can't make the claim, we will
         // revert and it will unmark it. This acts as a reentry check.
-        orderStatus[orderId] = OrderStatus.Locked;
+        orderStatus[orderId] = OrderStatus.Claimed;
 
         if (signature.length == 0) {
             if (msg.sender != sponsor)
@@ -236,10 +291,36 @@ contract InputSettlerBond is BondManager, InputSettlerBase, IInputSettlerBond {
         });
 
         // Validate that there has been no reentrancy.
-        if (orderStatus[orderId] != OrderStatus.Locked)
+        if (orderStatus[orderId] != OrderStatus.Claimed)
             revert ReentrancyDetected();
 
         emit Open(orderId, order);
+    }
+
+    function claim(StandardOrder calldata order) external {
+        bytes32 orderId = order.orderIdentifier();
+        _validateOrderStatus(orderId, OrderStatus.Deposited);
+
+        // Mark order as claimed. If we can't make the claim, we will
+        // revert and it will unmark it. This acts as a reentry check.
+        orderStatus[orderId] = OrderStatus.Claimed;
+
+        _claim(orderId, order.inputs);
+
+        // Validate that there has been no reentrancy.
+        if (orderStatus[orderId] != OrderStatus.Claimed)
+            revert ReentrancyDetected();
+
+        emit Claimed(orderId, msg.sender, order);
+    }
+
+    function _claim(bytes32 orderId, uint256[2][] calldata inputs) internal {
+        _lockBondsAndTransfer(address(this), msg.sender, inputs);
+
+        orderSolver[orderId] = OrderSolver({
+            solver: msg.sender,
+            timestamp: block.timestamp
+        });
     }
 
     /**
@@ -257,7 +338,7 @@ contract InputSettlerBond is BondManager, InputSettlerBase, IInputSettlerBond {
 
         bytes32 orderId = order.orderIdentifier();
 
-        _validateOrderStatus(orderId, OrderStatus.Locked);
+        _validateOrderStatus(orderId, OrderStatus.Claimed);
 
         _validateFills(
             order.fillDeadline,
@@ -280,18 +361,45 @@ contract InputSettlerBond is BondManager, InputSettlerBase, IInputSettlerBond {
         _validateInputChain(order.originChainId);
         _validateTimestampHasPassed(order.expires);
 
+        if (order.user != msg.sender)
+            revert NotOrderUser(order.user, msg.sender);
+
         bytes32 orderId = order.orderIdentifier();
-        _validateOrderStatus(orderId, OrderStatus.Locked);
 
         // Mark order as refunded. If we can't make the refund, we will
         // revert and it will unmark it. This acts as a reentry check.
         orderStatus[orderId] = OrderStatus.Refunded;
 
-        OrderSolver memory os = orderSolver[orderId];
+        _refund(order, orderId);
 
-        _penalizeBonds(os.solver, order.user, order.inputs);
+        // Validate that there has been no reentrancy.
+        if (orderStatus[orderId] != OrderStatus.Refunded)
+            revert ReentrancyDetected();
 
         emit Refunded(orderId);
+    }
+
+    function _refund(StandardOrder calldata order, bytes32 orderId) internal {
+        OrderStatus status = orderStatus[orderId];
+
+        if (status == OrderStatus.Claimed) {
+            OrderSolver memory os = orderSolver[orderId];
+
+            _penalizeBonds(os.solver, order.user, order.inputs);
+        } else if (status == OrderStatus.Deposited) {
+            uint256 inputsLength = order.inputs.length;
+
+            for (uint256 i = 0; i < inputsLength; ++i) {
+                uint256[2] calldata input = order.inputs[i];
+
+                address token = input[0].validatedCleanAddress();
+                uint256 amount = input[1];
+
+                SafeERC20.safeTransfer(IERC20(token), order.user, amount);
+            }
+        } else {
+            revert InvalidOrderStatus(status);
+        }
     }
 
     /**
