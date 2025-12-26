@@ -12,7 +12,6 @@ import {IInputSettlerBond} from "../../interfaces/IInputSettlerBond.sol";
 import {BondManager} from "./BondManager.sol";
 import {StandardOrder, StandardOrderType} from "../types/StandardOrderType.sol";
 import {LibAddress} from "../../libs/LibAddress.sol";
-
 /**
  * @title OIF Input Settler supporting using a bond.
  * @notice This implementation contains a bond system to manage input assets. Intents are initiated by
@@ -292,6 +291,59 @@ contract InputSettlerBond is BondManager, InputSettlerBase, IInputSettlerBond {
 
         // Validate that there has been no reentrancy.
         if (orderStatus[orderId] != OrderStatus.Claimed)
+            revert ReentrancyDetected();
+
+        emit Open(orderId, order);
+    }
+
+    function openFor(
+        StandardOrder calldata order,
+        address sponsor,
+        bytes calldata signature
+    ) external {
+        _validateInputChain(order.originChainId);
+        _validateTimestampHasNotPassed(order.fillDeadline);
+        _validateTimestampHasNotPassed(order.expires);
+        _validateFillDeadlineBeforeExpiry(order.fillDeadline, order.expires);
+
+        bytes32 orderId = order.orderIdentifier();
+        _validateOrderStatus(orderId, OrderStatus.None);
+
+        // Mark order as deposited. If we can't make the deposit, we will
+        // revert and it will unmark it. This acts as a reentry check.
+        orderStatus[orderId] = OrderStatus.Deposited;
+
+        if (signature.length == 0) {
+            if (msg.sender != sponsor)
+                revert SignatureNotSupported(SIGNATURE_TYPE_SELF);
+
+            _transferInputs(msg.sender, address(this), order.inputs);
+        } else {
+            bytes1 signatureType = signature[0];
+
+            if (signatureType == SIGNATURE_TYPE_PERMIT2) {
+                _openForWithPermit2(
+                    order,
+                    sponsor,
+                    signature[1:],
+                    address(this)
+                );
+            } else if (signatureType == SIGNATURE_TYPE_3009) {
+                _openForWithAuthorization(
+                    orderId,
+                    sponsor,
+                    signature[1:],
+                    order.fillDeadline,
+                    address(this),
+                    order.inputs
+                );
+            } else {
+                revert SignatureNotSupported(signatureType);
+            }
+        }
+
+        // Validate that there has been no reentrancy.
+        if (orderStatus[orderId] != OrderStatus.Deposited)
             revert ReentrancyDetected();
 
         emit Open(orderId, order);

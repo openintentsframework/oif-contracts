@@ -543,6 +543,133 @@ contract BondManager {
         }
     }
 
+    function _transferInputs(
+        address sender,
+        address to,
+        uint256[2][] calldata inputs
+    ) internal {
+        uint256 inputsLength = inputs.length;
+
+        for (uint256 i = 0; i < inputsLength; ++i) {
+            uint256[2] calldata input = inputs[i];
+
+            address token = input[0].validatedCleanAddress();
+            uint256 amount = input[1];
+
+            _validateZeroAmount(amount);
+            _validateToken(token);
+
+            IERC20(token).safeTransferFrom(sender, to, amount);
+        }
+    }
+
+    function _openForWithPermit2(
+        StandardOrder calldata order,
+        address signer,
+        bytes calldata signature,
+        address to
+    ) internal {
+        ISignatureTransfer.TokenPermissions[] memory permitted;
+        ISignatureTransfer.SignatureTransferDetails[] memory transferDetails;
+
+        {
+            uint256 inputsLength = order.inputs.length;
+            permitted = new ISignatureTransfer.TokenPermissions[](inputsLength);
+            transferDetails = new ISignatureTransfer.SignatureTransferDetails[](
+                inputsLength
+            );
+
+            for (uint256 i; i < inputsLength; ++i) {
+                uint256[2] calldata input = order.inputs[i];
+                address token = input[0].validatedCleanAddress();
+                uint256 amount = input[1];
+
+                _validateZeroAmount(amount);
+                _validateToken(token);
+
+                permitted[i] = ISignatureTransfer.TokenPermissions({
+                    token: token,
+                    amount: amount
+                });
+
+                transferDetails[i] = ISignatureTransfer
+                    .SignatureTransferDetails({
+                        to: to,
+                        requestedAmount: amount
+                    });
+            }
+        }
+        ISignatureTransfer.PermitBatchTransferFrom
+            memory permitBatch = ISignatureTransfer.PermitBatchTransferFrom({
+                permitted: permitted,
+                nonce: order.nonce,
+                deadline: order.fillDeadline
+            });
+
+        PERMIT2.permitWitnessTransferFrom(
+            permitBatch,
+            transferDetails,
+            signer,
+            Permit2WitnessType.Permit2WitnessHash(order),
+            Permit2WitnessType.PERMIT2_PERMIT2_TYPESTRING,
+            signature
+        );
+    }
+
+    function _openForWithAuthorization(
+        bytes32 orderId,
+        address signer,
+        bytes calldata _signature_,
+        uint32 fillDeadline,
+        address to,
+        uint256[2][] calldata inputs
+    ) internal {
+        uint256 inputsLength = inputs.length;
+
+        if (inputsLength == 1) {
+            uint256[2] calldata input = inputs[0];
+            address token = input[0].validatedCleanAddress();
+            uint256 amount = input[1];
+
+            _validateZeroAmount(amount);
+            _validateToken(token);
+
+            bytes memory callData = abi.encodeCall(
+                IERC3009.receiveWithAuthorization,
+                (signer, to, amount, 0, fillDeadline, orderId, _signature_)
+            );
+
+            (bool success, ) = token.call(callData);
+            if (success) return;
+        }
+        {
+            uint256 signaturesLength = BytesLib.getLengthOfBytesArray(
+                _signature_
+            );
+            if (inputsLength != signaturesLength)
+                revert SignatureAndInputsNotEqual();
+        }
+        for (uint256 i; i < inputsLength; ++i) {
+            uint256[2] calldata input = inputs[i];
+            address token = input[0].validatedCleanAddress();
+            uint256 amount = input[1];
+
+            _validateZeroAmount(amount);
+            _validateToken(token);
+
+            bytes calldata signature = BytesLib.getBytesOfArray(_signature_, i);
+            IERC3009(token).receiveWithAuthorization({
+                from: signer,
+                to: to,
+                value: amount,
+                validAfter: 0,
+                validBefore: fillDeadline,
+                nonce: orderId,
+                signature: signature
+            });
+        }
+    }
+
     /**
      * @dev Calculate slash amount using basis points with proper rounding
      * @param amount The amount to calculate slash penalty for
