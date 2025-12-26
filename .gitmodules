@@ -10,4 +10,6 @@
 [submodule "lib/openzeppelin-contracts"]
 	path = lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
-	branch = master
+[submodule "lib/broadcaster"]
+	path = lib/broadcaster
+	url = https://github.com/openintentsframework/broadcaster

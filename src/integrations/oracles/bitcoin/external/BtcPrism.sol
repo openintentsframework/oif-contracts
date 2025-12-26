@@ -130,8 +130,8 @@ contract BtcPrism is IBtcPrism {
             uint256 oldWork = 0;
             if (newPeriod > parentPeriod) {
                 require(newPeriod == parentPeriod + 1); // unchecked: parentPeriod is max uint256/2016 <
-                    // type(uint256).max
-                    // the submitted chain segment contains a difficulty retarget.
+                // type(uint256).max
+                // the submitted chain segment contains a difficulty retarget.
                 if (newPeriod == oldPeriod) {
                     // the old canonical chain is past the retarget
                     // we cannot compare length, we must compare total work
@@ -151,7 +151,7 @@ contract BtcPrism is IBtcPrism {
                 // that it is not going to overflow.
                 uint256 blockNum = blockHeight + i;
                 submitBlock(blockNum, blockHeaders[80 * i:80 * (i + 1)]); // unchecked: Overflows if blockHeaders.length
-                    // == type(uint256).max.
+                // == type(uint256).max.
             }
 
             // check that we have a new heaviest chain
@@ -159,7 +159,7 @@ contract BtcPrism is IBtcPrism {
                 // the submitted chain segment crosses into a new difficulty
                 // period. this is happens once every ~2 weeks. check total work
                 bytes calldata lastHeader = blockHeaders[80 * (numHeaders - 1):]; // unchecked: won't overflow since
-                    // numHeaders*80 is bounded by type(uint256).max
+                // numHeaders*80 is bounded by type(uint256).max
                 uint32 newDifficultyBits = Endian.reverse32(uint32(bytes4(lastHeader[72:76])));
 
                 uint256 newWork = getWorkInPeriod(newPeriod, newHeight);
@@ -184,7 +184,7 @@ contract BtcPrism is IBtcPrism {
             latestBlockHeight = uint120(newHeight);
             uint256 ixT = blockHeaders.length - 12; // blockHeaders.length is at least 80.
             uint32 time = uint32(bytes4(blockHeaders[ixT:ixT + 4])); // max ixT = type(uint256).max - 12 => max ixT +4
-                // => type(uint256).max - 12 + 4
+            // => type(uint256).max - 12 + 4
             latestBlockTime = Endian.reverse32(time);
 
             // finally, log the new tip
@@ -236,7 +236,7 @@ contract BtcPrism is IBtcPrism {
             bytes32 prevHash = bytes32(Endian.reverse256(uint256(bytes32(blockHeader[4:36]))));
             // Add NUM_BLOCKS so we roll over then subtract one so we go down.
             if (prevHash != blockHashes[(blockHeight + NUM_BLOCKS - 1) % NUM_BLOCKS]) revert BadParent(); // unchecked:
-                // blockHeight >= 1
+            // blockHeight >= 1
             if (prevHash == bytes32(0)) revert NoParent();
 
             // verify proof-of-work
@@ -251,10 +251,10 @@ contract BtcPrism is IBtcPrism {
                 // difficulty. Doing the full calculation here does not necessarily
                 // add any security. We keep the heaviest chain, not the longest.
                 uint256 lastTarget = periodToTarget[period - 1]; // blockHeight > 2016 => blockHeight / 2016 > 1 =>
-                    // fine.
-                    // ignore difficulty update rules on testnet.
-                    // Bitcoin testnet has some clown hacks regarding difficulty, see
-                    // https://blog.lopp.net/the-block-storms-of-bitcoins-testnet/
+                // fine.
+                // ignore difficulty update rules on testnet.
+                // Bitcoin testnet has some clown hacks regarding difficulty, see
+                // https://blog.lopp.net/the-block-storms-of-bitcoins-testnet/
                 if (!isTestnet) {
                     if (target >> 2 >= lastTarget) revert DifficultyRetargetLT25();
                     if (target << 2 <= lastTarget) revert DifficultyRetargetLT25();

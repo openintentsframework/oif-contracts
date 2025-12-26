@@ -64,7 +64,7 @@ library MessageEncodingLib {
             uint256 pointer = 34;
             for (uint256 index = 0; index < numPayloads; ++index) {
                 uint256 payloadSize = uint256(uint16(bytes2(encodedPayload[pointer:pointer += 2]))); // unchecked:
-                    // calldata less than 2**256 bytes.
+                // calldata less than 2**256 bytes.
                 bytes calldata payload = encodedPayload[pointer:pointer += payloadSize];
                 bytes32 hashedPayload = keccak256(payload);
                 payloadHashes[index] = hashedPayload;

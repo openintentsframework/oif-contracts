@@ -75,7 +75,7 @@ library ReceiptParser {
 
         RLPReader.RLPItem[] memory encodedTopics = RLPReader.readList(log[1]);
         unindexedData = (RLPReader.readBytes(log[2])); // This is the raw unindexed data. in this case it's
-            // just an abi encoded uint64
+        // just an abi encoded uint64
 
         topics = new bytes[](encodedTopics.length);
         for (uint256 i = 0; i < encodedTopics.length; i++) {

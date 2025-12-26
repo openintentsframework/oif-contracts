@@ -32,7 +32,7 @@ contract CrossL2ProverV2 is SequencerSignatureVerifierV2, ICrossL2ProverV2 {
     event Ping(); // Event to signal the initialization of the chain
 
     LightClientType public constant LIGHT_CLIENT_TYPE = LightClientType.SequencerLightClient; // Stored as a constant
-        // for cheap on-chain use
+    // for cheap on-chain use
 
     string public clientType;
 

@@ -28,7 +28,7 @@ import { ECDSA } from "openzeppelin/utils/cryptography/ECDSA.sol";
  */
 contract SequencerSignatureVerifier is ISignatureVerifier {
     address public immutable SEQUENCER; // The trusted sequencer address that polymer p2p signer holds the private key
-        //to
+    // to
     bytes32 public immutable CHAIN_ID; // Chain ID of the L2 chain for which the sequencer signs over
 
     constructor(
