@@ -91,9 +91,9 @@ contract CitreaOracleTest is Test {
     }
 
     // --- Optimistic Component --- //
-    //  TODO: mock _resolveClaimed
+    // TODO: mock _resolveClaimed
 
-    //-- Claim
+    // -- Claim
 
     /// forge-config: default.isolate = true
     function test_claim_gas() external {
@@ -256,7 +256,7 @@ contract CitreaOracleTest is Test {
         citreaOracle.claim(solver, orderId, output);
     }
 
-    //-- Dispute
+    // -- Dispute
 
     /// forge-config: default.isolate = true
     function test_dispute_gas() external {
@@ -526,7 +526,7 @@ contract CitreaOracleTest is Test {
         citreaOracle.dispute(orderId, output);
     }
 
-    //-- Optimistic Verification
+    // -- Optimistic Verification
 
     /// forge-config: default.isolate = true
     function test_optimistically_verify_gas() external {
@@ -735,7 +735,7 @@ contract CitreaOracleTest is Test {
         citreaOracle.optimisticallyVerify(orderId, output);
     }
 
-    //-- Finalise Dispute
+    // -- Finalise Dispute
 
     /// forge-config: default.isolate = true
     function test_finalise_dispute_gas() external {
@@ -993,7 +993,7 @@ contract CitreaOracleTest is Test {
         // TODO: implement this check without stack too deep
         // Check that storage has been correctly updated.
         // (bytes32 solver_, uint32 claimTimestamp_, uint64 multiplier_, address sponsor_, address disputer_,) =
-        //     citreaOracle._claimedOrder(orderId, outputId);
+        // citreaOracle._claimedOrder(orderId, outputId);
 
         // assertEq(bytes32(0), solver_);
         // assertEq(0, claimTimestamp_);
@@ -1064,7 +1064,7 @@ contract CitreaOracleTest is Test {
         // TODO: implement this check without stack too deep
         // Check that storage has been correctly updated.
         // (bytes32 solver_, uint32 claimTimestamp_, uint64 multiplier_, address sponsor_, address disputer_,) =
-        //     citreaOracle._claimedOrder(orderId, outputId);
+        // citreaOracle._claimedOrder(orderId, outputId);
 
         // assertEq(bytes32(0), solver_);
         // assertEq(0, claimTimestamp_);
@@ -1623,7 +1623,7 @@ contract CitreaOracleTest is Test {
         vm.assume(orderId != bytes32(0));
         vm.assume(caller != address(0));
 
-        //IBtcPrism(citreaOracle.LIGHT_CLIENT()).submit(NEXT_BLOCK_HEIGHT, NEXT_BLOCK_HEADER);
+        // IBtcPrism(citreaOracle.LIGHT_CLIENT()).submit(NEXT_BLOCK_HEIGHT, NEXT_BLOCK_HEADER);
 
         // We need to wrap to the Bitcoin block.
         vm.warp(BLOCK_TIME);
@@ -1675,7 +1675,7 @@ contract CitreaOracleTest is Test {
         vm.assume(orderId != bytes32(0));
         vm.assume(caller != address(0));
 
-        //IBtcPrism(citreaOracle.LIGHT_CLIENT()).submit(NEXT_BLOCK_HEIGHT, NEXT_BLOCK_HEADER);
+        // IBtcPrism(citreaOracle.LIGHT_CLIENT()).submit(NEXT_BLOCK_HEIGHT, NEXT_BLOCK_HEADER);
 
         // We need to wrap to the Bitcoin block.
         vm.warp(BLOCK_TIME + 1 days + 1);
@@ -1722,7 +1722,7 @@ contract CitreaOracleTest is Test {
         vm.assume(orderId != bytes32(0));
         vm.assume(caller != address(0));
 
-        //IBtcPrism(citreaOracle.LIGHT_CLIENT()).submit(NEXT_BLOCK_HEIGHT, NEXT_BLOCK_HEADER);
+        // IBtcPrism(citreaOracle.LIGHT_CLIENT()).submit(NEXT_BLOCK_HEIGHT, NEXT_BLOCK_HEADER);
 
         // We need to wrap to the Bitcoin block.
         vm.warp(BLOCK_TIME);

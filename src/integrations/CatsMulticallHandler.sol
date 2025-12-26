@@ -33,7 +33,7 @@ contract CatsMulticallHandler is IInputCallback, IOutputCallback, ReentrancyGuar
         // If set to an address (not address(0)), then the tokens sent to this contract on the call
         // will be approved for this address.
         address setApprovalsUsingInputsFor;
-        //  Calls that will be attempted.
+        // Calls that will be attempted.
         Call[] calls;
         // Where the tokens go if any part of the call fails.
         // Leftover tokens are sent here as well if the action succeeds.

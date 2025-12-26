@@ -85,7 +85,7 @@ contract BaseInputSettlerTest is Test {
         (solver, solverPrivateKey) = makeAddrAndKey("swapper");
     }
 
-    //--- Fill Validation ---//
+    // --- Fill Validation ---//
 
     error InvalidProofSeries();
 
@@ -268,7 +268,7 @@ contract BaseInputSettlerTest is Test {
         vm.snapshotGasLastCall("inputSettler", "validate2FillsMultipleSolvers");
     }
 
-    //--- Order Purchase ---//
+    // --- Order Purchase ---//
 
     /// forge-config: default.isolate = true
     function test_purchase_order_gas() external {
@@ -497,7 +497,7 @@ contract BaseInputSettlerTest is Test {
         _executionData = executionData;
     }
 
-    //--- Purchase Resolution ---//
+    // --- Purchase Resolution ---//
 
     function test_purchase_order_then_resolve(
         bytes32 orderId

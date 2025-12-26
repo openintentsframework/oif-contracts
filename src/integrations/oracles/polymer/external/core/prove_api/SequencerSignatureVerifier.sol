@@ -67,7 +67,7 @@ contract SequencerSignatureVerifier is ISignatureVerifier {
         bytes calldata signature
     ) internal view {
         // Signature will be the keccak256 hash of a + b, where:
-        // a =  (empty bytes 32 corresponding to the Domain) + ( peptide chain Id )
+        // a = (empty bytes 32 corresponding to the Domain) + ( peptide chain Id )
         // b = keccak((l2 block number ) + ( l2 apphash) + ( l1 origin hash))
         if (
             ECDSA.recover(

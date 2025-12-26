@@ -31,7 +31,7 @@ contract BaseInputSettlerTestTimestamps is Test {
         settler = new MockSettler();
     }
 
-    //--- Testing Utility functions ---//
+    // --- Testing Utility functions ---//
 
     /// forge-config: default.isolate = true
     function test_max_timestamp() external {

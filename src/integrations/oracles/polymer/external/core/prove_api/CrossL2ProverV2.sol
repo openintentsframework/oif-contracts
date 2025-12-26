@@ -52,33 +52,33 @@ contract CrossL2ProverV2 is SequencerSignatureVerifierV2, ICrossL2ProverV2 {
      * @notice These proofs should be generated using https://proof.devnet.polymer.zone
      * @notice Use `validateSolLogs` for Solana proofs.
      * @param proof The proof bytes containing:
-     *     //  +--------------------------------------------------+
-     *     //  |  state root (32 bytes)                           | 0:32
-     *     //  +--------------------------------------------------+
-     *     //  |  signature (65 bytes)                            | 32:97
-     *     //  +--------------------------------------------------+
-     *     //  |  source chain ID (big endian, 4 bytes)           | 97:101
-     *     //  +--------------------------------------------------+
-     *     //  |  peptide height (big endian, 8 bytes)            | 101:109
-     *     //  +--------------------------------------------------+
-     *     //  |  source chain block height (big endian, 8 bytes) | 109:117
-     *     //  +--------------------------------------------------+
-     *     //  |  receipt index (big endian, 4 bytes)             | 117:121
-     *     //  +--------------------------------------------------+
-     *     //  |  event index (big endian, 4 bytes)               | 121:125
-     *     //  +--------------------------------------------------+
-     *     //  |  number of topics (1 byte)                       | 125
-     *     //  +--------------------------------------------------+
-     *     //  |  event data end (big endian, 2 bytes)            | 126:128
-     *     //  +--------------------------------------------------+
-     *     //  |  event emitter (contract address) (20 bytes)     | 128:148
-     *     //  +--------------------------------------------------+
-     *     //  |  topics (32 bytes * number of topics)            | 148 + 32 * number of topics: eventDatEnd
-     *     //  +--------------------------------------------------+
-     *     //  |  event data (x bytes)                            | eventDataEnd:
-     *     //  +--------------------------------------------------+
-     *     //  |  iavl proof (x bytes)                            |
-     *     //  +--------------------------------------------------+
+     *     // +--------------------------------------------------+
+     *     // | state root (32 bytes) | 0:32
+     *     // +--------------------------------------------------+
+     *     // | signature (65 bytes) | 32:97
+     *     // +--------------------------------------------------+
+     *     // | source chain ID (big endian, 4 bytes) | 97:101
+     *     // +--------------------------------------------------+
+     *     // | peptide height (big endian, 8 bytes) | 101:109
+     *     // +--------------------------------------------------+
+     *     // | source chain block height (big endian, 8 bytes) | 109:117
+     *     // +--------------------------------------------------+
+     *     // | receipt index (big endian, 4 bytes) | 117:121
+     *     // +--------------------------------------------------+
+     *     // | event index (big endian, 4 bytes) | 121:125
+     *     // +--------------------------------------------------+
+     *     // | number of topics (1 byte) | 125
+     *     // +--------------------------------------------------+
+     *     // | event data end (big endian, 2 bytes) | 126:128
+     *     // +--------------------------------------------------+
+     *     // | event emitter (contract address) (20 bytes) | 128:148
+     *     // +--------------------------------------------------+
+     *     // | topics (32 bytes * number of topics) | 148 + 32 * number of topics: eventDatEnd
+     *     // +--------------------------------------------------+
+     *     // | event data (x bytes) | eventDataEnd:
+     *     // +--------------------------------------------------+
+     *     // | iavl proof (x bytes) |
+     *     // +--------------------------------------------------+
      * @return chainId The chain ID of the source chain
      * @return emittingContract The address of the contract that emitted the event
      * @return topics The event topics
@@ -125,29 +125,29 @@ contract CrossL2ProverV2 is SequencerSignatureVerifierV2, ICrossL2ProverV2 {
      * @notice Use `validateLogs` for non-Solana proofs.
      * @param proof The proof bytes containing:
      *     // SOLANA DECODING
-     *     //          +---------------------------------------------------+
-     *     // 0:32     |  state root                 (32 bytes)            |
-     *     //          +---------------------------------------------------+
-     *     // 32:97    |  signature                  (65 bytes)            |
-     *     //          +---------------------------------------------------+
-     *     // 97:101   |  source chain ID            (big endian, 4 bytes) |
-     *     //          +---------------------------------------------------+
-     *     // 101:109  |  peptide height             (big endian, 8 bytes) |
-     *     //          +---------------------------------------------------+
-     *     // 109:117  |  source chain block height  (big endian, 8 bytes) |
-     *     //          +---------------------------------------------------+
-     *     // 117      |  number of log messages     (1 byte)              |
-     *     //          +---------------------------------------------------+
-     *     // 118:150  |  txSignature (high)         (32 bytes)            |
-     *     //          +---------------------------------------------------+
-     *     // 150:182  |  txSignature (low)          (32 bytes)            |
-     *     //          +---------------------------------------------------+
-     *     // 182:214  |  programID                  (32 bytes)            |
-     *     //          +---------------------------------------------------+
-     *     // 214:216  |  (currLogMsgDataEnd,logMsg) (2 bytes, X bytes)    |
-     *     //          +---------------------------------------------------+
-     *     //          |  iavl proof                 (x bytes)             |
-     *     //          +---------------------------------------------------+
+     *     // +---------------------------------------------------+
+     *     // 0:32 | state root (32 bytes) |
+     *     // +---------------------------------------------------+
+     *     // 32:97 | signature (65 bytes) |
+     *     // +---------------------------------------------------+
+     *     // 97:101 | source chain ID (big endian, 4 bytes) |
+     *     // +---------------------------------------------------+
+     *     // 101:109 | peptide height (big endian, 8 bytes) |
+     *     // +---------------------------------------------------+
+     *     // 109:117 | source chain block height (big endian, 8 bytes) |
+     *     // +---------------------------------------------------+
+     *     // 117 | number of log messages (1 byte) |
+     *     // +---------------------------------------------------+
+     *     // 118:150 | txSignature (high) (32 bytes) |
+     *     // +---------------------------------------------------+
+     *     // 150:182 | txSignature (low) (32 bytes) |
+     *     // +---------------------------------------------------+
+     *     // 182:214 | programID (32 bytes) |
+     *     // +---------------------------------------------------+
+     *     // 214:216 | (currLogMsgDataEnd,logMsg) (2 bytes, X bytes) |
+     *     // +---------------------------------------------------+
+     *     // | iavl proof (x bytes) |
+     *     // +---------------------------------------------------+
      * @return chainId The ID of the chain the proof is from
      * @return programID The Solana program ID that emitted the logs
      * @return logMessages Array of log messages emitted by the program
@@ -243,19 +243,19 @@ contract CrossL2ProverV2 is SequencerSignatureVerifierV2, ICrossL2ProverV2 {
      * @notice The proof should be encoded in this following format:
      *     //
      * +----------------------------------------------------------------------------------------------------+
-     *     // header:   |  number of paths (1B) | path-0 start (1B) |  prefix...  |  varint(len(key))
+     *     // header: | number of paths (1B) | path-0 start (1B) | prefix... | varint(len(key))
      * |
      *     //
      * +----------------------------------------------------------------------------------------------------+
-     *     // path-0:   |  path-0 suffix start (1B)  |  path-0 suffix end (1B)  |  path-0 prefix... |  path-0 suffix...
+     *     // path-0: | path-0 suffix start (1B) | path-0 suffix end (1B) | path-0 prefix... | path-0 suffix...
      * |
      *     //
      * +----------------------------------------------------------------------------------------------------+
-     *     // ...       |                                        ...
+     *     // ... | ...
      * |
      *     //
      * +----------------------------------------------------------------------------------------------------+
-     *     // path-n:   |  path-n suffix start (1B)  |  path-n suffix end (1B)  |  path-n prefix... |  path-n suffix...
+     *     // path-n: | path-n suffix start (1B) | path-n suffix end (1B) | path-n prefix... | path-n suffix...
      * |
      *     //
      * +----------------------------------------------------------------------------------------------------+
