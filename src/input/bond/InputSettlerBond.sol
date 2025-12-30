@@ -9,6 +9,7 @@ import {
     SignatureChecker
 } from "openzeppelin/utils/cryptography/SignatureChecker.sol";
 
+import {IInputOracle} from "../../interfaces/IInputOracle.sol";
 import {IInputSettlerBond} from "../../interfaces/IInputSettlerBond.sol";
 
 import {LibAddress} from "../../libs/LibAddress.sol";
@@ -16,40 +17,38 @@ import {LibAddress} from "../../libs/LibAddress.sol";
 import {InputSettlerBase} from "../InputSettlerBase.sol";
 import {StandardOrder, StandardOrderType} from "../types/StandardOrderType.sol";
 
-import {SolverBondVault} from "./SolverBondVault.sol";
+import {IERC3009} from "../../interfaces/IERC3009.sol";
+import {BytesLib} from "../../libs/BytesLib.sol";
+import {IsContractLib} from "../../libs/IsContractLib.sol";
+import {Permit2WitnessType} from "../escrow/Permit2WitnessType.sol";
+import {MandateOutput} from "../types/MandateOutputType.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+import {
+    ISignatureTransfer
+} from "permit2/src/interfaces/ISignatureTransfer.sol";
 
 /**
- * @title OIF Input Settler supporting using a bond.
- * @notice Input settler that supports a solver bond model for input asset management.
+ * @title OIF Input Settler supporting a bond-based dispute mechanism.
+ * @notice This implementation escrows input assets in the contract and introduces a bonding flow for solvers:
+ * - A user (or sponsor) opens an order via `::open` or `::openFor`, depositing `order.inputs` into this contract.
+ * - A solver claims the order via `::claim` by posting a bond (per-input) computed from `BOND_BPS`.
+ * - During `DISPUTE_WINDOW`, anyone can dispute via `::dispute` by posting an equal bond.
+ * - After `DISPUTE_WAITING_TIME`, the claim can be settled, distributing bonds depending on whether the claim is valid.
  *
- * This settler supports two input custody modes:
- * - **Direct-to-solver (bonded)**: inputs are transferred directly to a chosen solver while the solver's bonds are
- *   locked for the same amounts (`open(order, solver, ...)` / `openFor(order, ..., solver, ...)`).
- * - **Escrow (deposit)**: inputs are transferred to this contract first (`open(order)` / `openFor(order, ...)`), and a
- *   solver later calls `claim(order)` to receive the inputs while locking their bonds.
+ * Refunds are only allowed after `order.expires + DISPUTE_WINDOW + DISPUTE_WAITING_TIME` and only if the order was
+ * never claimed/finalised.
  *
- * In both modes, `finalise` unlocks (and potentially slashes/penalizes) bonds based on fill timing. If an order expires
- * before being finalised, anyone may call `refund` to return value to the user (either by returning escrowed tokens or
- * by penalizing the solver's locked bonds).
- *
- * If an order has not been finalised / claimed before `order.expires`, anyone may call `::refund` to send
- * `order.inputs` to `order.user`. Note that if this is not done, an order finalised after `order.expires` still claims
- * `order.inputs` for the solver.
+ * `::openFor` supports typed signatures:
+ * - SIGNATURE_TYPE_PERMIT2:  b1:0x00 | bytes:signature
+ * - SIGNATURE_TYPE_3009:     b1:0x01 | bytes:signature OR abi.encode(bytes[]:signatures)
+ * - empty: self-funded open (requires msg.sender == sponsor)
  */
-contract InputSettlerBond is
-    SolverBondVault,
-    InputSettlerBase,
-    IInputSettlerBond
-{
+contract InputSettlerBond is InputSettlerBase, IInputSettlerBond {
+    using SafeERC20 for IERC20;
     using StandardOrderType for StandardOrder;
-    using LibAddress for address;
-    using LibAddress for bytes32;
     using LibAddress for uint256;
-
-    /**
-     * @dev The solver signature is invalid.
-     */
-    error InvalidSolverSignature();
+    using LibAddress for bytes32;
+    using LibAddress for address;
 
     /**
      * @dev The order status is invalid.
@@ -62,22 +61,81 @@ contract InputSettlerBond is
     error ReentrancyDetected();
 
     /**
+     * @dev The token amount is zero.
+     */
+    error ZeroTokenAmount();
+
+    /**
+     * @dev The token is invalid.
+     */
+    error InvalidToken(address token);
+
+    /**
+     * @dev The signature and inputs are not equal.
+     */
+    error SignatureAndInputsNotEqual();
+
+    /**
+     * Signature type not supported.
+     */
+    error SignatureNotSupported(bytes1);
+
+    /**
+     * @dev The bond basis points are too high.
+     */
+    error BondBpsTooHigh();
+
+    /**
+     * @dev The dispute window has expired.
+     */
+    error DisputeWindowExpired();
+
+    /**
+     * @dev The dispute window is not exceeded.
+     */
+    error DisputeWindowNotExceeded();
+
+    /**
+     * @dev The dispute waiting time is not exceeded.
+     */
+    error DisputeWaitingTimeNotExceeded();
+
+    /**
+     * @dev The caller is not authorised.
+     */
+    error NotAuthorised(address caller);
+
+    /**
+     * @dev The solve params hash is invalid.
+     */
+    error InvalidSolveParams(SolveParams[] solveParams);
+
+    /**
+     * @dev The claim already exists.
+     */
+    error ClaimAlreadyExists();
+
+    /**
+     * @dev The claim already disputed.
+     */
+    error ClaimDisputed();
+
+    /**
+     * @dev The claim is not disputed.
+     */
+    error ClaimNotDisputed();
+
+    /**
+     * @dev The claim is finalised.
+     */
+    error ClaimFinalised();
+
+    /**
      * @notice Emitted when an order is opened.
      * @param orderId The order identifier.
      * @param order The order.
      */
     event Open(bytes32 indexed orderId, StandardOrder order);
-
-    /**
-     * @notice Emitted when an order is claimed.
-     * @param orderId The order identifier.
-     * @param order The order.
-     */
-    event Claimed(
-        bytes32 indexed orderId,
-        address indexed solver,
-        StandardOrder order
-    );
 
     /**
      * @notice Emitted when an order is refunded.
@@ -86,44 +144,108 @@ contract InputSettlerBond is
     event Refunded(bytes32 indexed orderId);
 
     /**
-     * Signature type not supported.
+     * @notice Emitted when an order is claimed.
+     * @param orderId The order identifier.
+     * @param solver The solver.
+     * @param order The order.
+     * @param solveParams The solve parameters.
      */
-    error SignatureNotSupported(bytes1);
+    event Claimed(
+        bytes32 indexed orderId,
+        address indexed solver,
+        StandardOrder order,
+        SolveParams[] solveParams
+    );
 
+    /**
+     * @notice Emitted when an order is disputed.
+     * @param orderId The order identifier.
+     * @param disputer The disputer.
+     * @param order The order.
+     * @param solveParams The solve parameters.
+     */
+    event Disputed(
+        bytes32 indexed orderId,
+        address indexed disputer,
+        StandardOrder order,
+        SolveParams[] solveParams
+    );
+
+    /**
+     * @notice Emitted when an order is settled.
+     * @param orderId The order identifier.
+     * @param solveParamsHash The solve parameters hash.
+     * @param isValidClaim Whether the claim is valid.
+     */
+    event Settled(
+        bytes32 indexed orderId,
+        bytes32 solveParamsHash,
+        bool isValidClaim
+    );
+
+    /**
+     * @notice High-level lifecycle status for an order.
+     */
     enum OrderStatus {
         None,
         Deposited,
         Claimed,
-        Settled,
         Refunded
     }
 
-    struct OrderSolver {
+    /**
+     * @notice Claim record keyed by (orderId, solveParamsHash).
+     * @dev `claimTimestamp` and `disputeTimestamp` are used for time-window enforcement.
+     */
+    struct Claim {
         address solver;
-        uint256 timestamp;
+        address disputer;
+        uint32 claimTimestamp;
+        uint32 disputeTimestamp;
+        bool isFinalised;
     }
-    /// @dev EIP712 typehash used for `solverSignature` to authorize locking solver bonds.
-    bytes32 private constant SOLVER_CONSENT_TYPEHASH =
-        keccak256("SolverConsent(bytes32 orderId)");
 
-    uint256 public immutable TIME_TO_FILL;
+    /// Bond percentage (in basis points) charged on each input amount.
+    uint32 public immutable BOND_BPS;
+    /// Time window (in seconds) during which a claim can be disputed.
+    uint32 public immutable DISPUTE_WINDOW;
+    /// Additional time window (in seconds) after dispute for settlement/ slashing.
+    uint32 public immutable DISPUTE_WAITING_TIME;
 
+    /// Basis points denominator (100% = 10_000 bps).
+    uint32 internal constant BPS_DENOMINATOR = 10_000;
+
+    /// Signature types allowed.
+    bytes1 internal constant SIGNATURE_TYPE_PERMIT2 = 0x00;
+    bytes1 internal constant SIGNATURE_TYPE_3009 = 0x01;
+    bytes1 internal constant SIGNATURE_TYPE_SELF = 0xff;
+
+    /// Tracks order status by identifier.
     mapping(bytes32 orderId => OrderStatus) public orderStatus;
-    mapping(bytes32 orderId => OrderSolver) public orderSolver;
+    /// Tracks claims by orderId and solveParams hash.
+    mapping(bytes32 orderId => mapping(bytes32 solveParamsHash => Claim))
+        public orderClaims;
+
+    // Address of the Permit2 contract.
+    ISignatureTransfer constant PERMIT2 =
+        ISignatureTransfer(0x000000000022D473030F116dDEE9F6B43aC78BA3);
 
     /**
      * @notice Constructs the InputSettlerBond contract.
-     * @param timeToFill The time window in seconds for the solver to fill the order.
-     * @param slashBasisPoints The basis points to slash from bonds in case of penalties.
+     * @param disputeWindow The time window in seconds for the dispute window.
+     * @param disputeWaitingTime The time window in seconds for the dispute waiting time.
+     * @param bondBps The basis points to calculate the bond amount.
      */
     constructor(
-        uint256 timeToFill,
-        uint256 slashBasisPoints
-    )
-        EIP712(_domainName(), _domainVersion())
-        SolverBondVault(slashBasisPoints)
-    {
-        TIME_TO_FILL = timeToFill;
+        uint32 bondBps,
+        uint32 disputeWindow,
+        uint32 disputeWaitingTime
+    ) EIP712(_domainName(), _domainVersion()) {
+        if (bondBps > BPS_DENOMINATOR) revert BondBpsTooHigh();
+
+        BOND_BPS = bondBps;
+        DISPUTE_WINDOW = disputeWindow;
+        DISPUTE_WAITING_TIME = disputeWaitingTime;
     }
 
     /**
@@ -159,49 +281,33 @@ contract InputSettlerBond is
         return order.orderIdentifier();
     }
 
+    // --- Open Orders --- //
+
+    /**
+     * @notice Collects input tokens directly from msg.sender.
+     * @param order StandardOrder representing the intent.
+     */
+    function _open(StandardOrder calldata order) internal {
+        uint256 numInputs = order.inputs.length;
+
+        for (uint256 i = 0; i < numInputs; ++i) {
+            uint256[2] calldata input = order.inputs[i];
+            address token = input[0].validatedCleanAddress();
+            uint256 amount = input[1];
+
+            _validateToken(token);
+            _validateTokenAmount(amount);
+
+            IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+        }
+    }
+
     /**
      * @notice Opens an intent for `order.user`. `order.inputs` tokens are collected from msg.sender.
      * @dev This function may make multiple sub-call calls either directly from this contract or from deeper inside the
      * call tree. To protect against reentry, the function uses the `orderStatus`.
      * @param order StandardOrder representing the intent.
-     * @param solver The solver address.
-     * @param solverSignature The solver signature.
      */
-    function open(
-        StandardOrder calldata order,
-        address solver,
-        bytes calldata solverSignature
-    ) external {
-        _validateInputChain(order.originChainId);
-        _validateTimestampHasNotPassed(order.fillDeadline);
-        _validateTimestampHasNotPassed(order.expires);
-        _validateFillDeadlineBeforeExpiry(order.fillDeadline, order.expires);
-
-        bytes32 orderId = order.orderIdentifier();
-        _validateOrderStatus(orderId, OrderStatus.None);
-
-        _validateSolverSignature(solver, solverSignature, orderId);
-
-        // Mark order as claimed. If we can't make the claim, we will
-        // revert and it will unmark it. This acts as a reentry check.
-        orderStatus[orderId] = OrderStatus.Claimed;
-
-        _lockBondsAndTransfer(msg.sender, solver, order.inputs);
-
-        // Store the solver for the order.
-        orderSolver[orderId] = OrderSolver({
-            solver: solver,
-            timestamp: block.timestamp
-        });
-
-        // Validate that there has been no reentrancy.
-        if (orderStatus[orderId] != OrderStatus.Claimed)
-            revert ReentrancyDetected();
-
-        emit Open(orderId, order);
-        emit Claimed(orderId, solver, order);
-    }
-
     function open(StandardOrder calldata order) external {
         _validateInputChain(order.originChainId);
         _validateTimestampHasNotPassed(order.fillDeadline);
@@ -211,11 +317,9 @@ contract InputSettlerBond is
         bytes32 orderId = order.orderIdentifier();
         _validateOrderStatus(orderId, OrderStatus.None);
 
-        // Mark order as deposited. If we can't make the deposit, we will
-        // revert and it will unmark it. This acts as a reentry check.
         orderStatus[orderId] = OrderStatus.Deposited;
 
-        _transferInputs(msg.sender, address(this), order.inputs);
+        _open(order);
 
         // Validate that there has been no reentrancy.
         if (orderStatus[orderId] != OrderStatus.Deposited)
@@ -225,91 +329,11 @@ contract InputSettlerBond is
     }
 
     /**
-     * @notice Opens an intent for `order.user` and immediately "claims" it for `solver`.
-     * `order.inputs` are collected from `sponsor` through transferFrom, Permit2, or ERC-3009 and are sent directly to
-     * `solver` while the solver's bonds are locked for the same amounts.
-     *
-     * @dev Reentrancy protection is handled through `orderStatus` (checks-effects-interactions) and verifying the
-     * status remains unchanged after the asset transfers complete.
+     * @notice Opens an intent for `order.user` sponsored by `sponsor`.
+     * @dev Inputs are collected from `sponsor` and held by this contract until the order is refunded or claimed.
      * @param order StandardOrder representing the intent.
      * @param sponsor Address to collect tokens from.
-     * @param signature Allowance signature from sponsor with a signature type encoded as:
-     * - SIGNATURE_TYPE_PERMIT2:  b1:0x00 | bytes:signature
-     * - SIGNATURE_TYPE_3009:     b1:0x01 | bytes:signature OR abi.encode(bytes[]:signatures)
-     * @param solver The solver whose bonds will be locked and who will receive the tokens.
-     * @param solverSignature Signature from the solver authorizing their bond lock.
-     */
-    function openFor(
-        StandardOrder calldata order,
-        address sponsor,
-        bytes calldata signature,
-        address solver,
-        bytes calldata solverSignature
-    ) external {
-        _validateInputChain(order.originChainId);
-        _validateTimestampHasNotPassed(order.fillDeadline);
-        _validateTimestampHasNotPassed(order.expires);
-        _validateFillDeadlineBeforeExpiry(order.fillDeadline, order.expires);
-
-        bytes32 orderId = order.orderIdentifier();
-        _validateOrderStatus(orderId, OrderStatus.None);
-
-        _validateSolverSignature(solver, solverSignature, orderId);
-
-        // Mark order as claimed. If we can't make the claim, we will
-        // revert and it will unmark it. This acts as a reentry check.
-        orderStatus[orderId] = OrderStatus.Claimed;
-
-        if (signature.length == 0) {
-            if (msg.sender != sponsor)
-                revert SignatureNotSupported(SIGNATURE_TYPE_SELF);
-
-            _lockBondsAndTransfer(sponsor, solver, order.inputs);
-        } else {
-            // Check the first byte of the signature for signature type then collect inputs.
-            bytes1 signatureType = signature[0];
-
-            if (signatureType == SIGNATURE_TYPE_PERMIT2) {
-                _lockBondsAndTransferWithPermit2(
-                    order,
-                    sponsor,
-                    signature[1:],
-                    solver
-                );
-            } else if (signatureType == SIGNATURE_TYPE_3009) {
-                _lockBondsAndTransferWithAuthorization(
-                    orderId,
-                    sponsor,
-                    signature[1:],
-                    order.fillDeadline,
-                    solver,
-                    order.inputs
-                );
-            } else {
-                revert SignatureNotSupported(signatureType);
-            }
-        }
-
-        // Store the solver for the order.
-        orderSolver[orderId] = OrderSolver({
-            solver: solver,
-            timestamp: block.timestamp
-        });
-
-        // Validate that there has been no reentrancy.
-        if (orderStatus[orderId] != OrderStatus.Claimed)
-            revert ReentrancyDetected();
-
-        emit Open(orderId, order);
-        emit Claimed(orderId, solver, order);
-    }
-
-    /**
-     * @notice Opens an intent for `order.user` in escrow mode.
-     * @dev Inputs are collected from `sponsor` and held by this contract until a solver claims the order.
-     * @param order StandardOrder representing the intent.
-     * @param sponsor Address to collect tokens from.
-     * @param signature Signature-typed allowance for collecting inputs (Permit2 / ERC-3009), or empty for self.
+     * @param signature Allowance signature from sponsor, optionally typed (Permit2 / ERC-3009), or empty for self.
      */
     function openFor(
         StandardOrder calldata order,
@@ -324,33 +348,30 @@ contract InputSettlerBond is
         bytes32 orderId = order.orderIdentifier();
         _validateOrderStatus(orderId, OrderStatus.None);
 
-        // Mark order as deposited. If we can't make the deposit, we will
-        // revert and it will unmark it. This acts as a reentry check.
         orderStatus[orderId] = OrderStatus.Deposited;
 
         if (signature.length == 0) {
             if (msg.sender != sponsor)
                 revert SignatureNotSupported(SIGNATURE_TYPE_SELF);
 
-            _transferInputs(msg.sender, address(this), order.inputs);
+            _open(order);
         } else {
             bytes1 signatureType = signature[0];
 
             if (signatureType == SIGNATURE_TYPE_PERMIT2) {
-                _transferInputsWithPermit2(
+                _openForWithPermit2(
                     order,
                     sponsor,
                     signature[1:],
                     address(this)
                 );
             } else if (signatureType == SIGNATURE_TYPE_3009) {
-                _transferInputsWithAuthorization(
-                    orderId,
+                _openForWithAuthorization(
+                    order.inputs,
+                    order.fillDeadline,
                     sponsor,
                     signature[1:],
-                    order.fillDeadline,
-                    address(this),
-                    order.inputs
+                    orderId
                 );
             } else {
                 revert SignatureNotSupported(signatureType);
@@ -364,55 +385,231 @@ contract InputSettlerBond is
         emit Open(orderId, order);
     }
 
+    // --- Claim Orders --- //
+
     /**
-     * @notice Claims an escrowed order by transferring escrowed inputs to the caller and locking their bonds.
-     * @dev Only callable for orders that are in `Deposited` state.
-     * @param order StandardOrder representing the intent.
+     * @notice Creates a claim by collecting the solver bond and storing the claim record.
+     * @dev The solver posts a bond proportional to each input amount.
+     * @param orderId The order identifier.
+     * @param order The order to claim.
+     * @param solveParamsHash Hash of the solve parameters (used as claim key).
      */
-    function claim(StandardOrder calldata order) external {
-        bytes32 orderId = order.orderIdentifier();
-        _validateOrderStatus(orderId, OrderStatus.Deposited);
+    function _claim(
+        bytes32 orderId,
+        StandardOrder calldata order,
+        bytes32 solveParamsHash
+    ) internal {
+        uint256 numInputs = order.inputs.length;
 
-        // Mark order as claimed. If we can't make the claim, we will
-        // revert and it will unmark it. This acts as a reentry check.
-        orderStatus[orderId] = OrderStatus.Claimed;
+        for (uint256 i = 0; i < numInputs; ++i) {
+            uint256[2] calldata input = order.inputs[i];
+            address token = input[0].validatedCleanAddress();
+            uint256 amount = input[1];
 
-        _claim(orderId, order.inputs);
+            uint256 bondAmount = _calculateBondAmount(amount);
 
-        // Validate that there has been no reentrancy.
-        if (orderStatus[orderId] != OrderStatus.Claimed)
-            revert ReentrancyDetected();
+            IERC20(token).safeTransferFrom(
+                msg.sender,
+                address(this),
+                bondAmount
+            );
+        }
 
-        emit Claimed(orderId, msg.sender, order);
-    }
-
-    function _claim(bytes32 orderId, uint256[2][] calldata inputs) internal {
-        _lockBondsAndTransfer(address(this), msg.sender, inputs);
-
-        orderSolver[orderId] = OrderSolver({
+        orderClaims[orderId][solveParamsHash] = Claim({
             solver: msg.sender,
-            timestamp: block.timestamp
+            claimTimestamp: uint32(block.timestamp),
+            disputer: address(0),
+            disputeTimestamp: 0,
+            isFinalised: false
         });
     }
 
     /**
-     * @notice Finalises an order when called directly by the solver
-     * @dev Finalise is not blocked after the expiry of orders.
-     * The caller must be the address corresponding to the first solver in the solvers array.
+     * @notice Claims an order by posting the bond. The claim can be disputed during `DISPUTE_WINDOW`.
      * @param order StandardOrder description of the intent.
-     * @param solveParams List of solve parameters for when the outputs were filled.
+     * @param solveParams Solve parameters for when the outputs were filled.
+     */
+    function claim(
+        StandardOrder calldata order,
+        SolveParams[] calldata solveParams
+    ) external {
+        bytes32 orderId = order.orderIdentifier();
+        _validateOrderStatus(orderId, OrderStatus.Deposited);
+
+        if (solveParams.length != order.outputs.length)
+            revert InvalidSolveParams(solveParams);
+        if (msg.sender != solveParams[0].solver.fromIdentifier())
+            revert NotAuthorised(msg.sender);
+
+        bytes32 solveParamsHash = _getSolveParamsHash(solveParams);
+
+        Claim memory orderClaim = orderClaims[orderId][solveParamsHash];
+
+        if (orderClaim.claimTimestamp > 0) revert ClaimAlreadyExists();
+
+        _claim(orderId, order, solveParamsHash);
+
+        emit Claimed(orderId, msg.sender, order, solveParams);
+    }
+
+    // --- Dispute Claims --- //
+
+    /**
+     * @notice Disputes an existing claim by posting a matching bond and recording dispute metadata.
+     * @param orderId The order identifier.
+     * @param order StandardOrder description of the intent.
+     * @param orderClaim Storage pointer to the claim being disputed.
+     */
+    function _dispute(
+        bytes32 orderId,
+        StandardOrder calldata order,
+        Claim storage orderClaim
+    ) internal {
+        uint256 numInputs = order.inputs.length;
+
+        for (uint256 i = 0; i < numInputs; ++i) {
+            uint256[2] calldata input = order.inputs[i];
+            address token = input[0].validatedCleanAddress();
+            uint256 amount = input[1];
+
+            uint256 bondAmount = _calculateBondAmount(amount);
+
+            IERC20(token).safeTransferFrom(
+                msg.sender,
+                address(this),
+                bondAmount
+            );
+        }
+
+        orderClaim.disputer = msg.sender;
+        orderClaim.disputeTimestamp = uint32(block.timestamp);
+    }
+
+    /**
+     * @notice Disputes a claim within `DISPUTE_WINDOW` by posting the bond.
+     * @param order StandardOrder description of the intent.
+     * @param solveParams Solve parameters for the claim being disputed.
+     */
+    function dispute(
+        StandardOrder calldata order,
+        SolveParams[] calldata solveParams
+    ) external {
+        bytes32 orderId = order.orderIdentifier();
+
+        bytes32 solveParamsHash = _getSolveParamsHash(solveParams);
+        Claim storage orderClaim = orderClaims[orderId][solveParamsHash];
+
+        // Avoid reentrancy / ensure the claim exists by checking an already-stored timestamp.
+        if (orderClaim.claimTimestamp == 0)
+            revert InvalidSolveParams(solveParams);
+
+        if (orderClaim.disputeTimestamp > 0) revert ClaimDisputed();
+
+        if (block.timestamp - orderClaim.claimTimestamp > DISPUTE_WINDOW)
+            revert DisputeWindowExpired();
+
+        _dispute(orderId, order, orderClaim);
+
+        emit Disputed(orderId, msg.sender, order, solveParams);
+    }
+
+    // --- Finalise / Settle Claims --- //
+
+    /**
+     * @notice Finalises a claim by paying the solver the input amount plus the solver bond.
+     * @dev This only transfers funds; status transitions are handled by the caller.
+     * @param orderId The order identifier.
+     * @param order StandardOrder description of the intent.
+     * @param orderClaim Storage pointer to the claim being finalised.
+     */
+    function _finalise(
+        bytes32 orderId,
+        StandardOrder calldata order,
+        Claim storage orderClaim
+    ) internal {
+        orderClaim.isFinalised = true;
+
+        uint256 numInputs = order.inputs.length;
+
+        for (uint256 i = 0; i < numInputs; ++i) {
+            uint256[2] calldata input = order.inputs[i];
+            address token = input[0].validatedCleanAddress();
+            uint256 amount = input[1];
+
+            uint256 bondAmount = _calculateBondAmount(amount);
+
+            IERC20(token).safeTransfer(orderClaim.solver, amount + bondAmount);
+        }
+    }
+
+    /**
+     * @notice Finalises an undisputed claim after `DISPUTE_WINDOW` has passed.
+     * @param order StandardOrder description of the intent.
+     * @param solveParams Solve parameters for the claim.
      */
     function finalise(
         StandardOrder calldata order,
         SolveParams[] calldata solveParams
     ) external {
-        _validateInputChain(order.originChainId);
-
         bytes32 orderId = order.orderIdentifier();
 
-        _validateOrderStatus(orderId, OrderStatus.Claimed);
+        _validateOrderStatus(orderId, OrderStatus.Deposited);
 
-        _validateFills(
+        bytes32 solveParamsHash = _getSolveParamsHash(solveParams);
+
+        Claim storage orderClaim = orderClaims[orderId][solveParamsHash];
+
+        if (orderClaim.claimTimestamp == 0)
+            revert InvalidSolveParams(solveParams);
+
+        if (orderClaim.disputeTimestamp > 0) revert ClaimDisputed();
+
+        if (orderClaim.isFinalised) revert ClaimFinalised();
+
+        if (block.timestamp - orderClaim.claimTimestamp < DISPUTE_WINDOW)
+            revert DisputeWindowNotExceeded();
+
+        orderStatus[orderId] = OrderStatus.Claimed;
+
+        _finalise(orderId, order, orderClaim);
+
+        if (orderStatus[orderId] != OrderStatus.Claimed)
+            revert ReentrancyDetected();
+
+        emit Finalised(orderId, solveParams[0].solver, solveParams[0].solver);
+    }
+
+    /**
+     * @notice Settles a disputed claim after `DISPUTE_WAITING_TIME` has passed.
+     * @dev If the claim is valid, solver receives input + both bonds. Otherwise, disputer receives both bonds.
+     * @param order StandardOrder description of the intent.
+     * @param solveParams Solve parameters for the claim.
+     */
+    function settleDispute(
+        StandardOrder calldata order,
+        SolveParams[] calldata solveParams
+    ) external {
+        bytes32 orderId = order.orderIdentifier();
+
+        _validateOrderStatus(orderId, OrderStatus.Deposited);
+
+        bytes32 solveParamsHash = _getSolveParamsHash(solveParams);
+
+        Claim storage orderClaim = orderClaims[orderId][solveParamsHash];
+
+        if (orderClaim.claimTimestamp == 0)
+            revert InvalidSolveParams(solveParams);
+        if (orderClaim.disputeTimestamp == 0) revert ClaimNotDisputed();
+        if (orderClaim.isFinalised) revert ClaimFinalised();
+        if (
+            block.timestamp - orderClaim.disputeTimestamp < DISPUTE_WAITING_TIME
+        ) {
+            revert DisputeWaitingTimeNotExceeded();
+        }
+
+        orderClaim.isFinalised = true;
+
+        bool isValidClaim = _validateClaim(
             order.fillDeadline,
             order.inputOracle,
             order.outputs,
@@ -420,35 +617,170 @@ contract InputSettlerBond is
             solveParams
         );
 
-        _finalise(order, orderId, solveParams);
+        if (isValidClaim) {
+            orderStatus[orderId] = OrderStatus.Claimed;
+
+            emit Finalised(
+                orderId,
+                solveParams[0].solver,
+                solveParams[0].solver
+            );
+        }
+
+        uint256 numInputs = order.inputs.length;
+
+        for (uint256 i = 0; i < numInputs; ++i) {
+            uint256[2] calldata input = order.inputs[i];
+            address token = input[0].validatedCleanAddress();
+            uint256 amount = input[1];
+
+            uint256 bondAmount = _calculateBondAmount(amount);
+
+            if (isValidClaim) {
+                IERC20(token).safeTransfer(
+                    orderClaim.solver,
+                    amount + (bondAmount * 2)
+                );
+            } else {
+                IERC20(token).safeTransfer(
+                    orderClaim.disputer,
+                    (bondAmount * 2)
+                );
+            }
+        }
+
+        emit Settled(orderId, solveParamsHash, isValidClaim);
     }
 
     /**
-     * @notice Refunds an order that has not been finalised before it expired. This order may have been filled but
-     * finalise has not been called yet.
-     * @dev The bond system penalizes the solver when an order is refunded.
+     * @notice Slashes a disputed claim after the order has been resolved (Claimed or Refunded).
+     * @dev This path distributes only the dispute bonds (2x bond) based on claim validity.
+     * @param orderId The order identifier.
      * @param order StandardOrder description of the intent.
+     * @param solveParams Solve parameters for the claim.
+     * @param orderClaim Storage pointer to the claim.
+     * @return isValidClaim Whether the claim is valid.
      */
-    function refund(StandardOrder calldata order) external {
-        _validateInputChain(order.originChainId);
-        _validateTimestampHasPassed(order.expires);
+    function _slashDispute(
+        bytes32 orderId,
+        StandardOrder calldata order,
+        SolveParams[] calldata solveParams,
+        Claim storage orderClaim
+    ) internal returns (bool) {
+        orderClaim.isFinalised = true;
 
+        bool isValidClaim = _validateClaim(
+            order.fillDeadline,
+            order.inputOracle,
+            order.outputs,
+            orderId,
+            solveParams
+        );
+
+        uint256 numInputs = order.inputs.length;
+
+        for (uint256 i = 0; i < numInputs; ++i) {
+            uint256[2] calldata input = order.inputs[i];
+            address token = input[0].validatedCleanAddress();
+            uint256 amount = input[1];
+
+            uint256 bondAmount = _calculateBondAmount(amount);
+            uint256 disputeBondAmount = bondAmount * 2;
+
+            if (isValidClaim) {
+                IERC20(token).safeTransfer(
+                    orderClaim.solver,
+                    disputeBondAmount
+                );
+            } else {
+                IERC20(token).safeTransfer(
+                    orderClaim.disputer,
+                    disputeBondAmount
+                );
+            }
+        }
+
+        return isValidClaim;
+    }
+
+    /**
+     * @notice Slashes a disputed claim after the order has been resolved (Claimed or Refunded).
+     * @param order StandardOrder description of the intent.
+     * @param solveParams Solve parameters for the claim.
+     */
+    function slashDispute(
+        StandardOrder calldata order,
+        SolveParams[] calldata solveParams
+    ) external {
         bytes32 orderId = order.orderIdentifier();
 
         OrderStatus currentStatus = orderStatus[orderId];
-
         if (
-            currentStatus != OrderStatus.Claimed &&
-            currentStatus != OrderStatus.Deposited
+            !(currentStatus == OrderStatus.Claimed ||
+                currentStatus == OrderStatus.Refunded)
         ) {
             revert InvalidOrderStatus(currentStatus);
         }
 
-        // Mark order as refunded. If we can't make the refund, we will revert and it will unmark it.
-        // This acts as a local reentrancy check, since all further logic may transfer ERC20 tokens.
+        bytes32 solveParamsHash = _getSolveParamsHash(solveParams);
+
+        Claim storage orderClaim = orderClaims[orderId][solveParamsHash];
+
+        if (orderClaim.claimTimestamp == 0)
+            revert InvalidSolveParams(solveParams);
+        if (orderClaim.disputeTimestamp == 0) revert ClaimNotDisputed();
+        if (orderClaim.isFinalised) revert ClaimFinalised();
+        if (
+            block.timestamp - orderClaim.disputeTimestamp < DISPUTE_WAITING_TIME
+        ) {
+            revert DisputeWaitingTimeNotExceeded();
+        }
+
+        bool isValidClaim = _slashDispute(
+            orderId,
+            order,
+            solveParams,
+            orderClaim
+        );
+
+        emit Settled(orderId, solveParamsHash, isValidClaim);
+    }
+
+    // --- Refund --- //
+
+    /**
+     * @notice Refunds the order inputs to `order.user`.
+     * @param order StandardOrder description of the intent.
+     */
+    function _refund(StandardOrder calldata order) internal {
+        uint256 numInputs = order.inputs.length;
+
+        for (uint256 i; i < numInputs; ++i) {
+            uint256[2] calldata input = order.inputs[i];
+
+            address token = input[0].validatedCleanAddress();
+            uint256 amount = input[1];
+
+            IERC20(token).safeTransfer(order.user, amount);
+        }
+    }
+
+    /**
+     * @notice Refunds an order that was never claimed/finalised, once all dispute windows have passed.
+     * @dev Refund is only allowed after `order.expires + DISPUTE_WINDOW + DISPUTE_WAITING_TIME`.
+     * @param order StandardOrder description of the intent.
+     */
+    function refund(StandardOrder calldata order) external {
+        _validateTimestampHasPassed(
+            order.expires + DISPUTE_WINDOW + DISPUTE_WAITING_TIME
+        );
+
+        bytes32 orderId = order.orderIdentifier();
+        _validateOrderStatus(orderId, OrderStatus.Deposited);
+
         orderStatus[orderId] = OrderStatus.Refunded;
 
-        _refund(order, orderId, currentStatus);
+        _refund(order);
 
         // Validate that there has been no reentrancy.
         if (orderStatus[orderId] != OrderStatus.Refunded)
@@ -457,53 +789,136 @@ contract InputSettlerBond is
         emit Refunded(orderId);
     }
 
-    function _refund(
-        StandardOrder calldata order,
-        bytes32 orderId,
-        OrderStatus currentStatus
-    ) internal {
-        if (currentStatus == OrderStatus.Claimed) {
-            OrderSolver memory os = orderSolver[orderId];
+    // --- Permit2 / ERC-3009 helpers --- //
 
-            _penalizeBonds(os.solver, order.user, order.inputs);
-        } else {
-            _transferInputs(address(this), order.user, order.inputs);
+    /**
+     * @notice Helper function for using Permit2 to collect assets represented by a StandardOrder.
+     * @param order StandardOrder representing the intent.
+     * @param signer Provider of the Permit2 funds and signer of the permit.
+     * @param signature Permit2 signature with Permit2Witness representing `order`.
+     * @param to Recipient of the input tokens. In most cases, should be address(this).
+     */
+    function _openForWithPermit2(
+        StandardOrder calldata order,
+        address signer,
+        bytes calldata signature,
+        address to
+    ) internal {
+        ISignatureTransfer.TokenPermissions[] memory permitted;
+        ISignatureTransfer.SignatureTransferDetails[] memory transferDetails;
+
+        {
+            uint256 numInputs = order.inputs.length;
+            permitted = new ISignatureTransfer.TokenPermissions[](numInputs);
+            transferDetails = new ISignatureTransfer.SignatureTransferDetails[](
+                numInputs
+            );
+
+            for (uint256 i; i < numInputs; ++i) {
+                uint256[2] calldata input = order.inputs[i];
+                address token = input[0].validatedCleanAddress();
+                uint256 amount = input[1];
+
+                _validateTokenAmount(amount);
+                _validateToken(token);
+
+                permitted[i] = ISignatureTransfer.TokenPermissions({
+                    token: token,
+                    amount: amount
+                });
+                // Set our requested transfer. This has to be less than or equal to the allowance
+                transferDetails[i] = ISignatureTransfer
+                    .SignatureTransferDetails({
+                        to: to,
+                        requestedAmount: amount
+                    });
+            }
         }
+        ISignatureTransfer.PermitBatchTransferFrom
+            memory permitBatch = ISignatureTransfer.PermitBatchTransferFrom({
+                permitted: permitted,
+                nonce: order.nonce,
+                deadline: order.fillDeadline
+            });
+        PERMIT2.permitWitnessTransferFrom(
+            permitBatch,
+            transferDetails,
+            signer,
+            Permit2WitnessType.Permit2WitnessHash(order),
+            Permit2WitnessType.PERMIT2_PERMIT2_TYPESTRING,
+            signature
+        );
     }
 
     /**
-     * @notice Finalise an order, paying the inputs to the solver.
-     * @dev This function handles bond management based on whether the fill was on time and who the solver is.
-     * @param order The order that has been filled.
-     * @param orderId A unique identifier for the order.
-     * @param solveParams The solve parameters.
+     * @notice Helper function for using ERC-3009 to collect assets represented by a StandardOrder.
+     * @dev For `receiveWithAuthorization`, the nonce is set to `orderId` to bind authorizations to a specific order.
+     * @param inputs Order inputs to be collected.
+     * @param fillDeadline Deadline for calling the open function.
+     * @param signer Provider of the ERC-3009 funds and signer of the authorization.
+     * @param _signature_ Either a single ERC-3009 signature or abi.encoded bytes[] of signatures. A single signature is
+     * only allowed if the order has exactly 1 input.
+     * @param orderId The order identifier used as ERC-3009 nonce.
      */
-    function _finalise(
-        StandardOrder calldata order,
-        bytes32 orderId,
-        SolveParams[] calldata solveParams
+    function _openForWithAuthorization(
+        uint256[2][] calldata inputs,
+        uint32 fillDeadline,
+        address signer,
+        bytes calldata _signature_,
+        bytes32 orderId
     ) internal {
-        // Mark order as settled. If we can't make the settle, we will
-        // revert and it will unmark it. This acts as a reentry check.
-        orderStatus[orderId] = OrderStatus.Settled;
+        uint256 numInputs = inputs.length;
 
-        uint256 fillTimestamp = solveParams[0].timestamp;
-        address fillSolver = solveParams[0].solver.fromIdentifier();
+        if (numInputs == 1) {
+            // If there is only 1 input, try using the provided signature as is.
+            uint256[2] calldata input = inputs[0];
 
-        OrderSolver memory os = orderSolver[orderId];
+            address token = input[0].validatedCleanAddress();
+            uint256 amount = input[1];
 
-        bool isOnTime = fillTimestamp <= os.timestamp + TIME_TO_FILL;
+            _validateTokenAmount(amount);
+            _validateToken(token);
 
-        if (isOnTime) _unlockBonds(os.solver, order.inputs);
-        else if (os.solver == fillSolver)
-            _unlockAndSlashBonds(os.solver, order.user, order.inputs);
-        else _penalizeAndSlashBonds(os.solver, fillSolver, order.inputs);
+            bytes memory callData = abi.encodeCall(
+                IERC3009.receiveWithAuthorization,
+                (
+                    signer,
+                    address(this),
+                    amount,
+                    0,
+                    fillDeadline,
+                    orderId,
+                    _signature_
+                )
+            );
 
-        // Validate that there has been no reentrancy.
-        if (orderStatus[orderId] != OrderStatus.Settled)
-            revert ReentrancyDetected();
+            (bool success, ) = token.call(callData);
+            if (success) return;
+            // Otherwise it could be because of a lot of reasons. One being the signature is abi.encoded as bytes[].
+        }
+        {
+            uint256 numSignatures = BytesLib.getLengthOfBytesArray(_signature_);
+            if (numInputs != numSignatures) revert SignatureAndInputsNotEqual();
+        }
+        for (uint256 i; i < numInputs; ++i) {
+            bytes calldata signature = BytesLib.getBytesOfArray(_signature_, i);
+            uint256[2] calldata input = inputs[i];
+            address token = input[0].validatedCleanAddress();
+            uint256 amount = input[1];
 
-        emit Finalised(orderId, solveParams[0].solver, solveParams[0].solver);
+            _validateTokenAmount(amount);
+            _validateToken(token);
+
+            IERC3009(token).receiveWithAuthorization({
+                from: signer,
+                to: address(this),
+                value: amount,
+                validAfter: 0,
+                validBefore: fillDeadline,
+                nonce: orderId,
+                signature: signature
+            });
+        }
     }
 
     // --- Validation --- //
@@ -522,28 +937,90 @@ contract InputSettlerBond is
     }
 
     /**
-     * @notice Validates the solver signature for an order.
-     * @param solver The solver address.
-     * @param solverSignature The signature to validate.
-     * @param orderId The order identifier.
+     * @notice Validates that the token address is non-zero and contains contract code.
+     * @param token ERC20 token address.
      */
-    function _validateSolverSignature(
-        address solver,
-        bytes calldata solverSignature,
-        bytes32 orderId
-    ) internal view {
-        bytes32 structHash = keccak256(
-            abi.encode(SOLVER_CONSENT_TYPEHASH, orderId)
-        );
+    function _validateToken(address token) internal view {
+        if (token == address(0)) revert InvalidToken(token);
+        IsContractLib.validateContainsCode(token);
+    }
 
-        bytes32 digest = _hashTypedDataV4(structHash);
+    /**
+     * @notice Validates that an amount is non-zero.
+     * @param amount Token amount.
+     */
+    function _validateTokenAmount(uint256 amount) internal pure {
+        if (amount == 0) revert ZeroTokenAmount();
+    }
 
-        if (
-            !SignatureChecker.isValidSignatureNow(
-                solver,
-                digest,
-                solverSignature
-            )
-        ) revert InvalidSolverSignature();
+    /**
+     * @notice Calculates the bond amount charged on a given input amount.
+     * @dev Uses ceiling rounding to avoid under-collecting bond.
+     * @param amount Input amount.
+     * @return Bond amount.
+     */
+    function _calculateBondAmount(
+        uint256 amount
+    ) internal view returns (uint256) {
+        return
+            Math.mulDiv(amount, BOND_BPS, BPS_DENOMINATOR, Math.Rounding.Ceil);
+    }
+
+    /**
+     * @notice Validates a claim by requiring the oracle to prove all outputs for the provided `solveParams`.
+     * @dev Returns false on any mismatch or missing proof; oracle is expected to revert when proofs are invalid.
+     */
+    function _validateClaim(
+        uint32 fillDeadline,
+        address inputOracle,
+        MandateOutput[] calldata outputs,
+        bytes32 orderId,
+        SolveParams[] calldata solveParams
+    ) internal view returns (bool) {
+        uint256 numOutputs = outputs.length;
+        if (solveParams.length != numOutputs) return false;
+
+        bytes memory proofSeries = new bytes(32 * 4 * numOutputs);
+        for (uint256 i; i < numOutputs; ++i) {
+            uint32 outputFilledAt = solveParams[i].timestamp;
+            if (fillDeadline < outputFilledAt) return false;
+
+            MandateOutput calldata output = outputs[i];
+            bytes32 payloadHash = _proofPayloadHash(
+                orderId,
+                solveParams[i].solver,
+                outputFilledAt,
+                output
+            );
+
+            uint256 chainId = output.chainId;
+            bytes32 outputOracle = output.oracle;
+            bytes32 outputSettler = output.settler;
+            assembly ("memory-safe") {
+                let offset := add(add(proofSeries, 0x20), mul(i, 0x80))
+                mstore(offset, chainId)
+                mstore(add(offset, 0x20), outputOracle)
+                mstore(add(offset, 0x40), outputSettler)
+                mstore(add(offset, 0x60), payloadHash)
+            }
+        }
+
+        // Oracle is expected to revert if any proof is missing/invalid.
+        try IInputOracle(inputOracle).efficientRequireProven(proofSeries) {
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * @notice Hashes solve params for use as a claim key.
+     * @param solveParams Solve parameters.
+     * @return Keccak256 hash of abi-encoded solve params.
+     */
+    function _getSolveParamsHash(
+        SolveParams[] calldata solveParams
+    ) internal pure returns (bytes32) {
+        return keccak256(abi.encode(solveParams));
     }
 }

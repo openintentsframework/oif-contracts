@@ -14,23 +14,27 @@ interface IInputSettlerBond {
         bytes calldata signature
     ) external;
 
-    function openFor(
-        StandardOrder calldata order,
-        address sponsor,
-        bytes calldata signature,
-        address solver,
-        bytes calldata solverSignature
-    ) external;
-
     function open(StandardOrder calldata order) external;
 
-    function open(
+    function claim(
         StandardOrder calldata order,
-        address solver,
-        bytes calldata solverSignature
+        InputSettlerBase.SolveParams[] calldata solveParams
     ) external;
 
-    function claim(StandardOrder calldata order) external;
+    function dispute(
+        StandardOrder calldata order,
+        InputSettlerBase.SolveParams[] calldata solveParams
+    ) external;
+
+    function settleDispute(
+        StandardOrder calldata order,
+        InputSettlerBase.SolveParams[] calldata solveParams
+    ) external;
+
+    function slashDispute(
+        StandardOrder calldata order,
+        InputSettlerBase.SolveParams[] calldata solveParams
+    ) external;
 
     function finalise(
         StandardOrder calldata order,
