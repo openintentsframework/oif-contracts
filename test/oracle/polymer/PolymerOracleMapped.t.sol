@@ -8,6 +8,7 @@ import { MandateOutput } from "src/input/types/MandateOutputType.sol";
 import { PolymerOracle } from "src/integrations/oracles/polymer/PolymerOracle.sol";
 import { PolymerOracleMapped } from "src/integrations/oracles/polymer/PolymerOracleMapped.sol";
 import { MockCrossL2ProverV2 } from "src/integrations/oracles/polymer/external/mocks/MockCrossL2ProverV2.sol";
+import { HexBytes } from "src/libs/HexBytesLib.sol";
 import { LibAddress } from "src/libs/LibAddress.sol";
 
 import { MockERC20 } from "../../mocks/MockERC20.sol";
@@ -287,5 +288,197 @@ contract PolymerOracleMappedTest is Test {
         IInputSettlerEscrow(inputSettlerEscrow).finalise(order, solveParams, solver.toIdentifier(), hex"");
 
         assertEq(token.balanceOf(solver), amount);
+    }
+
+    /**
+     * @dev Helper function to convert bytes32 to hex string (64 characters, lowercase, no 0x prefix)
+     */
+    function _bytes32ToHex(
+        bytes32 value
+    ) internal pure returns (string memory) {
+        bytes memory hexChars = "0123456789abcdef";
+        bytes memory result = new bytes(64);
+        for (uint256 i = 0; i < 32; i++) {
+            result[i * 2] = hexChars[uint8(value[i] >> 4)];
+            result[i * 2 + 1] = hexChars[uint8(value[i] & 0x0f)];
+        }
+        return string(result);
+    }
+
+    /**
+     * @dev Helper function to convert bytes to hex string (lowercase, no 0x prefix)
+     */
+    function _bytesToHex(
+        bytes memory data
+    ) internal pure returns (string memory) {
+        bytes memory hexChars = "0123456789abcdef";
+        bytes memory result = new bytes(data.length * 2);
+        for (uint256 i = 0; i < data.length; i++) {
+            result[i * 2] = hexChars[uint8(data[i] >> 4)];
+            result[i * 2 + 1] = hexChars[uint8(data[i] & 0x0f)];
+        }
+        return string(result);
+    }
+
+    function test_receiveSolanaMessage_with_proof_mapped() public {
+        uint32 solanaChainId = 2;
+        bytes32 programID = keccak256("solana-program");
+        bytes32 application = makeAddr("settler").toIdentifier();
+        bytes memory payload = bytes("test-payload");
+        bytes32 payloadHash = keccak256(payload);
+
+        // Create log message in the format: "Application: 0x<64 hex>, Payload: 0x<dynamic hex>"
+        string memory logMessage = string.concat(
+            "Application: 0x", _bytes32ToHex(application), ", Payload: 0x", _bytesToHex(payload)
+        );
+
+        string[] memory logMessages = new string[](1);
+        logMessages[0] = logMessage;
+
+        bytes memory mockProof = mockCrossL2ProverV2.generateAndEmitSolProof(solanaChainId, programID, logMessages);
+
+        uint256 remoteChainId = uint256(solanaChainId);
+
+        vm.prank(owner);
+        polymerOracleMapped.setChainMap(remoteChainId, remoteChainId);
+
+        vm.expectEmit();
+        emit OutputProven(remoteChainId, programID, application, payloadHash);
+        polymerOracleMapped.receiveSolanaMessage(mockProof);
+    }
+
+    function test_receiveSolanaMessage_multiple_proofs_mapped() public {
+        uint32 solanaChainId = 2;
+        bytes32 programID = keccak256("solana-program");
+
+        bytes32 application1 = makeAddr("settler1").toIdentifier();
+        bytes memory payload1 = bytes("test-payload-1");
+        bytes32 payloadHash1 = keccak256(payload1);
+
+        bytes32 application2 = makeAddr("settler2").toIdentifier();
+        bytes memory payload2 = bytes("test-payload-2");
+        bytes32 payloadHash2 = keccak256(payload2);
+
+        string memory logMessage1 = string.concat(
+            "Application: 0x", _bytes32ToHex(application1), ", Payload: 0x", _bytesToHex(payload1)
+        );
+
+        string memory logMessage2 = string.concat(
+            "Application: 0x", _bytes32ToHex(application2), ", Payload: 0x", _bytesToHex(payload2)
+        );
+
+        string[] memory logMessages1 = new string[](1);
+        logMessages1[0] = logMessage1;
+
+        string[] memory logMessages2 = new string[](1);
+        logMessages2[0] = logMessage2;
+
+        bytes memory mockProof1 = mockCrossL2ProverV2.generateAndEmitSolProof(solanaChainId, programID, logMessages1);
+        bytes memory mockProof2 = mockCrossL2ProverV2.generateAndEmitSolProof(solanaChainId, programID, logMessages2);
+
+        uint256 remoteChainId = uint256(solanaChainId);
+
+        vm.prank(owner);
+        polymerOracleMapped.setChainMap(remoteChainId, remoteChainId);
+
+        vm.expectEmit();
+        emit OutputProven(remoteChainId, programID, application1, payloadHash1);
+        polymerOracleMapped.receiveSolanaMessage(mockProof1);
+
+        vm.expectEmit();
+        emit OutputProven(remoteChainId, programID, application2, payloadHash2);
+        polymerOracleMapped.receiveSolanaMessage(mockProof2);
+    }
+
+    function test_receiveSolanaMessage_multiple_proofs_batch_mapped() public {
+        uint32 solanaChainId = 2;
+        bytes32 programID = keccak256("solana-program");
+
+        bytes32 application1 = makeAddr("settler1").toIdentifier();
+        bytes memory payload1 = bytes("test-payload-1");
+        bytes32 payloadHash1 = keccak256(payload1);
+
+        bytes32 application2 = makeAddr("settler2").toIdentifier();
+        bytes memory payload2 = bytes("test-payload-2");
+        bytes32 payloadHash2 = keccak256(payload2);
+
+        string memory logMessage1 = string.concat(
+            "Application: 0x", _bytes32ToHex(application1), ", Payload: 0x", _bytesToHex(payload1)
+        );
+
+        string memory logMessage2 = string.concat(
+            "Application: 0x", _bytes32ToHex(application2), ", Payload: 0x", _bytesToHex(payload2)
+        );
+
+        string[] memory logMessages1 = new string[](1);
+        logMessages1[0] = logMessage1;
+
+        string[] memory logMessages2 = new string[](1);
+        logMessages2[0] = logMessage2;
+
+        bytes memory mockProof1 = mockCrossL2ProverV2.generateAndEmitSolProof(solanaChainId, programID, logMessages1);
+        bytes memory mockProof2 = mockCrossL2ProverV2.generateAndEmitSolProof(solanaChainId, programID, logMessages2);
+
+        uint256 remoteChainId = uint256(solanaChainId);
+
+        vm.prank(owner);
+        polymerOracleMapped.setChainMap(remoteChainId, remoteChainId);
+
+        vm.expectEmit();
+        emit OutputProven(remoteChainId, programID, application1, payloadHash1);
+        vm.expectEmit();
+        emit OutputProven(remoteChainId, programID, application2, payloadHash2);
+
+        bytes[] memory proofs = new bytes[](2);
+        proofs[0] = mockProof1;
+        proofs[1] = mockProof2;
+
+        polymerOracleMapped.receiveSolanaMessage(proofs);
+    }
+
+    function test_receiveSolanaMessage_wrong_chain_id_mapped_reverts() public {
+        uint32 wrongChainId = 1; // Not Solana (should be 2)
+        bytes32 programID = keccak256("solana-program");
+        bytes32 application = makeAddr("settler").toIdentifier();
+        bytes memory payload = bytes("test-payload");
+        bytes32 payloadHash = keccak256(payload);
+
+        string memory logMessage = string.concat(
+            "Application: 0x", _bytes32ToHex(application), ", Payload: 0x", _bytesToHex(payload)
+        );
+
+        string[] memory logMessages = new string[](1);
+        logMessages[0] = logMessage;
+
+        bytes memory mockProof = mockCrossL2ProverV2.generateAndEmitSolProof(wrongChainId, programID, logMessages);
+
+        // Should revert on chainId check before mapping is even consulted.
+        vm.expectRevert(PolymerOracle.NotSolanaMessage.selector);
+        polymerOracleMapped.receiveSolanaMessage(mockProof);
+    }
+
+    function test_receiveSolanaMessage_invalid_hex_reverts() public {
+        uint32 solanaChainId = 2;
+        bytes32 programID = keccak256("solana-program");
+        bytes memory payload = hex"deadbeef";
+
+        // Build an invalid hex string (64 non-hex characters, e.g. 'g')
+        string memory badHex = "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg"; // 64 chars
+
+        string memory logMessage =
+            string.concat("Application: 0x", badHex, ", Payload: 0x", _bytesToHex(payload));
+
+        string[] memory logMessages = new string[](1);
+        logMessages[0] = logMessage;
+
+        bytes memory mockProof = mockCrossL2ProverV2.generateAndEmitSolProof(solanaChainId, programID, logMessages);
+
+        uint256 remoteChainId = uint256(solanaChainId);
+        vm.prank(owner);
+        polymerOracleMapped.setChainMap(remoteChainId, remoteChainId);
+
+        // hexStringToBytes32 should revert on invalid hex character
+        vm.expectRevert(HexBytes.InvalidHexChar.selector);
+        polymerOracleMapped.receiveSolanaMessage(mockProof);
     }
 }
