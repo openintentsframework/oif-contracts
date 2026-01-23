@@ -305,15 +305,31 @@ contract PolymerOracleMappedTest is Test {
         return string(result);
     }
 
+    /**
+     * @dev Helper function to convert bytes to hex string (lowercase, no 0x prefix)
+     */
+    function _bytesToHex(
+        bytes memory data
+    ) internal pure returns (string memory) {
+        bytes memory hexChars = "0123456789abcdef";
+        bytes memory result = new bytes(data.length * 2);
+        for (uint256 i = 0; i < data.length; i++) {
+            result[i * 2] = hexChars[uint8(data[i] >> 4)];
+            result[i * 2 + 1] = hexChars[uint8(data[i] & 0x0f)];
+        }
+        return string(result);
+    }
+
     function test_receiveSolanaMessage_with_proof_mapped() public {
         uint32 solanaChainId = 2;
         bytes32 programID = keccak256("solana-program");
         bytes32 application = makeAddr("settler").toIdentifier();
-        bytes32 payloadHash = keccak256("test-payload-hash");
+        bytes memory payload = bytes("test-payload");
+        bytes32 payloadHash = keccak256(payload);
 
-        // Create log message in the format: "Application: 0x<64 hex>, PayloadHash: 0x<64 hex>"
+        // Create log message in the format: "Application: 0x<64 hex>, Payload: 0x<dynamic hex>"
         string memory logMessage = string.concat(
-            "Application: 0x", _bytes32ToHex(application), ", PayloadHash: 0x", _bytes32ToHex(payloadHash)
+            "Application: 0x", _bytes32ToHex(application), ", Payload: 0x", _bytesToHex(payload)
         );
 
         string[] memory logMessages = new string[](1);
@@ -336,17 +352,19 @@ contract PolymerOracleMappedTest is Test {
         bytes32 programID = keccak256("solana-program");
 
         bytes32 application1 = makeAddr("settler1").toIdentifier();
-        bytes32 payloadHash1 = keccak256("test-payload-hash-1");
+        bytes memory payload1 = bytes("test-payload-1");
+        bytes32 payloadHash1 = keccak256(payload1);
 
         bytes32 application2 = makeAddr("settler2").toIdentifier();
-        bytes32 payloadHash2 = keccak256("test-payload-hash-2");
+        bytes memory payload2 = bytes("test-payload-2");
+        bytes32 payloadHash2 = keccak256(payload2);
 
         string memory logMessage1 = string.concat(
-            "Application: 0x", _bytes32ToHex(application1), ", PayloadHash: 0x", _bytes32ToHex(payloadHash1)
+            "Application: 0x", _bytes32ToHex(application1), ", Payload: 0x", _bytesToHex(payload1)
         );
 
         string memory logMessage2 = string.concat(
-            "Application: 0x", _bytes32ToHex(application2), ", PayloadHash: 0x", _bytes32ToHex(payloadHash2)
+            "Application: 0x", _bytes32ToHex(application2), ", Payload: 0x", _bytesToHex(payload2)
         );
 
         string[] memory logMessages1 = new string[](1);
@@ -377,17 +395,19 @@ contract PolymerOracleMappedTest is Test {
         bytes32 programID = keccak256("solana-program");
 
         bytes32 application1 = makeAddr("settler1").toIdentifier();
-        bytes32 payloadHash1 = keccak256("test-payload-hash-1");
+        bytes memory payload1 = bytes("test-payload-1");
+        bytes32 payloadHash1 = keccak256(payload1);
 
         bytes32 application2 = makeAddr("settler2").toIdentifier();
-        bytes32 payloadHash2 = keccak256("test-payload-hash-2");
+        bytes memory payload2 = bytes("test-payload-2");
+        bytes32 payloadHash2 = keccak256(payload2);
 
         string memory logMessage1 = string.concat(
-            "Application: 0x", _bytes32ToHex(application1), ", PayloadHash: 0x", _bytes32ToHex(payloadHash1)
+            "Application: 0x", _bytes32ToHex(application1), ", Payload: 0x", _bytesToHex(payload1)
         );
 
         string memory logMessage2 = string.concat(
-            "Application: 0x", _bytes32ToHex(application2), ", PayloadHash: 0x", _bytes32ToHex(payloadHash2)
+            "Application: 0x", _bytes32ToHex(application2), ", Payload: 0x", _bytesToHex(payload2)
         );
 
         string[] memory logMessages1 = new string[](1);
@@ -420,10 +440,11 @@ contract PolymerOracleMappedTest is Test {
         uint32 wrongChainId = 1; // Not Solana (should be 2)
         bytes32 programID = keccak256("solana-program");
         bytes32 application = makeAddr("settler").toIdentifier();
-        bytes32 payloadHash = keccak256("test-payload-hash");
+        bytes memory payload = bytes("test-payload");
+        bytes32 payloadHash = keccak256(payload);
 
         string memory logMessage = string.concat(
-            "Application: 0x", _bytes32ToHex(application), ", PayloadHash: 0x", _bytes32ToHex(payloadHash)
+            "Application: 0x", _bytes32ToHex(application), ", Payload: 0x", _bytesToHex(payload)
         );
 
         string[] memory logMessages = new string[](1);
@@ -439,13 +460,13 @@ contract PolymerOracleMappedTest is Test {
     function test_receiveSolanaMessage_invalid_hex_reverts() public {
         uint32 solanaChainId = 2;
         bytes32 programID = keccak256("solana-program");
-        bytes32 payloadHash = keccak256("test-payload-hash");
+        bytes memory payload = hex"deadbeef";
 
         // Build an invalid hex string (64 non-hex characters, e.g. 'g')
         string memory badHex = "gggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg"; // 64 chars
 
         string memory logMessage =
-            string.concat("Application: 0x", badHex, ", PayloadHash: 0x", _bytes32ToHex(payloadHash));
+            string.concat("Application: 0x", badHex, ", Payload: 0x", _bytesToHex(payload));
 
         string[] memory logMessages = new string[](1);
         logMessages[0] = logMessage;

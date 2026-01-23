@@ -20,6 +20,12 @@ contract HexBytesLibTest is Test {
         HexBytes.hexBytesToBytes32(input);
     }
 
+    function _call_hexBytesToBytes(
+        bytes memory input
+    ) external pure {
+        HexBytes.hexBytesToBytes(input);
+    }
+
     /*//////////////////////////////////////////////////////////////
                              fromHexChar
     //////////////////////////////////////////////////////////////*/
@@ -137,6 +143,47 @@ contract HexBytesLibTest is Test {
         this._call_hexBytesToBytes32(input);
     }
 
+
+    /*//////////////////////////////////////////////////////////////
+                              hexBytesToBytes
+    //////////////////////////////////////////////////////////////*/
+
+    function test_hexBytesToBytes_empty_no_prefix() public pure {
+        bytes memory result = HexBytes.hexBytesToBytes(bytes(""));
+        assertEq(result.length, 0);
+    }
+
+    function test_hexBytesToBytes_empty_with_prefix() public pure {
+        bytes memory result = HexBytes.hexBytesToBytes(bytes("0x"));
+        assertEq(result.length, 0);
+    }
+
+    function test_hexBytesToBytes_single_byte_no_prefix() public pure {
+        bytes memory result = HexBytes.hexBytesToBytes(bytes("ff"));
+        assertEq(keccak256(result), keccak256(hex"ff"));
+    }
+
+    function test_hexBytesToBytes_single_byte_with_prefix() public pure {
+        bytes memory result = HexBytes.hexBytesToBytes(bytes("0x0a"));
+        assertEq(keccak256(result), keccak256(hex"0a"));
+    }
+
+    function test_hexBytesToBytes_mixed_vector() public pure {
+        bytes memory result = HexBytes.hexBytesToBytes(bytes("0x0123456789abcdef"));
+        assertEq(keccak256(result), keccak256(hex"0123456789abcdef"));
+    }
+
+    function test_hexBytesToBytes_odd_length_reverts() public {
+        // 3 hex chars (odd) after optional prefix
+        vm.expectRevert(HexBytes.InvalidHexBytesLength.selector);
+        this._call_hexBytesToBytes(bytes("abc"));
+    }
+
+    function test_hexBytesToBytes_invalid_hex_char_reverts() public {
+        vm.expectRevert(HexBytes.InvalidHexChar.selector);
+        this._call_hexBytesToBytes(bytes("0x0g"));
+    }
+
     /*//////////////////////////////////////////////////////////////
                               sliceFromBytes
     //////////////////////////////////////////////////////////////*/
@@ -154,50 +201,6 @@ contract HexBytesLibTest is Test {
 
         bytes memory result = HexBytes.sliceFromBytes(data, 1, 0);
         assertEq(result.length, 0);
-    }
-
-    /*//////////////////////////////////////////////////////////////
-                                hasPrefix
-    //////////////////////////////////////////////////////////////*/
-
-    function test_hasPrefix_at_start_true() public pure {
-        bytes memory subject = hex"0011223344556677";
-        bytes memory prefix = hex"0011";
-
-        bool result = HexBytes.hasPrefix(subject, prefix, 0);
-        assertTrue(result);
-    }
-
-    function test_hasPrefix_at_offset_true() public pure {
-        bytes memory subject = hex"0011223344556677";
-        bytes memory prefix = hex"2233";
-
-        bool result = HexBytes.hasPrefix(subject, prefix, 2);
-        assertTrue(result);
-    }
-
-    function test_hasPrefix_mismatch_false() public pure {
-        bytes memory subject = hex"0011223344556677";
-        bytes memory prefix = hex"aabb";
-
-        bool result = HexBytes.hasPrefix(subject, prefix, 0);
-        assertFalse(result);
-    }
-
-    function test_hasPrefix_out_of_bounds_start_false() public pure {
-        bytes memory subject = hex"0011223344556677";
-        bytes memory prefix = hex"0011";
-
-        bool result = HexBytes.hasPrefix(subject, prefix, 20);
-        assertFalse(result);
-    }
-
-    function test_hasPrefix_prefix_runs_past_end_false() public pure {
-        bytes memory subject = hex"0011223344556677";
-        bytes memory prefix = hex"667788";
-
-        bool result = HexBytes.hasPrefix(subject, prefix, 6);
-        assertFalse(result);
     }
 }
 

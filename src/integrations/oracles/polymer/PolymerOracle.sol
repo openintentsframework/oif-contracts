@@ -20,13 +20,14 @@ contract PolymerOracle is BaseInputOracle {
 
     error WrongEventSignature();
     error NotSolanaMessage();
+    error InvalidApplicationSeparator();
+    error InvalidPayloadSeparator();
 
     uint256 constant SOLANA_POLYMER_CHAIN_ID = 2;
     bytes constant SOLANA_APPLICATION_SEPARATOR = bytes("Application: ");
-    bytes constant SOLANA_PAYLOAD_HASH_SEPARATOR = bytes(", PayloadHash: ");
+    bytes constant SOLANA_PAYLOAD_SEPARATOR = bytes(", Payload: ");
     uint256 constant SOLANA_HEX_STRING_LENGTH = 66; // 32 bytes as hex plus "0x" prefix
-    // 13 ("Application: ") + 66 (0x + 64 hex chars) + 15 (", PayloadHash: ") + 66 (0x + 64 hex chars) = 160
-    uint256 constant SOLANA_EXPECTED_LOG_LENGTH = 13 + 66 + 15 + 66;
+
 
     ICrossL2ProverV2 CROSS_L2_PROVER;
 
@@ -85,42 +86,45 @@ contract PolymerOracle is BaseInputOracle {
     /// ************** Solana Processing ************** ///
 
     /// @dev Validates and parses a single Solana log line.
-    /// Expects the format: "Application: 0x<64 hex>, PayloadHash: 0x<64 hex>".
-    /// Returns (application, payloadHash) if the log is valid, otherwise (0, 0).
+    /// Expects the format: "Application: 0x<64 hex>, Payload: 0x<dynamic length>".
+    /// Returns (application, payload) if the log is valid, otherwise (0, 0).
     function _isValidLog(
         bytes memory logBytes
     ) internal pure returns (bytes32 application, bytes32 payloadHash) {
-        // Quick length check
-        if (logBytes.length != SOLANA_EXPECTED_LOG_LENGTH) return (bytes32(0), bytes32(0));
+        uint256 pointer = 0;
+        bytes memory applicationSeparatorBytes =
+            HexBytes.sliceFromBytes(logBytes, pointer, SOLANA_APPLICATION_SEPARATOR.length);
 
-        if (!HexBytes.hasPrefix(logBytes, SOLANA_APPLICATION_SEPARATOR, 0)) return (bytes32(0), bytes32(0));
+        require(
+            keccak256(applicationSeparatorBytes) == keccak256(SOLANA_APPLICATION_SEPARATOR),
+            InvalidApplicationSeparator()
+        );
 
-        // Application: "0x" + 64 hex chars → 66 characters
-        uint256 idx = SOLANA_APPLICATION_SEPARATOR.length;
-        bytes memory applicationHexBytes = HexBytes.sliceFromBytes(logBytes, idx, 66);
-        idx += 66;
+        pointer += SOLANA_APPLICATION_SEPARATOR.length;
+        bytes memory applicationHexBytes = HexBytes.sliceFromBytes(logBytes, pointer, SOLANA_HEX_STRING_LENGTH);
 
-        // Expect exact ", PayloadHash: " separator
-        if (!HexBytes.hasPrefix(logBytes, SOLANA_PAYLOAD_HASH_SEPARATOR, idx)) return (bytes32(0), bytes32(0));
-        idx += SOLANA_PAYLOAD_HASH_SEPARATOR.length;
+        pointer += SOLANA_HEX_STRING_LENGTH;
+        bytes memory payloadSeparatorBytes = HexBytes.sliceFromBytes(logBytes, pointer, SOLANA_PAYLOAD_SEPARATOR.length);
 
-        // PayloadHash: "0x" + 64 hex chars → 66 characters
-        bytes memory payloadHexBytes = HexBytes.sliceFromBytes(logBytes, idx, 66);
-        idx += 66;
+        require(
+            keccak256(payloadSeparatorBytes) == keccak256(SOLANA_PAYLOAD_SEPARATOR),
+            InvalidPayloadSeparator()
+        );
 
-        // Sanity: must be at end of line
-        if (idx != logBytes.length) return (bytes32(0), bytes32(0));
+        pointer += SOLANA_PAYLOAD_SEPARATOR.length;
+        bytes memory payloadHexBytes = HexBytes.sliceFromBytes(logBytes, pointer, logBytes.length - pointer);
 
         // Parse hex bytes into bytes32
         application = HexBytes.hexBytesToBytes32(applicationHexBytes);
-        payloadHash = HexBytes.hexBytesToBytes32(payloadHexBytes);
+        payloadHash = keccak256(HexBytes.hexBytesToBytes(payloadHexBytes));
     }
 
     /**
      * @dev The Solana program emits a log in the format:
-     *  "Prove: program: <programID>, Application: <application>, PayloadHash: <payloadHash>"
-     *  where `<application>` and `<payloadHash>` are 32-byte values encoded as hex strings:
+     *  "Prove: program: <programID>, Application: <application>, Payload: <payload>"
+     *  where `<application>` is a 32-byte value encoded as a hex string:
      *  the ASCII characters `"0x"` followed by 64 lowercase hex characters (i.e. 0x + 32 bytes).
+     *  and `<payload>` is a dynamic-length byte array encoded as a hex string (i.e 0x + dynamic bytes).
      */
     function _processSolanaMessage(
         bytes calldata proof
