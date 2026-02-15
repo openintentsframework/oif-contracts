@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import { HexBytes } from "../../../libs/HexBytesLib.sol";
 import { LibAddress } from "../../../libs/LibAddress.sol";
+import { Base64 } from "openzeppelin/utils/Base64.sol";
 import { Bytes } from "openzeppelin/utils/Bytes.sol";
 
 import { MandateOutput, MandateOutputEncodingLib } from "../../../libs/MandateOutputEncodingLib.sol";
@@ -20,14 +20,8 @@ contract PolymerOracle is BaseInputOracle {
 
     error WrongEventSignature();
     error NotSolanaMessage();
-    error InvalidApplicationSeparator();
-    error InvalidPayloadSeparator();
 
     uint256 constant SOLANA_POLYMER_CHAIN_ID = 2;
-    bytes constant SOLANA_APPLICATION_SEPARATOR = bytes("Application: ");
-    bytes constant SOLANA_PAYLOAD_SEPARATOR = bytes(", Payload: ");
-    uint256 constant SOLANA_HEX_STRING_LENGTH = 66; // 32 bytes as hex plus "0x" prefix
-
 
     ICrossL2ProverV2 CROSS_L2_PROVER;
 
@@ -85,46 +79,16 @@ contract PolymerOracle is BaseInputOracle {
 
     /// ************** Solana Processing ************** ///
 
-    /// @dev Validates and parses a single Solana log line.
-    /// Expects the format: "Application: 0x<64 hex>, Payload: 0x<dynamic length>".
-    /// Returns (application, payload) if the log is valid, otherwise (0, 0).
-    function _isValidLog(
-        bytes memory logBytes
-    ) internal pure returns (bytes32 application, bytes32 payloadHash) {
-        uint256 pointer = 0;
-        bytes memory applicationSeparatorBytes =
-            HexBytes.sliceFromBytes(logBytes, pointer, SOLANA_APPLICATION_SEPARATOR.length);
-
-        require(
-            keccak256(applicationSeparatorBytes) == keccak256(SOLANA_APPLICATION_SEPARATOR),
-            InvalidApplicationSeparator()
-        );
-
-        pointer += SOLANA_APPLICATION_SEPARATOR.length;
-        bytes memory applicationHexBytes = HexBytes.sliceFromBytes(logBytes, pointer, SOLANA_HEX_STRING_LENGTH);
-
-        pointer += SOLANA_HEX_STRING_LENGTH;
-        bytes memory payloadSeparatorBytes = HexBytes.sliceFromBytes(logBytes, pointer, SOLANA_PAYLOAD_SEPARATOR.length);
-
-        require(
-            keccak256(payloadSeparatorBytes) == keccak256(SOLANA_PAYLOAD_SEPARATOR),
-            InvalidPayloadSeparator()
-        );
-
-        pointer += SOLANA_PAYLOAD_SEPARATOR.length;
-        bytes memory payloadHexBytes = HexBytes.sliceFromBytes(logBytes, pointer, logBytes.length - pointer);
-
-        // Parse hex bytes into bytes32
-        application = HexBytes.hexBytesToBytes32(applicationHexBytes);
-        payloadHash = keccak256(HexBytes.hexBytesToBytes(payloadHexBytes));
-    }
-
     /**
-     * @dev The Solana program emits a log in the format:
-     *  "Prove: program: <programID>, Application: <application>, Payload: <payload>"
-     *  where `<application>` is a 32-byte value encoded as a hex string:
-     *  the ASCII characters `"0x"` followed by 64 lowercase hex characters (i.e. 0x + 32 bytes).
-     *  and `<payload>` is a dynamic-length byte array encoded as a hex string (i.e 0x + dynamic bytes).
+     * @dev Solana logs are passed in as base64-encoded bytes.
+     *
+     * The decoded bytes are expected to be:
+     * - bytes[0:32]   = `emitter` (bytes32)      // remote identifier
+     * - bytes[32:64]  = `application` (bytes32)  // application/settler identifier
+     * - bytes[64:]    = `payload` (bytes)        // raw payload bytes (dynamic length)
+     *
+     * We attest over `payloadHash = keccak256(payload)` and store:
+     * `_attestations[remoteChainId][emitter][application][payloadHash] = true`.
      */
     function _processSolanaMessage(
         bytes calldata proof
@@ -137,15 +101,15 @@ contract PolymerOracle is BaseInputOracle {
         uint256 remoteChainId = _getChainId(uint256(chainId));
 
         for (uint256 i = 0; i < logMessages.length; i++) {
-            bytes memory logBytes = bytes(logMessages[i]);
+            bytes memory logBytes = Base64.decode(logMessages[i]);
 
-            (bytes32 application, bytes32 payloadHash) = _isValidLog(logBytes);
-            // It is okay to do a single check here since both of the return values are bytes32(0) if the log is
-            // invalid.
-            if (application == bytes32(0)) continue;
+            bytes32 emitter = bytes32(Bytes.slice(logBytes, 0, 32));
+            bytes32 application = bytes32(Bytes.slice(logBytes, 32, 64));
+            bytes32 payloadHash = keccak256(Bytes.slice(logBytes, 64, logBytes.length));
 
-            _attestations[remoteChainId][returnedProgramID][application][payloadHash] = true;
-            emit OutputProven(remoteChainId, returnedProgramID, application, payloadHash);
+            _attestations[remoteChainId][emitter][application][payloadHash] = true;
+
+            emit OutputProven(remoteChainId, emitter, application, payloadHash);
         }
     }
 
