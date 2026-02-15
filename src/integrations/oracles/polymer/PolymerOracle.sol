@@ -20,6 +20,7 @@ contract PolymerOracle is BaseInputOracle {
 
     error WrongEventSignature();
     error NotSolanaMessage();
+    error SolanaProgramIdMismatch(bytes32 returnedProgramId, bytes32 messageProgramId);
 
     uint256 constant SOLANA_POLYMER_CHAIN_ID = 2;
 
@@ -83,17 +84,15 @@ contract PolymerOracle is BaseInputOracle {
      * @dev Solana logs are passed in as base64-encoded bytes.
      *
      * The decoded bytes are expected to be:
-     * - bytes[0:32]   = `emitter` (bytes32)      // remote identifier
-     * - bytes[32:64]  = `application` (bytes32)  // application/settler identifier
-     * - bytes[64:]    = `payload` (bytes)        // raw payload bytes (dynamic length)
-     *
-     * We attest over `payloadHash = keccak256(payload)` and store:
-     * `_attestations[remoteChainId][emitter][application][payloadHash] = true`.
+     * - bytes[0:32]   = `messageProgramId` (bytes32) // program id the message claims to be from
+     * - bytes[32:64]  = `emitter` (bytes32)          // remote identifier
+     * - bytes[64:96]  = `application` (bytes32)      // application/settler identifier
+     * - bytes[96:]    = `payload` (bytes)            // raw payload bytes (dynamic length)
      */
     function _processSolanaMessage(
         bytes calldata proof
     ) internal {
-        (uint32 chainId, bytes32 returnedProgramID, string[] memory logMessages) =
+        (uint32 chainId, bytes32 returnedProgramId, string[] memory logMessages) =
             CROSS_L2_PROVER.validateSolLogs(proof);
 
         require(chainId == SOLANA_POLYMER_CHAIN_ID, NotSolanaMessage());
@@ -103,9 +102,14 @@ contract PolymerOracle is BaseInputOracle {
         for (uint256 i = 0; i < logMessages.length; i++) {
             bytes memory logBytes = Base64.decode(logMessages[i]);
 
-            bytes32 emitter = bytes32(Bytes.slice(logBytes, 0, 32));
-            bytes32 application = bytes32(Bytes.slice(logBytes, 32, 64));
-            bytes32 payloadHash = keccak256(Bytes.slice(logBytes, 64, logBytes.length));
+            bytes32 messageProgramId = bytes32(Bytes.slice(logBytes, 0, 32));
+
+            // Ensure the intended message came from the expected program.
+            if(messageProgramId != returnedProgramId) revert SolanaProgramIdMismatch(returnedProgramId, messageProgramId);
+
+            bytes32 emitter = bytes32(Bytes.slice(logBytes, 32, 64));
+            bytes32 application = bytes32(Bytes.slice(logBytes, 64, 96));
+            bytes32 payloadHash = keccak256(Bytes.slice(logBytes, 96, logBytes.length));
 
             _attestations[remoteChainId][emitter][application][payloadHash] = true;
 
