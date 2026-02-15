@@ -456,10 +456,26 @@ contract PolymerOracleMappedTest is Test {
         polymerOracleMapped.setChainMap(remoteChainId, remoteChainId);
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                PolymerOracle.SolanaProgramIdMismatch.selector, returnedProgramID, messageProgramID
-            )
+            abi.encodeWithSelector(PolymerOracle.SolanaProgramIdMismatch.selector, returnedProgramID, messageProgramID)
         );
+        polymerOracleMapped.receiveSolanaMessage(mockProof);
+    }
+
+    function test_receiveSolanaMessage_invalid_solana_message_reverts_mapped() public {
+        uint32 solanaChainId = 2;
+        bytes32 programID = keccak256("solana-program");
+
+        bytes memory shortLogBytes = abi.encodePacked(programID, bytes32(uint256(1)));
+        string[] memory logMessages = new string[](1);
+        logMessages[0] = Base64.encode(shortLogBytes);
+
+        bytes memory mockProof = mockCrossL2ProverV2.generateAndEmitSolProof(solanaChainId, programID, logMessages);
+
+        uint256 remoteChainId = uint256(solanaChainId);
+        vm.prank(owner);
+        polymerOracleMapped.setChainMap(remoteChainId, remoteChainId);
+
+        vm.expectRevert(PolymerOracle.InvalidSolanaMessage.selector);
         polymerOracleMapped.receiveSolanaMessage(mockProof);
     }
 }

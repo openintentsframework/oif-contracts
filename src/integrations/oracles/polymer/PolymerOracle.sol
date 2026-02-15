@@ -20,6 +20,7 @@ contract PolymerOracle is BaseInputOracle {
 
     error WrongEventSignature();
     error NotSolanaMessage();
+    error InvalidSolanaMessage();
     error SolanaProgramIdMismatch(bytes32 returnedProgramId, bytes32 messageProgramId);
 
     uint256 constant SOLANA_POLYMER_CHAIN_ID = 2;
@@ -102,10 +103,12 @@ contract PolymerOracle is BaseInputOracle {
         for (uint256 i = 0; i < logMessages.length; i++) {
             bytes memory logBytes = Base64.decode(logMessages[i]);
 
+            if (logBytes.length < 96) revert InvalidSolanaMessage();
             bytes32 messageProgramId = bytes32(Bytes.slice(logBytes, 0, 32));
-
             // Ensure the intended message came from the expected program.
-            if(messageProgramId != returnedProgramId) revert SolanaProgramIdMismatch(returnedProgramId, messageProgramId);
+            if (messageProgramId != returnedProgramId) {
+                revert SolanaProgramIdMismatch(returnedProgramId, messageProgramId);
+            }
 
             bytes32 emitter = bytes32(Bytes.slice(logBytes, 32, 64));
             bytes32 application = bytes32(Bytes.slice(logBytes, 64, 96));
