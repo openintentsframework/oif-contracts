@@ -6,6 +6,7 @@ import { Test } from "forge-std/Test.sol";
 import { MandateOutput } from "../../src/input/types/MandateOutputType.sol";
 import { OutputSettlerSimple } from "../../src/output/simple/OutputSettlerSimple.sol";
 
+import { MandateOutputEncodingLib } from "../../src/libs/MandateOutputEncodingLib.sol";
 import { MockCallbackExecutor } from "../mocks/MockCallbackExecutor.sol";
 import { MockERC20 } from "../mocks/MockERC20.sol";
 
@@ -87,6 +88,70 @@ contract OutputSettlerSimpleTestFill is Test {
 
         assertEq(outputToken.balanceOf(swapper), amount);
         assertEq(outputToken.balanceOf(sender), 0);
+    }
+
+    function test_fill_with_dirty_output(
+        // bytes32 orderId,
+        // address sender,
+        // bytes32 filler,
+        // uint256 amount
+    ) public {
+        bytes32 orderId = keccak256(bytes("orderId"));
+        address sender = makeAddr("sender");
+        bytes32 filler = keccak256(bytes("filler"));
+        uint256 amount = 10 ** 18;
+
+        //vm.assume(filler != bytes32(0) && swapper != sender && sender != address(0));
+
+        outputToken.mint(sender, amount);
+        vm.prank(sender);
+        outputToken.approve(outputSettlerCoinAddress, amount);
+
+        bytes memory fillerData = abi.encodePacked(filler);
+
+        address oracle = makeAddr("oracle");
+        bytes32 oracleWithDirtyBytes = bytes32(0xFF00000000000000000000000000000000000000000000000000000000000000)
+            | bytes32(uint256(uint160(oracle)));
+
+        MandateOutput memory output = MandateOutput({
+            oracle: oracleWithDirtyBytes,
+            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            chainId: block.chainid,
+            token: bytes32(uint256(uint160(outputTokenAddress))),
+            amount: amount,
+            recipient: bytes32(uint256(uint160(swapper))),
+            callbackData: bytes(""),
+            context: bytes("")
+        });
+
+        vm.prank(sender);
+        vm.expectEmit();
+        emit OutputFilled(orderId, filler, uint32(block.timestamp), output, amount);
+
+        vm.expectCall(
+            outputTokenAddress,
+            abi.encodeWithSignature("transferFrom(address,address,uint256)", sender, swapper, amount)
+        );
+        outputSettlerCoin.fill(orderId, output, type(uint48).max, fillerData);
+
+        bytes[] memory payloads = new bytes[](1);
+        payloads[0] = MandateOutputEncodingLib.encodeFillDescriptionMemory(
+            filler,
+            orderId,
+            uint32(block.timestamp),
+            bytes32(uint256(uint160(outputTokenAddress))),
+            amount,
+            bytes32(uint256(uint160(swapper))),
+            bytes(""),
+            bytes("")
+        );
+
+        assertEq(outputToken.balanceOf(swapper), amount);
+        assertEq(outputToken.balanceOf(sender), 0);
+
+        vm.prank(oracle);
+        bool hasAttested = outputSettlerCoin.hasAttested(payloads);
+        assertEq(hasAttested, true);
     }
 
     /// forge-config: default.isolate = true
