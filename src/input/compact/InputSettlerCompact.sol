@@ -49,6 +49,11 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
      */
     error OrderIdMismatch(bytes32 provided, bytes32 computed);
 
+    /**
+     * @dev Failed to transfer inputs.
+     */
+    error TransferInputsFailed();
+
     TheCompact public immutable COMPACT;
 
     constructor(
@@ -278,5 +283,15 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
         _purchaseOrder(
             orderPurchase, order.inputs, orderSolvedByIdentifier, purchaser, expiryTimestamp, solverSignature
         );
+    }
+
+    // @inheritdoc InputSettlerPurchase
+    function _transferInput(
+        uint256 tokenId,
+        address to,
+        uint256 amount
+    ) internal override {
+        bool success = COMPACT.transferFrom(msg.sender, to, tokenId, amount);
+        if (!success) revert TransferInputsFailed();
     }
 }

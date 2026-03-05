@@ -193,9 +193,7 @@ abstract contract InputSettlerPurchase is InputSettlerBase {
                 uint256 allocatedAmount = input[1];
                 uint256 amountAfterDiscount = (allocatedAmount * (DISCOUNT_DENOM - discount)) / DISCOUNT_DENOM;
                 // Throws if discount > DISCOUNT_DENOM => DISCOUNT_DENOM - discount < 0;
-                SafeERC20.safeTransferFrom(
-                    IERC20(tokenId.validatedCleanAddress()), msg.sender, newDestination, amountAfterDiscount
-                );
+                _transferInput(tokenId, newDestination, amountAfterDiscount);
             }
             // Emit the event now because of stack issues.
             emit OrderPurchased(orderPurchase.orderId, orderSolvedByIdentifier, purchaser);
@@ -204,5 +202,19 @@ abstract contract InputSettlerPurchase is InputSettlerBase {
             bytes calldata callData = orderPurchase.callData;
             if (callData.length > 0) IInputCallback(newDestination).orderFinalised(inputs, callData);
         }
+    }
+
+    /**
+     * @notice Transfers an input token to a destination.
+     * @param tokenId The token identifier.
+     * @param to The destination to transfer the input to.
+     * @param amount The amount of the input to transfer.
+     */
+    function _transferInput(
+        uint256 tokenId,
+        address to,
+        uint256 amount
+    ) internal virtual {
+        SafeERC20.safeTransferFrom(IERC20(tokenId.validatedCleanAddress()), msg.sender, to, amount);
     }
 }
