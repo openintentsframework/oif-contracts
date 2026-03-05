@@ -211,6 +211,55 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         test_open_for_3009_single(10 ** 18, 251251);
     }
 
+    function test_open_for_permit2_different_sponsor_reverts_with_wrong_order() public {
+        uint256 nonce = 1;
+        uint128 amountMint = 10 ** 18;
+        (address sponsor, uint256 sponsorPrivateKey) = makeAddrAndKey("sponsor");
+        token.mint(sponsor, amountMint);
+
+        uint256 amount = token.balanceOf(sponsor);
+
+        vm.prank(sponsor);
+        token.approve(address(permit2), amount);
+
+        MandateOutput[] memory outputs = new MandateOutput[](0);
+
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        address user = makeAddr("user");
+
+        StandardOrder memory originalOrder = StandardOrder({
+            user: user,
+            nonce: nonce,
+            originChainId: block.chainid,
+            expires: uint32(block.timestamp + 1 days),
+            fillDeadline: uint32(block.timestamp + 1 days),
+            inputOracle: address(0),
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        bytes memory signature = getPermit2Signature(sponsorPrivateKey, originalOrder);
+        assertEq(token.balanceOf(address(sponsor)), amount);
+
+        StandardOrder memory maliciousOrder = StandardOrder({
+            user: makeAddr("malicious"),
+            nonce: nonce,
+            originChainId: block.chainid,
+            expires: uint32(block.timestamp + 1 days),
+            fillDeadline: uint32(block.timestamp + 1 days),
+            inputOracle: address(0),
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        vm.prank(solver);
+        vm.expectRevert(abi.encodeWithSelector(InputSettlerBase.InvalidSigner.selector));
+        IInputSettlerEscrow(inputSettlerEscrow)
+            .openFor(maliciousOrder, sponsor, abi.encodePacked(bytes1(0x00), signature));
+    }
+
     function test_open_for_3009_single(
         uint128 amountMint,
         uint256 nonce
