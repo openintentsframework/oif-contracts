@@ -12,6 +12,7 @@ library OutputVerificationLib {
     error WrongChain(uint256 expected, uint256 actual);
     error WrongOutputSettler(bytes32 addressThis, bytes32 expected);
     error WrongOutputOracle(bytes32 addressThis, bytes32 expected);
+    error InvalidOutputOracle(bytes32 outputOracle);
 
     /**
      * @param chainId Expected chain id. Validated to match block.chainId.
@@ -43,5 +44,14 @@ library OutputVerificationLib {
         if (bytes32(uint256(uint160(address(this)))) != outputOracle) {
             revert WrongOutputOracle(bytes32(uint256(uint160(address(this)))), outputOracle);
         }
+    }
+
+    /**
+     * @notice Validate if the oracle address doesn't have upper dirty bits.
+     */
+    function _isValidOutputOracle(
+        bytes32 outputOracle
+    ) internal pure {
+        if ((outputOracle >> 160) != 0) revert InvalidOutputOracle(outputOracle);
     }
 }
