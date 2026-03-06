@@ -54,6 +54,18 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
      */
     error TransferInputsFailed();
 
+    /**
+     * @dev The order has already been claimed.
+     */
+    error AlreadyClaimed();
+
+    enum OrderStatus {
+        None,
+        Claimed
+    }
+
+    mapping(bytes32 orderId => OrderStatus) public orderStatus;
+
     TheCompact public immutable COMPACT;
 
     constructor(
@@ -125,7 +137,7 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
     ) internal virtual {
         bytes calldata sponsorSignature = BytesLib.toBytes(signatures, 0x00);
         bytes calldata allocatorData = BytesLib.toBytes(signatures, 0x20);
-        _resolveLock(order, sponsorSignature, allocatorData, destination);
+        _resolveLock(order, sponsorSignature, allocatorData, destination, OrderStatus.Claimed);
         emit Finalised(orderId, solver, destination);
     }
 
@@ -212,8 +224,20 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
         StandardOrder calldata order,
         bytes calldata sponsorSignature,
         bytes calldata allocatorData,
-        bytes32 claimant
+        bytes32 claimant,
+        OrderStatus newStatus
     ) internal virtual {
+        {
+            bytes32 orderId = _orderIdentifier(order);
+            // Check the order status:
+            OrderStatus status = orderStatus[orderId];
+            // Mark order as deposited. If we can't make the deposit, we will
+            // revert and it will unmark it. This acts as a reentry check.
+            if (status != OrderStatus.None) revert AlreadyClaimed();
+
+            orderStatus[orderId] = newStatus;
+        }
+
         BatchClaimComponent[] memory batchClaimComponents;
         {
             uint256 numInputs = order.inputs.length;
@@ -279,6 +303,9 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
         bytes32 computedOrderId = _orderIdentifier(order);
         // Sanity check to ensure the user thinks they are buying the right order.
         if (computedOrderId != orderPurchase.orderId) revert OrderIdMismatch(orderPurchase.orderId, computedOrderId);
+
+        OrderStatus status = orderStatus[computedOrderId];
+        if (status != OrderStatus.None) revert AlreadyClaimed();
 
         _purchaseOrder(
             orderPurchase, order.inputs, orderSolvedByIdentifier, purchaser, expiryTimestamp, solverSignature
