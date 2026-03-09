@@ -224,7 +224,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
      * @notice Helper function for using permit2 to collect assets represented by a StandardOrder.
      * @param order StandardOrder representing the intent.
      * @param signer Provider of the permit2 funds and signer of the intent.
-     * @param signature permit2 signature with Permit2Witness representing `order` signed by `order.user`.
+     * @param signature permit2 signature with Permit2Witness representing `order` signed by the `signer`.
      * @param to recipient of the inputs tokens. In most cases, should be address(this).
      */
     function _openForWithPermit2(
