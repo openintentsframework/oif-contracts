@@ -137,7 +137,7 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
     ) internal virtual {
         bytes calldata sponsorSignature = BytesLib.toBytes(signatures, 0x00);
         bytes calldata allocatorData = BytesLib.toBytes(signatures, 0x20);
-        _resolveLock(order, sponsorSignature, allocatorData, destination, OrderStatus.Claimed);
+        _resolveLock(order, sponsorSignature, allocatorData, destination);
         emit Finalised(orderId, solver, destination);
     }
 
@@ -224,8 +224,7 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
         StandardOrder calldata order,
         bytes calldata sponsorSignature,
         bytes calldata allocatorData,
-        bytes32 claimant,
-        OrderStatus newStatus
+        bytes32 claimant
     ) internal virtual {
         {
             bytes32 orderId = _orderIdentifier(order);
@@ -235,7 +234,7 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
             // revert and it will unmark it. This acts as a reentry check.
             if (status != OrderStatus.None) revert AlreadyClaimed();
 
-            orderStatus[orderId] = newStatus;
+            orderStatus[orderId] = OrderStatus.Claimed;
         }
 
         BatchClaimComponent[] memory batchClaimComponents;
