@@ -197,7 +197,6 @@ contract HyperlaneOracleMappedTest is Test {
         _oracle.submit{ value: _gasPaymentQuote }(
             _destination, _recipientOracle, _gasLimit, customMetadata, address(_outputSettler), payloads
         );
-        vm.snapshotGasLastCall("oracle", "hyperlaneOracleSubmit");
     }
 
     function test_submit_customHook_works_w() external {
@@ -258,7 +257,6 @@ contract HyperlaneOracleMappedTest is Test {
             address(_outputSettler),
             payloads
         );
-        vm.snapshotGasLastCall("oracle", "hyperlaneOracleSubmitCustomHook");
     }
 
     function test_handle_onlyMailbox(
@@ -317,7 +315,6 @@ contract HyperlaneOracleMappedTest is Test {
 
         vm.prank(address(_mailbox));
         _oracle.handle(_originHyperlaneId, messageSender, message);
-        vm.snapshotGasLastCall("oracle", "hyperlaneOracleHandle");
 
         assertTrue(_oracle.isProven(_originChainId, messageSender, application, payloadHashes[0]));
     }
