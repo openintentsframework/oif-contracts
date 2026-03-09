@@ -36,6 +36,17 @@ contract HyperlaneOracle is BaseInputOracle, MailboxClient, IMessageRecipient {
     ) MailboxClient(mailbox, customHook, ism) { }
 
     /**
+     * @dev Return the chain id from the chain identifier.
+     * @param chainIdentifier The chain identifier.
+     * @return chainId The chain id.
+     */
+    function _getChainId(
+        uint256 chainIdentifier
+    ) internal view virtual returns (uint256 chainId) {
+        return chainIdentifier;
+    }
+
+    /**
      * @notice Handles incoming Hyperlane messages.
      * @param messageOrigin The domain from which the message originates.
      * @param messageSender The address of the sender on the origin domain. The oracle.
@@ -51,9 +62,10 @@ contract HyperlaneOracle is BaseInputOracle, MailboxClient, IMessageRecipient {
         uint256 numPayloads = payloadHashes.length;
         for (uint256 i; i < numPayloads; ++i) {
             bytes32 payloadHash = payloadHashes[i];
-            _attestations[messageOrigin][messageSender][application][payloadHash] = true;
+            uint256 remoteChainId = _getChainId(uint256(messageOrigin));
+            _attestations[remoteChainId][messageSender][application][payloadHash] = true;
 
-            emit OutputProven(messageOrigin, messageSender, application, payloadHash);
+            emit OutputProven(remoteChainId, messageSender, application, payloadHash);
         }
     }
 
