@@ -154,7 +154,7 @@ abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
     ) internal virtual returns (bytes32 fillRecordHash, bytes32 solver) {
         OutputVerificationLib._isThisChain(output.chainId);
         OutputVerificationLib._isThisOutputSettler(output.settler);
-        OutputVerificationLib._isValidOutputOracle(output.oracle);
+        LibAddress.validatedCleanAddress(uint256(output.oracle));
 
         uint32 fillTimestamp = uint32(block.timestamp);
         uint256 outputAmount;

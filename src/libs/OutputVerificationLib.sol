@@ -45,13 +45,4 @@ library OutputVerificationLib {
             revert WrongOutputOracle(bytes32(uint256(uint160(address(this)))), outputOracle);
         }
     }
-
-    /**
-     * @notice Validate if the oracle address doesn't have upper dirty bits.
-     */
-    function _isValidOutputOracle(
-        bytes32 outputOracle
-    ) internal pure {
-        if ((outputOracle >> 160) != 0) revert InvalidOutputOracle(outputOracle);
-    }
 }

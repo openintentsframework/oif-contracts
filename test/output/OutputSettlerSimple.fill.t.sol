@@ -6,6 +6,7 @@ import { Test } from "forge-std/Test.sol";
 import { MandateOutput } from "../../src/input/types/MandateOutputType.sol";
 import { OutputSettlerSimple } from "../../src/output/simple/OutputSettlerSimple.sol";
 
+import { LibAddress } from "../../src/libs/LibAddress.sol";
 import { MandateOutputEncodingLib } from "../../src/libs/MandateOutputEncodingLib.sol";
 import { OutputVerificationLib } from "../../src/libs/OutputVerificationLib.sol";
 import { MockCallbackExecutor } from "../mocks/MockCallbackExecutor.sol";
@@ -160,9 +161,7 @@ contract OutputSettlerSimpleTestFill is Test {
         });
 
         vm.prank(sender);
-        vm.expectRevert(
-            abi.encodeWithSelector(OutputVerificationLib.InvalidOutputOracle.selector, oracleWithDirtyBytes)
-        );
+        vm.expectRevert(abi.encodeWithSelector(LibAddress.HasDirtyBits.selector));
         outputSettlerCoin.fill(orderId, output, type(uint48).max, fillerData);
     }
 
