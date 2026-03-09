@@ -475,7 +475,7 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
         vm.deal(swapper, amount);
 
         vm.prank(swapper);
-        uint256 tokenId = theCompact.depositNative{value: amount}(alwaysOkAllocatorLockTag, swapper);
+        uint256 tokenId = theCompact.depositNative{ value: amount }(alwaysOkAllocatorLockTag, swapper);
 
         uint256[2][] memory inputs = new uint256[2][](1);
         inputs[0][0] = tokenId;
