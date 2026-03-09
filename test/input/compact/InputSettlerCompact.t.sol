@@ -367,21 +367,19 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
         token.mint(purchaser, amount);
         anotherToken.mint(purchaser, amount);
 
-        vm.prank(purchaser);
+        token.mint(swapper, amount);
+        anotherToken.mint(swapper, amount);
+
+        vm.prank(swapper);
         token.approve(address(theCompact), amount);
-        vm.prank(purchaser);
+        vm.prank(swapper);
         anotherToken.approve(address(theCompact), amount);
 
-        vm.prank(purchaser);
-        uint256 tokenId = theCompact.depositERC20(address(token), alwaysOkAllocatorLockTag, amount, purchaser);
-        vm.prank(purchaser);
+        vm.prank(swapper);
+        uint256 tokenId = theCompact.depositERC20(address(token), alwaysOkAllocatorLockTag, amount, swapper);
+        vm.prank(swapper);
         uint256 anotherTokenId =
-            theCompact.depositERC20(address(anotherToken), alwaysOkAllocatorLockTag, amount, purchaser);
-
-        vm.prank(purchaser);
-        theCompact.approve(address(inputSettlerCompact), tokenId, amount);
-        vm.prank(purchaser);
-        theCompact.approve(address(inputSettlerCompact), anotherTokenId, amount);
+            theCompact.depositERC20(address(anotherToken), alwaysOkAllocatorLockTag, amount, swapper);
 
         uint256[2][] memory inputs = new uint256[2][](2);
         inputs[0][0] = tokenId;
@@ -449,8 +447,8 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
             );
 
         // Check storage and balances.
-        assertEq(theCompact.balanceOf(solver, tokenId), amount);
-        assertEq(theCompact.balanceOf(solver, anotherTokenId), amount);
+        assertEq(token.balanceOf(solver), amount);
+        assertEq(anotherToken.balanceOf(solver), amount);
 
         (storageLastOrderTimestamp, storagePurchaser) =
             InputSettlerPurchase(inputSettlerCompact).purchasedOrders(orderSolvedByIdentifier, orderId);
@@ -460,6 +458,79 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
         // Try to purchase the same order again
         vm.expectRevert(abi.encodeWithSignature("AlreadyPurchased()"));
         vm.prank(purchaser);
+        InputSettlerCompact(inputSettlerCompact)
+            .purchaseOrder(
+                orderPurchase,
+                order,
+                orderSolvedByIdentifier,
+                purchaser.toIdentifier(),
+                expiryTimestamp,
+                solverSignature
+            );
+    }
+
+    function test_purchase_order_reverts_with_native_token() public {
+        uint256 amount = 10 ** 18;
+
+        vm.deal(swapper, amount);
+
+        vm.prank(swapper);
+        uint256 tokenId = theCompact.depositNative{value: amount}(alwaysOkAllocatorLockTag, swapper);
+
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0][0] = tokenId;
+        inputs[0][1] = amount;
+
+        bytes32 orderSolvedByIdentifier = solver.toIdentifier();
+
+        MandateOutput[] memory outputs = new MandateOutput[](1);
+        outputs[0] = MandateOutput({
+            settler: address(outputSettlerCoin).toIdentifier(),
+            oracle: address(alwaysYesOracle).toIdentifier(),
+            chainId: block.chainid,
+            token: address(anotherToken).toIdentifier(),
+            amount: amount,
+            recipient: swapper.toIdentifier(),
+            callbackData: hex"",
+            context: hex""
+        });
+
+        StandardOrder memory order = StandardOrder({
+            user: address(swapper),
+            nonce: 0,
+            originChainId: block.chainid,
+            fillDeadline: type(uint32).max,
+            expires: type(uint32).max,
+            inputOracle: alwaysYesOracle,
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        bytes32 orderId = IInputSettlerCompact(inputSettlerCompact).orderIdentifier(order);
+
+        OrderPurchase memory orderPurchase =
+            OrderPurchase({ orderId: orderId, destination: solver, callData: hex"", discount: 0, timeToBuy: 1000 });
+        uint256 expiryTimestamp = type(uint256).max;
+        bytes memory solverSignature = this.getOrderPurchaseSignature(solverPrivateKey, orderPurchase);
+
+        vm.warp(uint32(10000));
+
+        vm.prank(purchaser);
+        token.approve(address(inputSettlerCompact), amount);
+        vm.prank(purchaser);
+        anotherToken.approve(address(inputSettlerCompact), amount);
+
+        // Check initial state:
+        assertEq(token.balanceOf(solver), 0);
+        assertEq(anotherToken.balanceOf(solver), 0);
+
+        (uint32 storageLastOrderTimestamp, bytes32 storagePurchaser) =
+            InputSettlerPurchase(inputSettlerCompact).purchasedOrders(orderSolvedByIdentifier, orderId);
+        assertEq(storageLastOrderTimestamp, 0);
+        assertEq(storagePurchaser, bytes32(0));
+
+        vm.prank(purchaser);
+        vm.expectRevert(abi.encodeWithSelector(InputSettlerCompact.NativeTokenNotSupported.selector));
         InputSettlerCompact(inputSettlerCompact)
             .purchaseOrder(
                 orderPurchase,

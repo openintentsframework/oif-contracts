@@ -11,6 +11,8 @@ import { EIP712 } from "openzeppelin/utils/cryptography/EIP712.sol";
 import { IInputCallback } from "../../interfaces/IInputCallback.sol";
 import { IInputOracle } from "../../interfaces/IInputOracle.sol";
 import { IInputSettlerCompact } from "../../interfaces/IInputSettlerCompact.sol";
+import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 
 import { BytesLib } from "../../libs/BytesLib.sol";
 
@@ -38,6 +40,7 @@ import { InputSettlerPurchase } from "../InputSettlerPurchase.sol";
  */
 contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
     using LibAddress for bytes32;
+    using LibAddress for uint256;
 
     /**
      * @dev The user cannot be the settler.
@@ -50,9 +53,9 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
     error OrderIdMismatch(bytes32 provided, bytes32 computed);
 
     /**
-     * @dev Failed to transfer inputs.
+     * @dev Native token is not supported.
      */
-    error TransferInputsFailed();
+    error NativeTokenNotSupported();
 
     /**
      * @dev The order has already been claimed.
@@ -317,7 +320,9 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
         address to,
         uint256 amount
     ) internal override {
-        bool success = COMPACT.transferFrom(msg.sender, to, tokenId, amount);
-        if (!success) revert TransferInputsFailed();
+        address token = tokenId.fromIdentifier();
+        if (token == address(0)) revert NativeTokenNotSupported();
+
+        SafeERC20.safeTransferFrom(IERC20(token), msg.sender, to, amount);
     }
 }
