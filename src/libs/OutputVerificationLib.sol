@@ -12,7 +12,6 @@ library OutputVerificationLib {
     error WrongChain(uint256 expected, uint256 actual);
     error WrongOutputSettler(bytes32 addressThis, bytes32 expected);
     error WrongOutputOracle(bytes32 addressThis, bytes32 expected);
-    error InvalidOutputOracle(bytes32 outputOracle);
 
     /**
      * @param chainId Expected chain id. Validated to match block.chainId.
