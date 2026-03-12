@@ -18,6 +18,7 @@ import { MandateOutput, MandateOutputType } from "../../../src/input/types/Manda
 import { OrderPurchase, OrderPurchaseType } from "../../../src/input/types/OrderPurchaseType.sol";
 import { StandardOrder } from "../../../src/input/types/StandardOrderType.sol";
 import { IInputSettlerCompact } from "../../../src/interfaces/IInputSettlerCompact.sol";
+import { MockSettler } from "../BaseSettler.t.sol";
 
 import { WormholeOracle } from "../../../src/integrations/oracles/wormhole/WormholeOracle.sol";
 import { Messages } from "../../../src/integrations/oracles/wormhole/external/wormhole/Messages.sol";
@@ -80,6 +81,11 @@ contract InputSettlerCompactTestBase is Test {
     address alwaysOKAllocator;
     bytes12 alwaysOkAllocatorLockTag;
     bytes32 DOMAIN_SEPARATOR;
+    address purchaser;
+    uint256 purchaserPrivateKey;
+    bytes32 purchaserDomainSeparator;
+
+    MockSettler settler;
 
     function setUp() public virtual {
         theCompact = new TheCompact();
@@ -98,6 +104,8 @@ contract InputSettlerCompactTestBase is Test {
         inputSettlerCompact = address(new InputSettlerCompact(address(theCompact)));
         outputSettlerCoin = new OutputSettlerSimple();
         alwaysYesOracle = address(new AlwaysYesOracle());
+
+        (purchaser, purchaserPrivateKey) = makeAddrAndKey("purchaser");
 
         token = new MockERC20("Mock ERC20", "MOCK", 18);
         anotherToken = new MockERC20("Mock2 ERC20", "MOCK2", 18);

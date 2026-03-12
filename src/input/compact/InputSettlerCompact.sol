@@ -11,6 +11,8 @@ import { EIP712 } from "openzeppelin/utils/cryptography/EIP712.sol";
 import { IInputCallback } from "../../interfaces/IInputCallback.sol";
 import { IInputOracle } from "../../interfaces/IInputOracle.sol";
 import { IInputSettlerCompact } from "../../interfaces/IInputSettlerCompact.sol";
+import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
 
 import { BytesLib } from "../../libs/BytesLib.sol";
 
@@ -38,6 +40,7 @@ import { InputSettlerPurchase } from "../InputSettlerPurchase.sol";
  */
 contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
     using LibAddress for bytes32;
+    using LibAddress for uint256;
 
     /**
      * @dev The user cannot be the settler.
@@ -48,6 +51,23 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
      * @dev Mismatch between the provided and computed order IDs.
      */
     error OrderIdMismatch(bytes32 provided, bytes32 computed);
+
+    /**
+     * @dev Native token is not supported.
+     */
+    error NativeTokenNotSupported();
+
+    /**
+     * @dev The order has already been claimed.
+     */
+    error AlreadyClaimed();
+
+    enum OrderStatus {
+        None,
+        Claimed
+    }
+
+    mapping(bytes32 orderId => OrderStatus) public orderStatus;
 
     TheCompact public immutable COMPACT;
 
@@ -209,6 +229,17 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
         bytes calldata allocatorData,
         bytes32 claimant
     ) internal virtual {
+        {
+            bytes32 orderId = _orderIdentifier(order);
+            // Check the order status:
+            OrderStatus status = orderStatus[orderId];
+            // Mark order as deposited. If we can't make the deposit, we will
+            // revert and it will unmark it. This acts as a reentry check.
+            if (status != OrderStatus.None) revert AlreadyClaimed();
+
+            orderStatus[orderId] = OrderStatus.Claimed;
+        }
+
         BatchClaimComponent[] memory batchClaimComponents;
         {
             uint256 numInputs = order.inputs.length;
@@ -275,8 +306,23 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
         // Sanity check to ensure the user thinks they are buying the right order.
         if (computedOrderId != orderPurchase.orderId) revert OrderIdMismatch(orderPurchase.orderId, computedOrderId);
 
+        OrderStatus status = orderStatus[computedOrderId];
+        if (status != OrderStatus.None) revert AlreadyClaimed();
+
         _purchaseOrder(
             orderPurchase, order.inputs, orderSolvedByIdentifier, purchaser, expiryTimestamp, solverSignature
         );
+    }
+
+    // @inheritdoc InputSettlerPurchase
+    function _transferInput(
+        uint256 tokenId,
+        address to,
+        uint256 amount
+    ) internal override {
+        address token = tokenId.fromIdentifier();
+        if (token == address(0)) revert NativeTokenNotSupported();
+
+        SafeERC20.safeTransferFrom(IERC20(token), msg.sender, to, amount);
     }
 }

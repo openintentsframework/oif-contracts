@@ -82,7 +82,7 @@ contract BaseInputSettlerTest is Test {
         anotherToken = new MockERC20("Mock2 ERC20", "MOCK2", 18);
 
         (purchaser, purchaserPrivateKey) = makeAddrAndKey("purchaser");
-        (solver, solverPrivateKey) = makeAddrAndKey("swapper");
+        (solver, solverPrivateKey) = makeAddrAndKey("solver");
     }
 
     //--- Fill Validation ---//
