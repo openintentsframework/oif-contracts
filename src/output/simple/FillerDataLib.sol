@@ -12,6 +12,9 @@ pragma solidity ^0.8.26;
  * PROPOSED_SOLVER       0               (32 bytes)  - bytes32: proposed solver address
  */
 library FillerDataLib {
+    /// @dev fillerData is shorter than the required 32 bytes
+    error FillerDataTooShort();
+
     /**
      * @notice Loads the proposed solver from the filler data.
      * @param fillerData Serialised filler data.
@@ -20,6 +23,7 @@ library FillerDataLib {
     function solver(
         bytes calldata fillerData
     ) internal pure returns (bytes32 _solver) {
+        if (fillerData.length < 32) revert FillerDataTooShort();
         assembly ("memory-safe") {
             _solver := calldataload(fillerData.offset)
         }
