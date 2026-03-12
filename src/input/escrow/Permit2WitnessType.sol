@@ -21,9 +21,8 @@ struct Permit2Witness {
  * TYPE: Is complete including sub-types.
  */
 library Permit2WitnessType {
-    bytes constant PERMIT2_WITNESS_TYPE_STUB = abi.encodePacked(
-        "Permit2Witness(address user,uint32 expires,address inputOracle,MandateOutput[] outputs)"
-    );
+    bytes constant PERMIT2_WITNESS_TYPE_STUB =
+        abi.encodePacked("Permit2Witness(address user,uint32 expires,address inputOracle,MandateOutput[] outputs)");
 
     // M comes earlier than P.
     bytes constant PERMIT2_WITNESS_TYPE = abi.encodePacked(
