@@ -22,7 +22,7 @@ struct Permit2Witness {
  */
 library Permit2WitnessType {
     bytes constant PERMIT2_WITNESS_TYPE_STUB = abi.encodePacked(
-        "Permit2Witness(address user,uint32 expires,address inputOracle,uint256[2][] inputs,MandateOutput[] outputs)"
+        "Permit2Witness(address user,uint32 expires,address inputOracle,MandateOutput[] outputs)"
     );
 
     // M comes earlier than P.
