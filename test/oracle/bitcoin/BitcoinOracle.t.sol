@@ -143,6 +143,63 @@ contract BitcoinOracleTest is Test {
         assertEq(address(0), disputer_);
     }
 
+    // --- L-02: _readMultiplier truncation ---
+
+    /// @notice Regression test for L-02: _readMultiplier previously loaded 32 bytes via calldataload
+    /// but claim() stored the result as uint64, truncating the upper 192 bits. This caused claim() to
+    /// take collateral based on the full uint256 while _resolveClaimed returned only the truncated amount.
+    function test_L02_multiplier_truncation_strands_collateral() external {
+        bytes32 solver = keccak256(bytes("solver"));
+        bytes32 orderId = keccak256(bytes("orderId"));
+        uint64 amount = 1e9;
+        address caller = makeAddr("caller");
+
+        // A multiplier whose upper bits exceed uint64.max.
+        // uint64(bigMultiplier) == 2, so claim() stores 2 but uses the full value for safeTransferFrom.
+        uint256 bigMultiplier = (uint256(1) << 64) | uint256(2);
+
+        // Context encoding: 0xB0 marker (1 byte) + uint64 value (8 bytes) = 9 bytes.
+        // bigMultiplier is truncated to uint64 when packed, so only the lower 64 bits (== 2) are encoded.
+        bytes memory context = abi.encodePacked(bytes1(0xB0), uint64(bigMultiplier));
+
+        MandateOutput memory output = MandateOutput({
+            oracle: bytes32(uint256(uint160(address(bitcoinOracle)))),
+            settler: bytes32(uint256(uint160(address(bitcoinOracle)))),
+            token: bytes32(
+                bytes.concat(hex"000000000000000000000000BC000000000000000000000000000000000000", UTXO_TYPE)
+            ),
+            recipient: bytes32(PHASH),
+            amount: uint256(amount),
+            chainId: uint32(block.chainid),
+            callbackData: hex"",
+            context: context
+        });
+
+        // Mint enough so claim() can pull whatever it needs; we measure the actual transfer via balance delta.
+        token.mint(caller, type(uint128).max);
+        vm.prank(caller);
+        token.approve(address(bitcoinOracle), type(uint256).max);
+
+        uint256 balanceBefore = token.balanceOf(caller);
+        vm.prank(caller);
+        bitcoinOracle.claim(solver, orderId, output);
+        uint256 collateralPosted = balanceBefore - token.balanceOf(caller);
+
+        bytes32 outputId = bitcoinOracle.outputIdentifier(output);
+        (,, uint64 storedMultiplier,,,) = bitcoinOracle._claimedOrder(orderId, outputId);
+
+        // _resolveClaimed uses the stored (truncated) multiplier to compute the return amount.
+        uint256 collateralRecoverable = uint256(amount) * uint256(storedMultiplier);
+
+        // This assertion FAILS: collateralPosted >> collateralRecoverable.
+        // The difference (amount * 2^64) is permanently stuck in the contract.
+        assertEq(
+            collateralPosted,
+            collateralRecoverable,
+            "L-02: collateral posted != collateral recoverable; excess is permanently stuck"
+        );
+    }
+
     function test_revert_claim_solver_0(
         bytes32 orderId,
         address caller,
@@ -1092,7 +1149,7 @@ contract BitcoinOracleTest is Test {
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
             callbackData: hex"",
-            context: bytes.concat(bytes1(0xB0), bytes32(uint256(custom_multiplier)))
+            context: abi.encodePacked(bytes1(0xB0), uint64(custom_multiplier))
         });
 
         uint256 collateralAmount = output.amount * uint256(custom_multiplier);
@@ -1158,7 +1215,7 @@ contract BitcoinOracleTest is Test {
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
             callbackData: hex"",
-            context: bytes.concat(bytes1(0xB0), bytes32(uint256(custom_multiplier)))
+            context: abi.encodePacked(bytes1(0xB0), uint64(custom_multiplier))
         });
 
         uint256 collateralAmount = output.amount * uint256(custom_multiplier);
