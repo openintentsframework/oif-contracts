@@ -1,9 +1,9 @@
 {
-  "outputSettlerCoinFill": "90630",
-  "outputSettlerCoinFillDutchAuction": "92600",
-  "outputSettlerCoinFillExclusive": "92241",
-  "outputSettlerCoinFillExclusiveDutchAuction": "93578",
-  "outputSettlerCoinFillNative": "95049",
-  "outputSettlerCoinFillOrderOutputsNative": "140044",
-  "outputSettlerCoinfillOrderOutputs": "134282"
+  "outputSettlerCoinFill": "90721",
+  "outputSettlerCoinFillDutchAuction": "92691",
+  "outputSettlerCoinFillExclusive": "92332",
+  "outputSettlerCoinFillExclusiveDutchAuction": "93669",
+  "outputSettlerCoinFillNative": "95140",
+  "outputSettlerCoinFillOrderOutputsNative": "140226",
+  "outputSettlerCoinfillOrderOutputs": "134464"
 }
