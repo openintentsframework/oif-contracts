@@ -1102,7 +1102,7 @@ contract CitreaOracleTest is Test {
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
             callbackData: hex"",
-            context: bytes.concat(bytes1(0xB0), bytes32(uint256(custom_multiplier)))
+            context: abi.encodePacked(bytes1(0xB0), uint64(custom_multiplier))
         });
 
         uint256 collateralAmount = output.amount * uint256(custom_multiplier);
@@ -1168,7 +1168,7 @@ contract CitreaOracleTest is Test {
             amount: SATS_AMOUNT,
             chainId: uint32(block.chainid),
             callbackData: hex"",
-            context: bytes.concat(bytes1(0xB0), bytes32(uint256(custom_multiplier)))
+            context: abi.encodePacked(bytes1(0xB0), uint64(custom_multiplier))
         });
 
         uint256 collateralAmount = output.amount * uint256(custom_multiplier);

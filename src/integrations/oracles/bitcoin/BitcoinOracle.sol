@@ -190,7 +190,7 @@ contract BitcoinOracle is BaseInputOracle {
     /**
      * @notice Reads the multiplier from the order context.
      * The expected encoding of the context is:
-     * 0xB0: Bitcoin multiplier : B1:orderType | B32:multiplier
+     * 0xB0: Bitcoin multiplier : B1:orderType | B8:multiplier
      * @dev Returns DEFAULT_COLLATERAL_MULTIPLIER if context can not be decoded.
      * @param context Output context to be decoded.
      * @return multiplier Collateral multiplier
@@ -200,10 +200,11 @@ contract BitcoinOracle is BaseInputOracle {
     ) internal view returns (uint256 multiplier) {
         uint256 fulfillmentLength = context.length;
         if (fulfillmentLength == 0) return DEFAULT_COLLATERAL_MULTIPLIER;
-        if (bytes1(context) == 0xB0 && fulfillmentLength == 33) {
-            // (, multiplier) = abi.decode(context, (bytes1, uint64));
+        if (bytes1(context) == 0xB0 && fulfillmentLength == 9) {
             assembly ("memory-safe") {
-                multiplier := calldataload(add(context.offset, 0x01))
+                // Loads 1-33 bytes of context. We need to move the 8 leftmost bits to the right.
+                // This turns multiplier into uint8
+                multiplier := shr(mul(24, 8), calldataload(add(context.offset, 0x01)))
             }
         }
         return multiplier != 0 ? multiplier : DEFAULT_COLLATERAL_MULTIPLIER;
@@ -629,10 +630,11 @@ contract BitcoinOracle is BaseInputOracle {
         if (claimedOrder.disputer != address(0)) revert Disputed();
 
         bytes32 solver = claimedOrder.solver;
-        bytes32 outputHash =
-            keccak256(MandateOutputEncodingLib.encodeFillDescription(solver, orderId, uint32(block.timestamp), output));
+        bytes32 outputHash = keccak256(
+            MandateOutputEncodingLib.encodeFillDescription(solver, orderId, uint32(claimedOrder.claimTimestamp), output)
+        );
         _attestations[block.chainid][output.oracle][address(this).toIdentifier()][outputHash] = true;
-        emit OutputFilled(orderId, solver, uint32(block.timestamp), output, output.amount);
+        emit OutputFilled(orderId, solver, uint32(claimedOrder.claimTimestamp), output, output.amount);
 
         address claimant = claimedOrder.claimant;
         uint256 multiplier = claimedOrder.multiplier;
