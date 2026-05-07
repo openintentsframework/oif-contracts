@@ -668,4 +668,149 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
                 solverSignature
             );
     }
+
+    /// @notice Purchaser buys under one bytes32 solver encoding; solver later attempts finalise under a different
+    /// encoding.
+    function test_purchase_order_finalise_with_different_solver_encoding() public {
+        uint256 amount = 10 ** 18;
+
+        bytes32 purchaseEncoding = solver.toIdentifier();
+        bytes32 finaliseEncoding = bytes32((uint256(0xDEADBEEFDEADBEEFDEADBEEF) << 160) | uint256(uint160(solver)));
+
+        token.mint(swapper, amount);
+        vm.prank(swapper);
+        token.approve(address(theCompact), type(uint256).max);
+
+        vm.prank(swapper);
+        uint256 tokenId = theCompact.depositERC20(address(token), alwaysOkAllocatorLockTag, amount, swapper);
+
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [tokenId, amount];
+
+        MandateOutput[] memory outputs = new MandateOutput[](1);
+        outputs[0] = MandateOutput({
+            settler: address(outputSettlerCoin).toIdentifier(),
+            oracle: address(alwaysYesOracle).toIdentifier(),
+            chainId: block.chainid,
+            token: address(anotherToken).toIdentifier(),
+            amount: amount,
+            recipient: swapper.toIdentifier(),
+            callbackData: hex"",
+            context: hex""
+        });
+
+        StandardOrder memory order = StandardOrder({
+            user: address(swapper),
+            nonce: 0,
+            originChainId: block.chainid,
+            fillDeadline: type(uint32).max,
+            expires: type(uint32).max,
+            inputOracle: alwaysYesOracle,
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        bytes32 orderId = IInputSettlerCompact(inputSettlerCompact).orderIdentifier(order);
+
+        OrderPurchase memory orderPurchase =
+            OrderPurchase({ orderId: orderId, destination: solver, callData: hex"", discount: 0, timeToBuy: 0 });
+        bytes memory solverSignature = this.getOrderPurchaseSignature(solverPrivateKey, orderPurchase);
+
+        token.mint(purchaser, amount);
+        vm.prank(purchaser);
+        token.approve(address(inputSettlerCompact), amount);
+
+        vm.warp(uint32(10000));
+
+        vm.prank(purchaser);
+        InputSettlerCompact(inputSettlerCompact)
+            .purchaseOrder(
+                orderPurchase, order, purchaseEncoding, purchaser.toIdentifier(), type(uint256).max, solverSignature
+            );
+
+        bytes memory signature = abi.encode(
+            getCompactBatchWitnessSignature(
+                swapperPrivateKey, inputSettlerCompact, swapper, 0, type(uint32).max, inputs, witnessHash(order)
+            ),
+            hex""
+        );
+
+        InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
+        solveParams[0] = InputSettlerBase.SolveParams({ solver: finaliseEncoding, timestamp: uint32(block.timestamp) });
+
+        vm.prank(solver);
+        vm.expectRevert(abi.encodeWithSignature("NotOrderOwner()"));
+        IInputSettlerCompact(inputSettlerCompact).finalise(order, signature, solveParams, solver.toIdentifier(), hex"");
+    }
+
+    /// @notice After an order has been purchased, a second purchase under a different bytes32 solver encoding is
+    /// attempted.
+    function test_purchase_order_second_purchase_with_different_solver_encoding() public {
+        uint256 amount = 10 ** 18;
+
+        bytes32 firstEncoding = solver.toIdentifier();
+        bytes32 secondEncoding = bytes32((uint256(0xCAFEBABECAFEBABECAFEBABE) << 160) | uint256(uint160(solver)));
+
+        token.mint(swapper, amount);
+        vm.prank(swapper);
+        token.approve(address(theCompact), type(uint256).max);
+
+        vm.prank(swapper);
+        uint256 tokenId = theCompact.depositERC20(address(token), alwaysOkAllocatorLockTag, amount, swapper);
+
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [tokenId, amount];
+
+        MandateOutput[] memory outputs = new MandateOutput[](1);
+        outputs[0] = MandateOutput({
+            settler: address(outputSettlerCoin).toIdentifier(),
+            oracle: address(alwaysYesOracle).toIdentifier(),
+            chainId: block.chainid,
+            token: address(anotherToken).toIdentifier(),
+            amount: amount,
+            recipient: swapper.toIdentifier(),
+            callbackData: hex"",
+            context: hex""
+        });
+
+        StandardOrder memory order = StandardOrder({
+            user: address(swapper),
+            nonce: 0,
+            originChainId: block.chainid,
+            fillDeadline: type(uint32).max,
+            expires: type(uint32).max,
+            inputOracle: alwaysYesOracle,
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        bytes32 orderId = IInputSettlerCompact(inputSettlerCompact).orderIdentifier(order);
+
+        OrderPurchase memory orderPurchase =
+            OrderPurchase({ orderId: orderId, destination: solver, callData: hex"", discount: 0, timeToBuy: 0 });
+        bytes memory solverSignature = this.getOrderPurchaseSignature(solverPrivateKey, orderPurchase);
+
+        (address otherPurchaser,) = makeAddrAndKey("otherPurchaser");
+        token.mint(purchaser, amount);
+        token.mint(otherPurchaser, amount);
+        vm.prank(purchaser);
+        token.approve(address(inputSettlerCompact), amount);
+        vm.prank(otherPurchaser);
+        token.approve(address(inputSettlerCompact), amount);
+
+        vm.warp(uint32(10000));
+
+        vm.prank(purchaser);
+        InputSettlerCompact(inputSettlerCompact)
+            .purchaseOrder(
+                orderPurchase, order, firstEncoding, purchaser.toIdentifier(), type(uint256).max, solverSignature
+            );
+
+        vm.prank(otherPurchaser);
+        vm.expectRevert(abi.encodeWithSignature("AlreadyPurchased()"));
+        InputSettlerCompact(inputSettlerCompact)
+            .purchaseOrder(
+                orderPurchase, order, secondEncoding, otherPurchaser.toIdentifier(), type(uint256).max, solverSignature
+            );
+    }
 }

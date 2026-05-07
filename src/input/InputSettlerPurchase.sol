@@ -124,7 +124,8 @@ abstract contract InputSettlerPurchase is InputSettlerBase {
         SolveParams[] calldata solveParams
     ) internal returns (bytes32 orderOwner) {
         bytes32 solver = solveParams[0].solver;
-        Purchased storage purchaseDetails = purchasedOrders[solver][orderId];
+        // Canonicalize the storage lookup so any bytes32 sharing the lower 160 bits maps to the same slot.
+        Purchased storage purchaseDetails = purchasedOrders[solver.fromIdentifier().toIdentifier()][orderId];
         uint32 lastOrderTimestamp = purchaseDetails.lastOrderTimestamp;
         bytes32 purchaser = purchaseDetails.purchaser;
 
@@ -161,8 +162,12 @@ abstract contract InputSettlerPurchase is InputSettlerBase {
         if (purchaser == bytes32(0)) revert InvalidPurchaser();
         if (expiryTimestamp < block.timestamp) revert Expired();
 
+        // Canonicalize so any bytes32 encoding sharing the lower 160 bits maps to the same slot.
+        address orderSolvedByAddress = orderSolvedByIdentifier.fromIdentifier();
+        bytes32 cleanSolver = orderSolvedByAddress.toIdentifier();
+
         {
-            Purchased storage purchased = purchasedOrders[orderSolvedByIdentifier][orderPurchase.orderId];
+            Purchased storage purchased = purchasedOrders[cleanSolver][orderPurchase.orderId];
             if (purchased.purchaser != bytes32(0)) revert AlreadyPurchased();
 
             // Reentry protection. Ensure that you can't reenter this contract.
@@ -177,7 +182,6 @@ abstract contract InputSettlerPurchase is InputSettlerBase {
         }
 
         {
-            address orderSolvedByAddress = orderSolvedByIdentifier.fromIdentifier();
             bytes32 digest = _hashTypedDataV4(OrderPurchaseType.hashOrderPurchase(orderPurchase));
             bool isValid = SignatureChecker.isValidSignatureNowCalldata(orderSolvedByAddress, digest, solverSignature);
             if (!isValid) revert InvalidSigner();
@@ -196,7 +200,7 @@ abstract contract InputSettlerPurchase is InputSettlerBase {
                 _transferInput(tokenId, newDestination, amountAfterDiscount);
             }
             // Emit the event now because of stack issues.
-            emit OrderPurchased(orderPurchase.orderId, orderSolvedByIdentifier, purchaser);
+            emit OrderPurchased(orderPurchase.orderId, cleanSolver, purchaser);
         }
         {
             bytes calldata callData = orderPurchase.callData;

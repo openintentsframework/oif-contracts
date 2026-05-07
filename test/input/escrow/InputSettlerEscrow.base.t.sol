@@ -8,6 +8,7 @@ import { LibAddress } from "../../../src/libs/LibAddress.sol";
 
 import { AllowOpenType } from "../../../src/input/types/AllowOpenType.sol";
 import { MandateOutput } from "../../../src/input/types/MandateOutputType.sol";
+import { OrderPurchase, OrderPurchaseType } from "../../../src/input/types/OrderPurchaseType.sol";
 import { StandardOrder } from "../../../src/input/types/StandardOrderType.sol";
 import { IInputSettlerEscrow } from "../../../src/interfaces/IInputSettlerEscrow.sol";
 import { OutputSettlerSimple } from "../../../src/output/simple/OutputSettlerSimple.sol";
@@ -43,6 +44,8 @@ contract InputSettlerEscrowTestBase is Permit2Test {
     address swapper;
     uint256 solverPrivateKey;
     address solver;
+    uint256 purchaserPrivateKey;
+    address purchaser;
     uint256 testGuardianPrivateKey;
     address testGuardian;
 
@@ -76,6 +79,7 @@ contract InputSettlerEscrowTestBase is Permit2Test {
 
         (swapper, swapperPrivateKey) = makeAddrAndKey("swapper");
         (solver, solverPrivateKey) = makeAddrAndKey("solver");
+        (purchaser, purchaserPrivateKey) = makeAddrAndKey("purchaser");
 
         alwaysYesOracle = address(new AlwaysYesOracle());
 
@@ -143,6 +147,19 @@ contract InputSettlerEscrowTestBase is Permit2Test {
         bytes32 domainSeparator = EIP712(inputSettlerEscrow).DOMAIN_SEPARATOR();
         bytes32 msgHash = keccak256(
             abi.encodePacked("\x19\x01", domainSeparator, AllowOpenType.hashAllowOpen(orderId, destination, call))
+        );
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
+        return bytes.concat(r, s, bytes1(v));
+    }
+
+    function getOrderPurchaseSignature(
+        uint256 privateKey,
+        OrderPurchase calldata orderPurchase
+    ) external view returns (bytes memory sig) {
+        bytes32 domainSeparator = EIP712(inputSettlerEscrow).DOMAIN_SEPARATOR();
+        bytes32 msgHash = keccak256(
+            abi.encodePacked("\x19\x01", domainSeparator, OrderPurchaseType.hashOrderPurchase(orderPurchase))
         );
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, msgHash);
