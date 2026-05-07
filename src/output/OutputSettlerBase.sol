@@ -155,7 +155,7 @@ abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
         OutputVerificationLib._isThisChain(output.chainId);
         OutputVerificationLib._isThisOutputSettler(output.settler);
         LibAddress.validatedCleanAddress(uint256(output.oracle));
-        if (output.callbackData.length + output.context.length > MandateOutputEncodingLib.MAX_FILL_DESCRIPTION_BODY) {
+        if (output.callbackData.length + output.context.length >= MandateOutputEncodingLib.MAX_FILL_DESCRIPTION_BODY) {
             revert MandateOutputEncodingLib.PayloadBodyTooLarge();
         }
 
