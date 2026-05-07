@@ -9,6 +9,7 @@ import { StandardOrder, StandardOrderType } from "../types/StandardOrderType.sol
  * @dev The filldeadline is part of the Permit2 struct as the openDeadline.
  */
 struct Permit2Witness {
+    address user;
     uint32 expires;
     address inputOracle;
     MandateOutput[] outputs;
