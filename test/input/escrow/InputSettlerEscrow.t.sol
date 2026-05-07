@@ -1106,4 +1106,67 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         IInputSettlerEscrow(inputSettlerEscrow).finalise(order, solveParams, purchaser.toIdentifier(), hex"");
         assertEq(token.balanceOf(purchaser), amount);
     }
+
+    function test_purchase_order_reverts_when_expired() public {
+        uint256 amount = 1e18 / 10;
+
+        bytes32 orderSolvedByIdentifier = solver.toIdentifier();
+
+        MandateOutput[] memory outputs = new MandateOutput[](1);
+        outputs[0] = MandateOutput({
+            settler: address(outputSettlerCoin).toIdentifier(),
+            oracle: alwaysYesOracle.toIdentifier(),
+            chainId: block.chainid,
+            token: address(anotherToken).toIdentifier(),
+            amount: amount,
+            recipient: swapper.toIdentifier(),
+            callbackData: hex"",
+            context: hex""
+        });
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        uint32 expires = uint32(block.timestamp) + 1000;
+
+        StandardOrder memory order = StandardOrder({
+            user: swapper,
+            nonce: 0,
+            originChainId: block.chainid,
+            expires: expires,
+            fillDeadline: expires,
+            inputOracle: alwaysYesOracle,
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        // Deposit into the escrow before the order expires.
+        vm.prank(swapper);
+        token.approve(inputSettlerEscrow, amount);
+        vm.prank(swapper);
+        IInputSettlerEscrow(inputSettlerEscrow).open(order);
+
+        bytes32 orderId = IInputSettlerEscrow(inputSettlerEscrow).orderIdentifier(order);
+
+        OrderPurchase memory orderPurchase =
+            OrderPurchase({ orderId: orderId, destination: solver, callData: hex"", discount: 0, timeToBuy: 1000 });
+        bytes memory solverSignature = this.getOrderPurchaseSignature(solverPrivateKey, orderPurchase);
+
+        token.mint(purchaser, amount);
+        vm.prank(purchaser);
+        token.approve(inputSettlerEscrow, amount);
+
+        vm.warp(uint256(expires) + 1);
+
+        vm.prank(purchaser);
+        vm.expectRevert(abi.encodeWithSignature("TimestampPassed()"));
+        InputSettlerEscrow(inputSettlerEscrow)
+            .purchaseOrder(
+                orderPurchase,
+                order,
+                orderSolvedByIdentifier,
+                purchaser.toIdentifier(),
+                type(uint256).max,
+                solverSignature
+            );
+    }
 }

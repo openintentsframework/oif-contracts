@@ -302,6 +302,7 @@ contract InputSettlerCompact is InputSettlerPurchase, IInputSettlerCompact {
         bytes calldata solverSignature
     ) external virtual {
         _validateInputChain(order.originChainId);
+        _validateTimestampHasNotPassed(order.expires);
         bytes32 computedOrderId = _orderIdentifier(order);
         // Sanity check to ensure the user thinks they are buying the right order.
         if (computedOrderId != orderPurchase.orderId) revert OrderIdMismatch(orderPurchase.orderId, computedOrderId);
