@@ -18,6 +18,7 @@ contract ReenteringRecipient {
     MandateOutput output;
     uint48 fillDeadline;
     bytes fillerData;
+    uint256 valueToForward;
     bool reentered;
 
     function setReentry(
@@ -34,10 +35,16 @@ contract ReenteringRecipient {
         fillerData = _fillerData;
     }
 
+    function setForwardValue(
+        uint256 _value
+    ) external {
+        valueToForward = _value;
+    }
+
     receive() external payable {
         if (!reentered) {
             reentered = true;
-            settler.fill(orderId, output, fillDeadline, fillerData);
+            settler.fill{ value: valueToForward }(orderId, output, fillDeadline, fillerData);
         }
     }
 }
@@ -806,6 +813,44 @@ contract OutputSettlerSimpleTestFill is Test {
 
         assertEq(address(recipient).balance, outputAmount);
         assertEq(sender.balance, excess);
+    }
+
+    /// @notice Recipient of a native ETH fill reenters `fill` and forwards its own ETH in the inner call.
+    function test_fill_native_token_recipient_reenters_with_own_value() public {
+        bytes32 orderId = keccak256(bytes("orderId"));
+        bytes32 filler = keccak256(bytes("filler"));
+        uint256 outputAmount = 1 ether;
+        uint256 excess = 4 ether;
+        uint256 totalValue = outputAmount + excess;
+        uint256 recipientOwnValue = 2 ether;
+
+        address sender = makeAddr("sender");
+        vm.deal(sender, totalValue);
+
+        ReenteringRecipient recipient = new ReenteringRecipient();
+        vm.deal(address(recipient), recipientOwnValue);
+
+        bytes memory fillerData = abi.encodePacked(filler);
+
+        MandateOutput memory outputStruct = MandateOutput({
+            oracle: bytes32(0),
+            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            chainId: block.chainid,
+            token: bytes32(0),
+            amount: outputAmount,
+            recipient: bytes32(uint256(uint160(address(recipient)))),
+            callbackData: bytes(""),
+            context: bytes("")
+        });
+
+        recipient.setReentry(outputSettlerCoin, orderId, outputStruct, type(uint48).max, fillerData);
+        recipient.setForwardValue(recipientOwnValue);
+
+        vm.prank(sender);
+        outputSettlerCoin.fill{ value: totalValue }(orderId, outputStruct, type(uint48).max, fillerData);
+
+        assertEq(sender.balance, excess);
+        assertEq(address(recipient).balance, outputAmount + recipientOwnValue);
     }
 
     function test_fill_native_token_insufficient_value(
