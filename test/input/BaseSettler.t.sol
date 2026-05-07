@@ -633,4 +633,82 @@ contract BaseInputSettlerTest is Test {
         bytes32 collectedPurchaser = settler.purchaseGetOrderOwner(orderId, solveParams);
         assertEq(collectedPurchaser, orderSolvedByIdentifier);
     }
+
+    /// @notice Purchase under one bytes32 solver encoding, look up under another sharing the same lower 160 bits.
+    function test_purchase_order_lookup_with_different_solver_encoding(
+        bytes32 orderId,
+        uint96 purchaseUpper,
+        uint96 lookupUpper
+    ) external {
+        bytes32 purchaseEncoding = bytes32((uint256(purchaseUpper) << 160) | uint256(uint160(solver)));
+        bytes32 lookupEncoding = bytes32((uint256(lookupUpper) << 160) | uint256(uint160(solver)));
+
+        uint256 amount = 10 ** 18;
+        token.mint(purchaser, amount);
+
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0][0] = uint256(uint160(address(token)));
+        inputs[0][1] = amount;
+
+        OrderPurchase memory orderPurchase =
+            OrderPurchase({ orderId: orderId, destination: solver, callData: hex"", discount: 0, timeToBuy: 1000 });
+        bytes memory solverSignature = this.getOrderPurchaseSignature(solverPrivateKey, orderPurchase);
+
+        uint32 currentTime = 10000;
+        vm.warp(currentTime);
+
+        vm.prank(purchaser);
+        token.approve(address(settler), amount);
+
+        vm.prank(purchaser);
+        settler.purchaseOrder(
+            orderPurchase, inputs, purchaseEncoding, purchaser.toIdentifier(), type(uint256).max, solverSignature
+        );
+
+        InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
+        solveParams[0] = InputSettlerBase.SolveParams({ solver: lookupEncoding, timestamp: currentTime });
+
+        bytes32 collectedPurchaser = settler.purchaseGetOrderOwner(orderId, solveParams);
+        assertEq(collectedPurchaser, purchaser.toIdentifier());
+    }
+
+    /// @notice Two purchases of the same order use distinct bytes32 solver encodings sharing the same lower 160 bits.
+    function test_purchase_order_replay_with_different_solver_encoding(
+        bytes32 orderId,
+        uint96 firstUpper,
+        uint96 secondUpper
+    ) external {
+        vm.assume(firstUpper != secondUpper);
+
+        bytes32 firstEncoding = bytes32((uint256(firstUpper) << 160) | uint256(uint160(solver)));
+        bytes32 secondEncoding = bytes32((uint256(secondUpper) << 160) | uint256(uint160(solver)));
+
+        uint256 amount = 10 ** 18;
+        token.mint(purchaser, 2 * amount);
+
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0][0] = uint256(uint160(address(token)));
+        inputs[0][1] = amount;
+
+        OrderPurchase memory orderPurchase =
+            OrderPurchase({ orderId: orderId, destination: solver, callData: hex"", discount: 0, timeToBuy: 1000 });
+        bytes memory solverSignature = this.getOrderPurchaseSignature(solverPrivateKey, orderPurchase);
+
+        uint32 currentTime = 10000;
+        vm.warp(currentTime);
+
+        vm.prank(purchaser);
+        token.approve(address(settler), 2 * amount);
+
+        vm.prank(purchaser);
+        settler.purchaseOrder(
+            orderPurchase, inputs, firstEncoding, purchaser.toIdentifier(), type(uint256).max, solverSignature
+        );
+
+        vm.prank(purchaser);
+        vm.expectRevert(abi.encodeWithSignature("AlreadyPurchased()"));
+        settler.purchaseOrder(
+            orderPurchase, inputs, secondEncoding, purchaser.toIdentifier(), type(uint256).max, solverSignature
+        );
+    }
 }
