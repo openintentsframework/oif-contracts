@@ -948,4 +948,35 @@ contract OutputSettlerSimpleTestFill is Test {
         assertEq(swapper.balance, swapperBalanceBefore);
         assertEq(sender.balance, senderBalanceBefore); // Full refund
     }
+
+    /// @notice Fill where the encoded fill description body would exceed type(uint16).max bytes.
+    function test_fill_reverts_when_payload_body_too_large() public {
+        bytes32 orderId = keccak256(bytes("orderId"));
+        bytes32 filler = keccak256(bytes("filler"));
+        uint256 amount = 1 ether;
+
+        address sender = makeAddr("sender");
+        vm.deal(sender, amount);
+
+        bytes memory fillerData = abi.encodePacked(filler);
+
+        // encodeFillDescription header = 168 bytes; combined body must be <= type(uint16).max - 168 = 65367.
+        // 65368 pushes the encoded payload past type(uint16).max.
+        bytes memory tooLargeCallback = new bytes(65368);
+
+        MandateOutput memory outputStruct = MandateOutput({
+            oracle: bytes32(0),
+            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            chainId: block.chainid,
+            token: bytes32(0),
+            amount: amount,
+            recipient: bytes32(uint256(uint160(mockCallbackExecutorAddress))),
+            callbackData: tooLargeCallback,
+            context: bytes("")
+        });
+
+        vm.prank(sender);
+        vm.expectRevert(abi.encodeWithSignature("PayloadBodyTooLarge()"));
+        outputSettlerCoin.fill{ value: amount }(orderId, outputStruct, type(uint48).max, fillerData);
+    }
 }
