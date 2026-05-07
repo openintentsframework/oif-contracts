@@ -1026,6 +1026,10 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         vm.prank(solver);
         vm.expectRevert(abi.encodeWithSignature("NotOrderOwner()"));
         IInputSettlerEscrow(inputSettlerEscrow).finalise(order, solveParams, solver.toIdentifier(), hex"");
+
+        vm.prank(purchaser);
+        IInputSettlerEscrow(inputSettlerEscrow).finalise(order, solveParams, purchaser.toIdentifier(), hex"");
+        assertEq(token.balanceOf(purchaser), amount);
     }
 
     /// @notice After an order has been purchased, a second purchase under a different bytes32 solver encoding is
@@ -1094,5 +1098,12 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
             .purchaseOrder(
                 orderPurchase, order, secondEncoding, otherPurchaser.toIdentifier(), type(uint256).max, solverSignature
             );
+
+        InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
+        solveParams[0] = InputSettlerBase.SolveParams({ solver: firstEncoding, timestamp: uint32(block.timestamp) });
+
+        vm.prank(purchaser);
+        IInputSettlerEscrow(inputSettlerEscrow).finalise(order, solveParams, purchaser.toIdentifier(), hex"");
+        assertEq(token.balanceOf(purchaser), amount);
     }
 }

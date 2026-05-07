@@ -741,6 +741,11 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
         vm.prank(solver);
         vm.expectRevert(abi.encodeWithSignature("NotOrderOwner()"));
         IInputSettlerCompact(inputSettlerCompact).finalise(order, signature, solveParams, solver.toIdentifier(), hex"");
+
+        vm.prank(purchaser);
+        IInputSettlerCompact(inputSettlerCompact)
+            .finalise(order, signature, solveParams, purchaser.toIdentifier(), hex"");
+        assertEq(token.balanceOf(purchaser), amount);
     }
 
     /// @notice After an order has been purchased, a second purchase under a different bytes32 solver encoding is
@@ -812,5 +817,20 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
             .purchaseOrder(
                 orderPurchase, order, secondEncoding, otherPurchaser.toIdentifier(), type(uint256).max, solverSignature
             );
+
+        bytes memory signature = abi.encode(
+            getCompactBatchWitnessSignature(
+                swapperPrivateKey, inputSettlerCompact, swapper, 0, type(uint32).max, inputs, witnessHash(order)
+            ),
+            hex""
+        );
+
+        InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
+        solveParams[0] = InputSettlerBase.SolveParams({ solver: firstEncoding, timestamp: uint32(block.timestamp) });
+
+        vm.prank(purchaser);
+        IInputSettlerCompact(inputSettlerCompact)
+            .finalise(order, signature, solveParams, purchaser.toIdentifier(), hex"");
+        assertEq(token.balanceOf(purchaser), amount);
     }
 }
