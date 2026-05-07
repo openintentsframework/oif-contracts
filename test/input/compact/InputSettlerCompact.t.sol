@@ -896,4 +896,63 @@ contract InputSettlerCompactTest is InputSettlerCompactTestBase {
                 solverSignature
             );
     }
+
+    function test_purchase_order_reverts_when_destination_is_zero() public {
+        uint256 amount = 10 ** 18;
+
+        token.mint(swapper, amount);
+        vm.prank(swapper);
+        token.approve(address(theCompact), type(uint256).max);
+
+        vm.prank(swapper);
+        uint256 tokenId = theCompact.depositERC20(address(token), alwaysOkAllocatorLockTag, amount, swapper);
+
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [tokenId, amount];
+
+        MandateOutput[] memory outputs = new MandateOutput[](1);
+        outputs[0] = MandateOutput({
+            settler: address(outputSettlerCoin).toIdentifier(),
+            oracle: address(alwaysYesOracle).toIdentifier(),
+            chainId: block.chainid,
+            token: address(anotherToken).toIdentifier(),
+            amount: amount,
+            recipient: swapper.toIdentifier(),
+            callbackData: hex"",
+            context: hex""
+        });
+
+        StandardOrder memory order = StandardOrder({
+            user: address(swapper),
+            nonce: 0,
+            originChainId: block.chainid,
+            fillDeadline: type(uint32).max,
+            expires: type(uint32).max,
+            inputOracle: alwaysYesOracle,
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        bytes32 orderId = IInputSettlerCompact(inputSettlerCompact).orderIdentifier(order);
+
+        OrderPurchase memory orderPurchase =
+            OrderPurchase({ orderId: orderId, destination: address(0), callData: hex"", discount: 0, timeToBuy: 1000 });
+        bytes memory solverSignature = this.getOrderPurchaseSignature(solverPrivateKey, orderPurchase);
+
+        token.mint(purchaser, amount);
+        vm.prank(purchaser);
+        token.approve(address(inputSettlerCompact), amount);
+
+        vm.prank(purchaser);
+        vm.expectRevert(abi.encodeWithSignature("NoDestination()"));
+        InputSettlerCompact(inputSettlerCompact)
+            .purchaseOrder(
+                orderPurchase,
+                order,
+                solver.toIdentifier(),
+                purchaser.toIdentifier(),
+                type(uint256).max,
+                solverSignature
+            );
+    }
 }

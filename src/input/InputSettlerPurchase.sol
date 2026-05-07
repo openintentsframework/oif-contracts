@@ -160,6 +160,7 @@ abstract contract InputSettlerPurchase is InputSettlerBase {
         bytes calldata solverSignature
     ) internal {
         if (purchaser == bytes32(0)) revert InvalidPurchaser();
+        _validateDestination(orderPurchase.destination.toIdentifier());
         if (expiryTimestamp < block.timestamp) revert Expired();
 
         // Canonicalize so any bytes32 encoding sharing the lower 160 bits maps to the same slot.
