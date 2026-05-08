@@ -287,4 +287,20 @@ contract MandateOutputEncodingLibTest is Test {
         vm.expectRevert(abi.encodeWithSignature("ContextOutOfRange()"));
         this.encodeFillDescriptionMemoryHarness(solver, orderId, timestamp, token, amount, recipient, call, context);
     }
+
+    /// @notice An empty-body encoded fill description equals FILL_DESCRIPTION_HEADER bytes.
+    function test_encodeFillDescription_header_size() external view {
+        bytes32 solver = keccak256(bytes("solver"));
+        bytes32 orderId = keccak256(bytes("orderId"));
+        uint32 timestamp = uint32(block.timestamp);
+        bytes32 token = keccak256(bytes("token"));
+        uint256 amount = 10 ** 18;
+        bytes32 recipient = keccak256(bytes("recipient"));
+        bytes memory call = bytes("");
+        bytes memory context = bytes("");
+
+        bytes memory encoded =
+            this.encodeFillDescriptionHarness(solver, orderId, timestamp, token, amount, recipient, call, context);
+        assertEq(encoded.length, MandateOutputEncodingLib.FILL_DESCRIPTION_HEADER);
+    }
 }
