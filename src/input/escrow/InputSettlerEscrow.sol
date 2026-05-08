@@ -325,8 +325,8 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         for (uint256 i; i < numInputs; ++i) {
             uint256[2] calldata input = inputs[i];
             bytes calldata signature = BytesLib.getBytesOfArray(_signature_, i);
-            IERC3009(input[0].validatedCleanAddress())
-                .receiveWithAuthorization({
+            // forgefmt: disable-next-line
+            IERC3009(input[0].validatedCleanAddress()).receiveWithAuthorization({
                 from: signer,
                 to: address(this),
                 value: input[1],
