@@ -224,7 +224,7 @@ abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
         uint256 nativeSent;
         (fillRecordHash,, nativeSent) = _fill(orderId, output, fillerData);
 
-        if (msg.value > nativeSent) Address.sendValue(payable(msg.sender), msg.value - nativeSent);
+        _refundNativeExcess(nativeSent);
     }
 
     // -- Batch Solving -- //
@@ -262,11 +262,21 @@ abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
 
         uint256 numOutputs = outputs.length;
         for (uint256 i = 1; i < numOutputs; ++i) {
-            (,, uint256 sent) = _fill(orderId, outputs[i], fillerData);
-            totalNativeSent += sent;
+            (,, uint256 nativeSent) = _fill(orderId, outputs[i], fillerData);
+            totalNativeSent += nativeSent;
         }
 
-        if (msg.value > totalNativeSent) Address.sendValue(payable(msg.sender), msg.value - totalNativeSent);
+        _refundNativeExcess(totalNativeSent);
+    }
+
+    /**
+     * @notice Refunds the unused native value to msg.sender.
+     * @param nativeSent Amount of native already paid out by `_fill`.
+     */
+    function _refundNativeExcess(
+        uint256 nativeSent
+    ) internal {
+        if (msg.value > nativeSent) Address.sendValue(payable(msg.sender), msg.value - nativeSent);
     }
 
     // --- IAttester --- //
