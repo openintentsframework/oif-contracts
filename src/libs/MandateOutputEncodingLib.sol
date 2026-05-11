@@ -39,16 +39,6 @@ import { MandateOutput } from "../input/types/MandateOutputType.sol";
 library MandateOutputEncodingLib {
     error ContextOutOfRange();
     error CallOutOfRange();
-    error PayloadBodyTooLarge();
-
-    /// @dev Fixed-size header of encodeFillDescription:
-    ///      solver(32) + orderId(32) + timestamp(4) + token(32) + amount(32) + recipient(32)
-    ///      + callbackData length prefix(2) + context length prefix(2) = 168 bytes.
-    uint256 internal constant FILL_DESCRIPTION_HEADER = 168;
-
-    /// @dev Max combined `callbackData.length + context.length` so the encoded fill description fits a uint16 length
-    /// prefix and remains relay-encodable through MessageEncodingLib.
-    uint256 internal constant MAX_FILL_DESCRIPTION_BODY = type(uint16).max - FILL_DESCRIPTION_HEADER;
 
     // --- MandateOutput --- //
 

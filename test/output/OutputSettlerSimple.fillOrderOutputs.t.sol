@@ -6,7 +6,6 @@ import { Test } from "forge-std/Test.sol";
 import { MandateOutput } from "../../src/input/types/MandateOutputType.sol";
 import { OutputSettlerSimple } from "../../src/output/simple/OutputSettlerSimple.sol";
 
-import { MockCallbackExecutor } from "../mocks/MockCallbackExecutor.sol";
 import { MockERC20 } from "../mocks/MockERC20.sol";
 
 contract OutputSettlerSimpleTestfillOrderOutputs is Test {
@@ -385,38 +384,5 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
         vm.prank(sender);
         vm.expectRevert(abi.encodeWithSignature("InsufficientBalance(uint256,uint256)", 0, uint256(amount2)));
         outputSettlerCoin.fillOrderOutputs{ value: sentValue }(orderId, outputs, type(uint48).max, fillerData);
-    }
-
-    /// @notice Batch fill where one output's encoded fill description body would exceed type(uint16).max bytes.
-    function test_fill_batch_reverts_when_payload_body_too_large() public {
-        bytes32 orderId = keccak256(bytes("orderId"));
-        bytes32 filler = keccak256(bytes("filler"));
-        uint256 amount = 1 ether;
-
-        address sender = makeAddr("sender");
-        MockCallbackExecutor recipient = new MockCallbackExecutor();
-        vm.deal(sender, amount);
-
-        bytes memory fillerData = abi.encodePacked(filler);
-
-        // encodeFillDescription header = 168 bytes; combined body must be <= type(uint16).max - 168 = 65367.
-        // 65368 pushes the encoded payload past type(uint16).max.
-        bytes memory tooLargeCallback = new bytes(65368);
-
-        MandateOutput[] memory outputs = new MandateOutput[](1);
-        outputs[0] = MandateOutput({
-            oracle: bytes32(0),
-            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
-            chainId: block.chainid,
-            token: bytes32(0),
-            amount: amount,
-            recipient: bytes32(uint256(uint160(address(recipient)))),
-            callbackData: tooLargeCallback,
-            context: bytes("")
-        });
-
-        vm.prank(sender);
-        vm.expectRevert(abi.encodeWithSignature("PayloadBodyTooLarge()"));
-        outputSettlerCoin.fillOrderOutputs{ value: amount }(orderId, outputs, type(uint48).max, fillerData);
     }
 }
