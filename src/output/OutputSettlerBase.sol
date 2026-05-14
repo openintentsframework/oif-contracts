@@ -151,7 +151,7 @@ abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
         bytes32 orderId,
         MandateOutput calldata output,
         bytes calldata fillerData
-    ) internal virtual returns (bytes32 fillRecordHash, bytes32 solver) {
+    ) internal virtual returns (bytes32 fillRecordHash, bytes32 solver, uint256 nativeSent) {
         OutputVerificationLib._isThisChain(output.chainId);
         OutputVerificationLib._isThisOutputSettler(output.settler);
         LibAddress.validatedCleanAddress(uint256(output.oracle));
@@ -164,7 +164,7 @@ abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
             bytes32 existingFillRecordHash = _fillRecords[orderId][outputHash];
 
             // Early return if already filled.
-            if (existingFillRecordHash != bytes32(0)) return (existingFillRecordHash, solver);
+            if (existingFillRecordHash != bytes32(0)) return (existingFillRecordHash, solver, 0);
 
             // The above and below lines act as a local re-entry check.
             fillRecordHash = _getFillRecordHash(solver, fillTimestamp);
@@ -176,6 +176,7 @@ abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
 
         if (tokenIdentifier == bytes32(0)) {
             Address.sendValue(payable(recipient), outputAmount);
+            nativeSent = outputAmount;
         } else {
             SafeERC20.safeTransferFrom(
                 IERC20(uint256(tokenIdentifier).validatedCleanAddress()), msg.sender, recipient, outputAmount
@@ -187,8 +188,6 @@ abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
             IOutputCallback(recipient).outputFilled(tokenIdentifier, outputAmount, callbackData);
         }
         emit OutputFilled(orderId, solver, fillTimestamp, output, outputAmount);
-
-        return (fillRecordHash, solver);
     }
 
     /**
@@ -222,9 +221,10 @@ abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
         bytes calldata fillerData
     ) external payable virtual returns (bytes32 fillRecordHash) {
         if (fillDeadline < block.timestamp) revert FillDeadline();
-        (fillRecordHash,) = _fill(orderId, output, fillerData);
+        uint256 nativeSent;
+        (fillRecordHash,, nativeSent) = _fill(orderId, output, fillerData);
 
-        refundNativeExcess();
+        _refundNativeExcess(nativeSent);
     }
 
     // -- Batch Solving -- //
@@ -255,25 +255,28 @@ abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
     ) external payable virtual {
         if (fillDeadline < block.timestamp) revert FillDeadline();
 
-        (bytes32 fillRecordHash, bytes32 solver) = _fill(orderId, outputs[0], fillerData);
+        (bytes32 fillRecordHash, bytes32 solver, uint256 totalNativeSent) = _fill(orderId, outputs[0], fillerData);
 
         bytes32 expectedFillRecordHash = _getFillRecordHash(solver, uint32(block.timestamp));
         if (fillRecordHash != expectedFillRecordHash) revert AlreadyFilled();
 
         uint256 numOutputs = outputs.length;
         for (uint256 i = 1; i < numOutputs; ++i) {
-            _fill(orderId, outputs[i], fillerData);
+            (,, uint256 nativeSent) = _fill(orderId, outputs[i], fillerData);
+            totalNativeSent += nativeSent;
         }
 
-        refundNativeExcess();
+        _refundNativeExcess(totalNativeSent);
     }
 
     /**
-     * @notice Refunds the native token excess value sent to the contract.
+     * @notice Refunds the unused native value to msg.sender.
+     * @param nativeSent Amount of native already paid out by `_fill`.
      */
-    function refundNativeExcess() internal {
-        uint256 excess = address(this).balance;
-        if (excess > 0) Address.sendValue(payable(msg.sender), excess);
+    function _refundNativeExcess(
+        uint256 nativeSent
+    ) internal {
+        if (msg.value > nativeSent) Address.sendValue(payable(msg.sender), msg.value - nativeSent);
     }
 
     // --- IAttester --- //

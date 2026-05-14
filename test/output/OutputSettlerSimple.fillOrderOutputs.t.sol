@@ -8,6 +8,36 @@ import { OutputSettlerSimple } from "../../src/output/simple/OutputSettlerSimple
 
 import { MockERC20 } from "../mocks/MockERC20.sol";
 
+contract ReenteringRecipient {
+    OutputSettlerSimple settler;
+    bytes32 orderId;
+    MandateOutput output;
+    uint48 fillDeadline;
+    bytes fillerData;
+    bool reentered;
+
+    function setReentry(
+        OutputSettlerSimple _settler,
+        bytes32 _orderId,
+        MandateOutput memory _output,
+        uint48 _fillDeadline,
+        bytes memory _fillerData
+    ) external {
+        settler = _settler;
+        orderId = _orderId;
+        output = _output;
+        fillDeadline = _fillDeadline;
+        fillerData = _fillerData;
+    }
+
+    receive() external payable {
+        if (!reentered) {
+            reentered = true;
+            settler.fill(orderId, output, fillDeadline, fillerData);
+        }
+    }
+}
+
 contract OutputSettlerSimpleTestfillOrderOutputs is Test {
     error FilledBySomeoneElse(bytes32 solver);
 
@@ -384,5 +414,110 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
         vm.prank(sender);
         vm.expectRevert(abi.encodeWithSignature("InsufficientBalance(uint256,uint256)", 0, uint256(amount2)));
         outputSettlerCoin.fillOrderOutputs{ value: sentValue }(orderId, outputs, type(uint48).max, fillerData);
+    }
+
+    /// @notice Recipient of the first (native) output reenters `fill` while the batch fills a subsequent ERC20 output.
+    function test_fill_batch_native_then_erc20_excess_refund_with_reentering_recipient() public {
+        bytes32 orderId = keccak256(bytes("orderId"));
+        bytes32 filler = keccak256(bytes("filler"));
+        uint256 nativeAmount = 1 ether;
+        uint256 erc20Amount = 1e18;
+        uint256 excess = 4 ether;
+        uint256 totalValue = nativeAmount + excess;
+
+        address sender = makeAddr("sender");
+        vm.deal(sender, totalValue);
+
+        outputToken.mint(sender, erc20Amount);
+        vm.prank(sender);
+        outputToken.approve(outputSettlerCoinAddress, erc20Amount);
+
+        ReenteringRecipient recipient = new ReenteringRecipient();
+
+        bytes memory fillerData = abi.encodePacked(filler);
+
+        MandateOutput[] memory outputs = new MandateOutput[](2);
+        outputs[0] = MandateOutput({
+            oracle: bytes32(0),
+            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            chainId: block.chainid,
+            token: bytes32(0),
+            amount: nativeAmount,
+            recipient: bytes32(uint256(uint160(address(recipient)))),
+            callbackData: bytes(""),
+            context: bytes("")
+        });
+        outputs[1] = MandateOutput({
+            oracle: bytes32(0),
+            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            chainId: block.chainid,
+            token: bytes32(uint256(uint160(outputTokenAddress))),
+            amount: erc20Amount,
+            recipient: bytes32(uint256(uint160(swapper))),
+            callbackData: bytes(""),
+            context: bytes("")
+        });
+
+        recipient.setReentry(outputSettlerCoin, orderId, outputs[0], type(uint48).max, fillerData);
+
+        vm.prank(sender);
+        outputSettlerCoin.fillOrderOutputs{ value: totalValue }(orderId, outputs, type(uint48).max, fillerData);
+
+        assertEq(address(recipient).balance, nativeAmount);
+        assertEq(sender.balance, excess);
+        assertEq(outputToken.balanceOf(swapper), erc20Amount);
+    }
+
+    /// @notice Recipient of one native output reenters `fill` with a different output of the same all-native batch.
+    function test_fill_batch_all_native_recipient_reenters_with_other_output() public {
+        bytes32 orderId = keccak256(bytes("orderId"));
+        bytes32 filler = keccak256(bytes("filler"));
+        uint256 amount0 = 1 ether;
+        uint256 amount1 = 1 ether;
+        uint256 excess = 4 ether;
+        uint256 totalValue = amount0 + amount1 + excess;
+
+        address sender = makeAddr("sender");
+        address otherRecipient = makeAddr("otherRecipient");
+        vm.deal(sender, totalValue);
+
+        ReenteringRecipient recipient = new ReenteringRecipient();
+
+        bytes memory fillerData = abi.encodePacked(filler);
+
+        MandateOutput[] memory outputs = new MandateOutput[](2);
+        outputs[0] = MandateOutput({
+            oracle: bytes32(0),
+            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            chainId: block.chainid,
+            token: bytes32(0),
+            amount: amount0,
+            recipient: bytes32(uint256(uint160(address(recipient)))),
+            callbackData: bytes(""),
+            context: bytes("")
+        });
+        outputs[1] = MandateOutput({
+            oracle: bytes32(0),
+            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            chainId: block.chainid,
+            token: bytes32(0),
+            amount: amount1,
+            recipient: bytes32(uint256(uint160(otherRecipient))),
+            callbackData: bytes(""),
+            context: bytes("")
+        });
+
+        // When the recipient receives ETH from outputs[0], reenter `fill` with outputs[1].
+        recipient.setReentry(outputSettlerCoin, orderId, outputs[1], type(uint48).max, fillerData);
+
+        uint256 senderBalanceBefore = sender.balance;
+
+        vm.prank(sender);
+        vm.expectRevert();
+        outputSettlerCoin.fillOrderOutputs{ value: totalValue }(orderId, outputs, type(uint48).max, fillerData);
+
+        assertEq(sender.balance, senderBalanceBefore);
+        assertEq(address(recipient).balance, 0);
+        assertEq(otherRecipient.balance, 0);
     }
 }
