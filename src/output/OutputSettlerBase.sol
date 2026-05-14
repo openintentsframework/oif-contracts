@@ -67,6 +67,9 @@ import { BaseInputOracle } from "../oracles/BaseInputOracle.sol";
  * not a guarantee of on-chain success)
  *        They should understand the risks of each callback and the potential for them to revert the filling of the
  * output, which could lead to the solver not being able to finalise the order.
+ * 2. Oversized fill descriptions: some oracles cannot transport fill descriptions larger than
+ * `type(uint16).max` bytes (168-byte header + `callbackData` + `context`).
+ *    - Mitigation: solvers MUST reject outputs where `callbackData.length + context.length > type(uint16).max - 168`.
  */
 abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
     using LibAddress for bytes32;
