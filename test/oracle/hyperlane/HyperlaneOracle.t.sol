@@ -10,6 +10,7 @@ import { LibAddress } from "../../../src/libs/LibAddress.sol";
 import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
 import { MessageEncodingLib } from "../../../src/libs/MessageEncodingLib.sol";
 import { OutputSettlerSimple } from "../../../src/output/simple/OutputSettlerSimple.sol";
+import { MockCallbackExecutor } from "../../mocks/MockCallbackExecutor.sol";
 import { MockERC20 } from "../../mocks/MockERC20.sol";
 
 import { HyperlaneOracle } from "../../../src/integrations/oracles/hyperlane/HyperlaneOracle.sol";
@@ -138,6 +139,60 @@ contract HyperlaneOracleTest is Test {
 
         // Fill without submitting
         vm.expectRevert(abi.encodeWithSignature("NotAllPayloadsValid()"));
+        _oracle.submit{ value: _gasPaymentQuote }(
+            _destination, _recipientOracle, _gasLimit, bytes("customMetadata"), address(_outputSettler), payloads
+        );
+    }
+
+    /// @notice Submit a fill whose encoded fill description exceeds the uint16-prefixed relay budget.
+    function test_submit_reverts_with_oversized_payload() external {
+        address sender = makeAddr("sender");
+        bytes32 orderId = keccak256(bytes("orderId"));
+        bytes32 solverIdentifier = keccak256(bytes("solver"));
+        uint256 amount = 1 ether;
+
+        // Callback receiver so the high-level outputFilled call from `_fill` doesn't revert.
+        MockCallbackExecutor recipient = new MockCallbackExecutor();
+
+        _token.mint(sender, amount);
+        vm.prank(sender);
+        _token.approve(address(_outputSettler), amount);
+
+        // encodeFillDescription header is 168 bytes; combined body > type(uint16).max - 168 produces a payload that
+        // MessageEncodingLib cannot encode through its uint16 length prefix.
+        bytes memory tooLargeCallback = new bytes(65368);
+
+        MandateOutput memory output = MandateOutput({
+            oracle: address(_oracle).toIdentifier(),
+            settler: address(_outputSettler).toIdentifier(),
+            chainId: block.chainid,
+            token: bytes32(abi.encode(address(_token))),
+            amount: amount,
+            recipient: address(recipient).toIdentifier(),
+            callbackData: tooLargeCallback,
+            context: bytes("")
+        });
+
+        bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionMemory(
+            solverIdentifier,
+            orderId,
+            uint32(block.timestamp),
+            bytes32(abi.encode(address(_token))),
+            amount,
+            address(recipient).toIdentifier(),
+            tooLargeCallback,
+            bytes("")
+        );
+
+        bytes memory fillerData = abi.encodePacked(solverIdentifier);
+
+        vm.prank(sender);
+        _outputSettler.fill(orderId, output, type(uint48).max, fillerData);
+
+        bytes[] memory payloads = new bytes[](1);
+        payloads[0] = payload;
+
+        vm.expectRevert(abi.encodeWithSelector(MessageEncodingLib.TooLargePayload.selector, payload.length));
         _oracle.submit{ value: _gasPaymentQuote }(
             _destination, _recipientOracle, _gasLimit, bytes("customMetadata"), address(_outputSettler), payloads
         );
