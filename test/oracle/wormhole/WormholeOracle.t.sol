@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.22;
 
-import { WormholeOracle } from "../../../src/oracles/wormhole/WormholeOracle.sol";
+import { WormholeOracle } from "../../../src/integrations/oracles/wormhole/WormholeOracle.sol";
 import { Test } from "forge-std/Test.sol";
 
 contract WormholeOracleTest is Test {
@@ -12,22 +12,25 @@ contract WormholeOracleTest is Test {
         wormholeOracle = new WormholeOracle(address(this), address(1));
     }
 
-    function test_set_chain_map(uint16 messagingProtocolChainIdentifier, uint256 chainId) external {
+    function test_set_chain_map(
+        uint16 messagingProtocolChainIdentifier,
+        uint256 chainId
+    ) external {
         vm.assume(messagingProtocolChainIdentifier != 0);
         vm.assume(chainId != 0);
-        wormholeOracle.setChainMap(messagingProtocolChainIdentifier, chainId);
+        wormholeOracle.setChainMap(uint256(messagingProtocolChainIdentifier), chainId);
 
-        uint256 readChainId = wormholeOracle.getChainIdentifierToBlockChainId(messagingProtocolChainIdentifier);
+        uint256 readChainId = wormholeOracle.chainIdMap(uint256(messagingProtocolChainIdentifier));
         assertEq(readChainId, chainId);
 
-        uint16 readMessagingProtocolChainIdentifier = wormholeOracle.getBlockChainIdToChainIdentifier(chainId);
+        uint16 readMessagingProtocolChainIdentifier = uint16(wormholeOracle.reverseChainIdMap(chainId));
         assertEq(readMessagingProtocolChainIdentifier, messagingProtocolChainIdentifier);
 
         vm.expectRevert(abi.encodeWithSignature("AlreadySet()"));
-        wormholeOracle.setChainMap(messagingProtocolChainIdentifier, chainId);
+        wormholeOracle.setChainMap(uint256(messagingProtocolChainIdentifier), chainId);
 
         vm.expectRevert(abi.encodeWithSignature("AlreadySet()"));
-        wormholeOracle.setChainMap(messagingProtocolChainIdentifier, 1);
+        wormholeOracle.setChainMap(uint256(messagingProtocolChainIdentifier), 1);
 
         vm.expectRevert(abi.encodeWithSignature("AlreadySet()"));
         wormholeOracle.setChainMap(1, chainId);

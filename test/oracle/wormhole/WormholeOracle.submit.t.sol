@@ -4,20 +4,24 @@ pragma solidity ^0.8.22;
 
 import { Test } from "forge-std/Test.sol";
 
-import { CoinFiller } from "../../../src/fillers/coin/CoinFiller.sol";
+import { MandateOutput } from "../../../src/input/types/MandateOutputType.sol";
+
+import { WormholeOracle } from "../../../src/integrations/oracles/wormhole/WormholeOracle.sol";
+import "../../../src/integrations/oracles/wormhole/external/wormhole/Messages.sol";
+import "../../../src/integrations/oracles/wormhole/external/wormhole/Setters.sol";
 import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
 import { MessageEncodingLib } from "../../../src/libs/MessageEncodingLib.sol";
-import { WormholeOracle } from "../../../src/oracles/wormhole/WormholeOracle.sol";
-import "../../../src/oracles/wormhole/external/wormhole/Messages.sol";
-import "../../../src/oracles/wormhole/external/wormhole/Setters.sol";
-import { MandateOutput } from "../../../src/settlers/types/MandateOutputType.sol";
+import { OutputSettlerSimple } from "../../../src/output/simple/OutputSettlerSimple.sol";
 
 import { MockERC20 } from "../../mocks/MockERC20.sol";
 
 event PackagePublished(uint32 nonce, bytes payload, uint8 consistencyLevel);
 
 contract ExportedMessages is Messages, Setters {
-    function storeGuardianSetPub(Structs.GuardianSet memory set, uint32 index) public {
+    function storeGuardianSetPub(
+        Structs.GuardianSet memory set,
+        uint32 index
+    ) public {
         return super.storeGuardianSet(set, index);
     }
 
@@ -34,7 +38,7 @@ contract ExportedMessages is Messages, Setters {
 contract WormholeOracleTestSubmit is Test {
     WormholeOracle oracle;
     ExportedMessages messages;
-    CoinFiller filler;
+    OutputSettlerSimple outputSettler;
     MockERC20 token;
 
     uint256 expectedValueOnCall;
@@ -43,7 +47,7 @@ contract WormholeOracleTestSubmit is Test {
     function setUp() external {
         messages = new ExportedMessages();
         oracle = new WormholeOracle(address(this), address(messages));
-        filler = new CoinFiller();
+        outputSettler = new OutputSettlerSimple();
 
         token = new MockERC20("TEST", "TEST", 18);
     }
@@ -72,30 +76,41 @@ contract WormholeOracleTestSubmit is Test {
         bytes32 orderId,
         bytes32 solverIdentifier
     ) public {
-        vm.assume(solverIdentifier != bytes32(0));
+        vm.assume(solverIdentifier != bytes32(0) && sender != address(0) && recipient != address(0));
 
         token.mint(sender, amount);
         vm.prank(sender);
-        token.approve(address(filler), amount);
+        token.approve(address(outputSettler), amount);
 
         MandateOutput memory output = MandateOutput({
-            remoteOracle: bytes32(uint256(uint160(address(oracle)))),
-            remoteFiller: bytes32(uint256(uint160(address(filler)))),
+            oracle: bytes32(uint256(uint160(address(oracle)))),
+            settler: bytes32(uint256(uint160(address(outputSettler)))),
+            chainId: block.chainid,
             token: bytes32(abi.encode(address(token))),
             amount: amount,
             recipient: bytes32(abi.encode(recipient)),
-            chainId: uint32(block.chainid),
-            remoteCall: hex"",
-            fulfillmentContext: hex""
+            callbackData: bytes(""),
+            context: bytes("")
         });
-        bytes memory payload =
-            MandateOutputEncodingLib.encodeFillDescriptionM(solverIdentifier, orderId, uint32(block.timestamp), output);
+
+        bytes memory fillerData = abi.encodePacked(solverIdentifier);
+
+        bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionMemory(
+            solverIdentifier,
+            orderId,
+            uint32(block.timestamp),
+            bytes32(abi.encode(address(token))),
+            amount,
+            bytes32(abi.encode(recipient)),
+            bytes(""),
+            bytes("")
+        );
         bytes[] memory payloads = new bytes[](1);
         payloads[0] = payload;
 
         // Fill without submitting
         vm.expectRevert(abi.encodeWithSignature("NotAllPayloadsValid()"));
-        oracle.submit(address(filler), payloads);
+        oracle.submit(address(outputSettler), payloads);
 
         vm.expectCall(
             address(token),
@@ -103,22 +118,29 @@ contract WormholeOracleTestSubmit is Test {
         );
 
         vm.prank(sender);
-        filler.fill(type(uint32).max, orderId, output, solverIdentifier);
+        outputSettler.fill(orderId, output, type(uint48).max, fillerData);
 
-        bytes memory expectedPayload = this.encodeMessageCalldata(output.remoteFiller, payloads);
+        bytes memory expectedPayload =
+            this.encodeMessageCalldata(bytes32(uint256(uint160(address(outputSettler)))), payloads);
 
         vm.expectEmit();
         emit PackagePublished(0, expectedPayload, 15);
-        oracle.submit(address(filler), payloads);
+        oracle.submit(address(outputSettler), payloads);
         vm.snapshotGasLastCall("oracle", "wormholeOracleSubmit");
     }
 
-    function test_submit_excess_value(uint64 val, bytes[] calldata payloads) external {
+    function test_submit_excess_value(
+        uint64 val,
+        bytes[] calldata payloads
+    ) external {
         expectedValueOnCall = val;
         oracle.submit{ value: val }(address(this), payloads);
     }
 
-    function test_revert_submit_excess_value(uint64 val, bytes[] calldata payloads) external {
+    function test_revert_submit_excess_value(
+        uint64 val,
+        bytes[] calldata payloads
+    ) external {
         revertFallback = true;
         expectedValueOnCall = val;
 
@@ -126,8 +148,8 @@ contract WormholeOracleTestSubmit is Test {
         oracle.submit{ value: val }(address(this), payloads);
     }
 
-    function arePayloadsValid(
-        bytes32[] calldata
+    function hasAttested(
+        bytes[] calldata
     ) external pure returns (bool) {
         return true;
     }

@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-only
 pragma solidity ^0.8.0;
 
-import { ReentrancyGuard } from "solady/utils/ReentrancyGuard.sol";
-import { SafeTransferLib } from "solady/utils/SafeTransferLib.sol";
+import { LibAddress } from "../libs/LibAddress.sol";
 
-import { EfficiencyLib } from "the-compact/src/lib/EfficiencyLib.sol";
+import { IERC20 } from "openzeppelin/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "openzeppelin/token/ERC20/utils/SafeERC20.sol";
+import { ReentrancyGuard } from "openzeppelin/utils/ReentrancyGuard.sol";
 
-import { ICatalystCallback } from "../interfaces/ICatalystCallback.sol";
+import { IInputCallback } from "../interfaces/IInputCallback.sol";
+import { IOutputCallback } from "../interfaces/IOutputCallback.sol";
 
 /**
  * @title Allows a user to specify a series of calls that should be made by the handler
@@ -16,7 +18,11 @@ import { ICatalystCallback } from "../interfaces/ICatalystCallback.sol";
  * The caller should ensure that the tokens received by the handler are completely consumed
  * otherwise they will be left in the contract free to take for next the next caller.
  */
-contract CatsMulticallHandler is ICatalystCallback, ReentrancyGuard {
+contract CatsMulticallHandler is IInputCallback, IOutputCallback, ReentrancyGuard {
+    using LibAddress for address;
+    using LibAddress for uint256;
+    using LibAddress for bytes32;
+
     struct Call {
         address target;
         bytes callData;
@@ -41,6 +47,7 @@ contract CatsMulticallHandler is ICatalystCallback, ReentrancyGuard {
     event DrainedTokens(address indexed recipient, address indexed token, uint256 indexed amount);
 
     // Errors
+    error DrainNativeFailed();
     error CallReverted(uint256 index, Call[] calls); // 0xe462c440
     error NotSelf(); // 0x29c3b7ee
     error InvalidCall(uint256 index, Call[] calls); // 0xe237730c
@@ -86,12 +93,16 @@ contract CatsMulticallHandler is ICatalystCallback, ReentrancyGuard {
      * @dev Please make sure to empty the contract of tokens after your call otherwise they can be taken by someone
      * else.
      */
-    function outputFilled(bytes32 token, uint256 amount, bytes calldata executionData) external nonReentrant {
+    function outputFilled(
+        bytes32 token,
+        uint256 amount,
+        bytes calldata executionData
+    ) external nonReentrant {
         Instructions memory instructions = abi.decode(executionData, (Instructions));
 
         // Set approvals base on inputs if requested.
         if (instructions.setApprovalsUsingInputsFor != address(0)) {
-            _setApproval(address(uint160(uint256(token))), amount, instructions.setApprovalsUsingInputsFor);
+            _setApproval(uint256(token).validatedCleanAddress(), amount, instructions.setApprovalsUsingInputsFor);
         }
 
         // Execute attached instructions
@@ -99,7 +110,7 @@ contract CatsMulticallHandler is ICatalystCallback, ReentrancyGuard {
 
         if (instructions.fallbackRecipient == address(0)) return;
         // If there are leftover tokens, send them to the fallback recipient regardless of execution success.
-        _drainRemainingTokens(address(uint160(uint256(token))), payable(instructions.fallbackRecipient));
+        _drainRemainingTokens(uint256(token).validatedCleanAddress(), payable(instructions.fallbackRecipient));
     }
 
     /**
@@ -107,7 +118,10 @@ contract CatsMulticallHandler is ICatalystCallback, ReentrancyGuard {
      * @dev Please make sure to empty the contract of tokens after your call otherwise they can be taken by someone
      * else.
      */
-    function inputsFilled(uint256[2][] calldata inputs, bytes calldata executionData) external nonReentrant {
+    function orderFinalised(
+        uint256[2][] calldata inputs,
+        bytes calldata executionData
+    ) external nonReentrant {
         Instructions memory instructions = abi.decode(executionData, (Instructions));
         // Set approvals base on inputs if requested.
         if (instructions.setApprovalsUsingInputsFor != address(0)) {
@@ -122,12 +136,12 @@ contract CatsMulticallHandler is ICatalystCallback, ReentrancyGuard {
         uint256 numInputs = inputs.length;
         for (uint256 i; i < numInputs; ++i) {
             _drainRemainingTokens(
-                EfficiencyLib.asSanitizedAddress(inputs[i][0]), payable(instructions.fallbackRecipient)
+                uint256(inputs[i][0]).validatedCleanAddress(), payable(instructions.fallbackRecipient)
             );
         }
     }
 
-    // --- Code dedublication --- //
+    // --- Code de-duplication --- //
 
     /**
      * @notice Helper function to execute attached instructions.
@@ -149,20 +163,27 @@ contract CatsMulticallHandler is ICatalystCallback, ReentrancyGuard {
     /**
      * @notice Sets approval for a token.
      */
-    function _setApproval(address token, uint256 amount, address to) internal {
-        SafeTransferLib.safeApproveWithRetry(token, to, amount);
+    function _setApproval(
+        address token,
+        uint256 amount,
+        address to
+    ) internal {
+        SafeERC20.forceApprove(IERC20(token), to, amount);
     }
 
     /**
      * @notice Set approvals for a list of tokens.
      */
-    function _setApprovals(uint256[2][] calldata inputs, address to) internal {
+    function _setApprovals(
+        uint256[2][] calldata inputs,
+        address to
+    ) internal {
         uint256 numInputs = inputs.length;
         for (uint256 i; i < numInputs; ++i) {
             uint256[2] calldata input = inputs[i];
             uint256 token = input[0];
             uint256 amount = input[1];
-            SafeTransferLib.safeApproveWithRetry(EfficiencyLib.asSanitizedAddress(token), to, amount);
+            SafeERC20.forceApprove(IERC20(uint256(token).validatedCleanAddress()), to, amount);
         }
     }
 
@@ -171,25 +192,34 @@ contract CatsMulticallHandler is ICatalystCallback, ReentrancyGuard {
      * @param token Token to drain
      * @param destination Target for the tokens
      */
-    function _drainRemainingTokens(address token, address payable destination) internal {
+    function _drainRemainingTokens(
+        address token,
+        address payable destination
+    ) internal {
         if (token != address(0)) {
             // ERC20 token.
-            uint256 amount = SafeTransferLib.balanceOf(token, address(this));
+            uint256 amount = IERC20(token).balanceOf(address(this));
             if (amount > 0) {
-                SafeTransferLib.safeTransfer(token, destination, amount);
+                SafeERC20.safeTransfer(IERC20(token), destination, amount);
                 emit DrainedTokens(destination, token, amount);
             }
         } else {
             // Send native token
             uint256 amount = address(this).balance;
-            if (amount > 0) SafeTransferLib.safeTransferETH(destination, amount);
+            if (amount > 0) {
+                (bool success,) = destination.call{ value: amount }("");
+                if (!success) revert DrainNativeFailed();
+            }
         }
     }
 
     /**
      * @notice External helper to drain remaining tokens. Can be called as an instruction to empty other tokens.
      */
-    function drainLeftoverTokens(address token, address payable destination) external onlySelf {
+    function drainLeftoverTokens(
+        address token,
+        address payable destination
+    ) external onlySelf {
         _drainRemainingTokens(token, destination);
     }
 

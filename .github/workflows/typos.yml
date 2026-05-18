@@ -25,3 +25,8 @@ jobs:
         uses: crate-ci/typos@master
         with:
           files: ./script
+      
+      - name: Check spelling of readme
+        uses: crate-ci/typos@master
+        with:
+          files: README.md

@@ -3,10 +3,13 @@ pragma solidity ^0.8.22;
 
 import { Script } from "forge-std/Script.sol";
 
-import { WormholeOracle } from "../src/oracles/wormhole/WormholeOracle.sol";
+import { WormholeOracle } from "../src/integrations/oracles/wormhole/WormholeOracle.sol";
 
 contract DeployWormholeOracle is Script {
-    function deploy(address owner, address wormholeOracle) external {
+    function deploy(
+        address owner,
+        address wormholeOracle
+    ) external {
         vm.broadcast();
         address(new WormholeOracle{ salt: bytes32(0) }(owner, wormholeOracle));
     }
@@ -37,18 +40,21 @@ contract DeployWormholeOracle is Script {
         setMap(WormholeOracle(wormholeOracle), wormholeMaps);
     }
 
-    function setMap(WormholeOracle wormholeOracle, uint256[2][] memory map) internal {
+    function setMap(
+        WormholeOracle wormholeOracle,
+        uint256[2][] memory map
+    ) internal {
         // Check if each chain has already been set. Otherwise set it.
         uint256 numMaps = map.length;
         for (uint256 i; i < numMaps; ++i) {
             uint256[2] memory selectMap = map[i];
             uint256 chainId = selectMap[0];
-            if (wormholeOracle.getBlockChainIdToChainIdentifier(chainId) != 0) continue;
+            if (wormholeOracle.reverseChainIdMap(chainId) != 0) continue;
             uint16 messagingProtocolChainIdentifier = uint16(selectMap[1]);
-            if (wormholeOracle.getChainIdentifierToBlockChainId(messagingProtocolChainIdentifier) != 0) continue;
+            if (wormholeOracle.chainIdMap(uint256(messagingProtocolChainIdentifier)) != 0) continue;
 
             vm.broadcast();
-            WormholeOracle(wormholeOracle).setChainMap(messagingProtocolChainIdentifier, chainId);
+            WormholeOracle(wormholeOracle).setChainMap(uint256(messagingProtocolChainIdentifier), chainId);
         }
     }
 }

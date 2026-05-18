@@ -16,7 +16,7 @@ contract MessageEncodingLibTest is Test {
     function decodeMemoryToCalldata(
         bytes calldata encodedPayloads
     ) external pure returns (bytes32 decodedApplication, bytes32[] memory decodedPayloadHashes) {
-        return MessageEncodingLib.decodeMessage(encodedPayloads);
+        return MessageEncodingLib.getHashesOfEncodedPayloads(encodedPayloads);
     }
 
     /// forge-config: default.block_gas_limit = 100000000000
@@ -45,7 +45,10 @@ contract MessageEncodingLibTest is Test {
         this.encodeMemoryToCalldata(application, payloads);
     }
 
-    function test_encode_decode_messages(bytes32 application, bytes[] calldata payloads) external view {
+    function test_encode_decode_messages(
+        bytes32 application,
+        bytes[] calldata payloads
+    ) external view {
         vm.assume(payloads.length < type(uint16).max);
         for (uint256 i; i < payloads.length; ++i) {
             vm.assume(payloads[i].length < type(uint16).max);

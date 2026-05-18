@@ -1,0 +1,1230 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.22;
+
+import { InputSettlerEscrow } from "../../../src/input/escrow/InputSettlerEscrow.sol";
+import { MandateOutput } from "../../../src/input/types/MandateOutputType.sol";
+import { OrderPurchase } from "../../../src/input/types/OrderPurchaseType.sol";
+import { StandardOrder } from "../../../src/input/types/StandardOrderType.sol";
+
+import { IInputSettlerEscrow } from "../../../src/interfaces/IInputSettlerEscrow.sol";
+import { LibAddress } from "../../../src/libs/LibAddress.sol";
+import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodingLib.sol";
+
+import { InputSettlerBase } from "../../../src/input/InputSettlerBase.sol";
+import { InputSettlerPurchase } from "../../../src/input/InputSettlerPurchase.sol";
+import { InputSettlerEscrowTestBase } from "./InputSettlerEscrow.base.t.sol";
+
+contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
+    using LibAddress for address;
+    using LibAddress for bytes32;
+
+    /// forge-config: default.isolate = true
+    function test_open_gas() external {
+        test_open(10000, 10 ** 18, makeAddr("user"));
+    }
+
+    function test_open(
+        uint32 expires,
+        uint128 amount,
+        address user
+    ) public returns (StandardOrder memory order) {
+        vm.assume(expires < type(uint32).max);
+        vm.assume(expires > block.timestamp);
+        vm.assume(token.balanceOf(user) == 0);
+        vm.assume(user != address(0) && user != inputSettlerEscrow);
+
+        token.mint(user, amount);
+        vm.prank(user);
+        token.approve(inputSettlerEscrow, amount);
+
+        MandateOutput[] memory outputs = new MandateOutput[](0);
+
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        order = StandardOrder({
+            user: swapper,
+            nonce: 0,
+            originChainId: block.chainid,
+            expires: expires,
+            fillDeadline: expires,
+            inputOracle: address(0),
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        assertEq(token.balanceOf(address(user)), amount);
+
+        vm.prank(user);
+        IInputSettlerEscrow(inputSettlerEscrow).open(order);
+        vm.snapshotGasLastCall("inputSettler", "escrowOpen");
+
+        assertEq(token.balanceOf(address(user)), 0);
+        assertEq(token.balanceOf(inputSettlerEscrow), amount);
+    }
+
+    /// forge-config: default.isolate = true
+    function test_open_for_msgsender_gas() external {
+        test_open_for_msgsender(10000, 10 ** 18, makeAddr("user"));
+    }
+
+    function test_open_for_msgsender(
+        uint32 expires,
+        uint128 amount,
+        address user
+    ) public returns (StandardOrder memory order) {
+        vm.assume(expires < type(uint32).max);
+        vm.assume(expires > block.timestamp);
+        vm.assume(token.balanceOf(user) == 0);
+        vm.assume(user != address(0) && user != inputSettlerEscrow);
+
+        token.mint(user, amount);
+        vm.prank(user);
+        token.approve(inputSettlerEscrow, amount);
+
+        MandateOutput[] memory outputs = new MandateOutput[](0);
+
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        order = StandardOrder({
+            user: swapper,
+            nonce: 0,
+            originChainId: block.chainid,
+            expires: expires,
+            fillDeadline: expires,
+            inputOracle: address(0),
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        assertEq(token.balanceOf(address(user)), amount);
+
+        vm.prank(user);
+        IInputSettlerEscrow(inputSettlerEscrow).openFor(order, user, hex"");
+        vm.snapshotGasLastCall("inputSettler", "escrowOpenForMsgSender");
+
+        assertEq(token.balanceOf(address(user)), 0);
+        assertEq(token.balanceOf(inputSettlerEscrow), amount);
+    }
+
+    /// forge-config: default.isolate = true
+    function test_open_for_permit2_gas() external {
+        test_open_for_permit2(10 ** 18, 251251);
+    }
+
+    function test_open_for_permit2(
+        uint128 amountMint,
+        uint256 nonce
+    ) public {
+        token.mint(swapper, amountMint);
+
+        uint256 amount = token.balanceOf(swapper);
+
+        // Permit2 has default infinite allowance. (Solady erc20)
+        // vm.prank(swapper);
+        // token.approve(address(permit2), amount);
+
+        MandateOutput[] memory outputs = new MandateOutput[](0);
+
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        StandardOrder memory order = StandardOrder({
+            user: swapper,
+            nonce: nonce,
+            originChainId: block.chainid,
+            expires: type(uint32).max,
+            fillDeadline: type(uint32).max,
+            inputOracle: address(0),
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        bytes memory signature = getPermit2Signature(swapperPrivateKey, order);
+
+        assertEq(token.balanceOf(address(swapper)), amount);
+
+        vm.prank(swapper);
+        IInputSettlerEscrow(inputSettlerEscrow).openFor(order, order.user, abi.encodePacked(bytes1(0x00), signature));
+        vm.snapshotGasLastCall("inputSettler", "escrowOpenForPermit2");
+
+        assertEq(token.balanceOf(address(swapper)), 0);
+        assertEq(token.balanceOf(inputSettlerEscrow), amount);
+    }
+
+    /// forge-config: default.isolate = true
+    function test_open_for_permit2_different_sponsor_gas() external {
+        test_open_for_permit2_different_sponsor(10 ** 18, 251251);
+    }
+
+    function test_open_for_permit2_different_sponsor(
+        uint128 amountMint,
+        uint256 nonce
+    ) public {
+        (address sponsor, uint256 sponsorPrivateKey) = makeAddrAndKey("sponsor");
+        token.mint(sponsor, amountMint);
+
+        uint256 amount = token.balanceOf(sponsor);
+
+        vm.prank(sponsor);
+        token.approve(address(permit2), amount);
+
+        MandateOutput[] memory outputs = new MandateOutput[](0);
+
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        address user = makeAddr("user");
+
+        StandardOrder memory order = StandardOrder({
+            user: user,
+            nonce: nonce,
+            originChainId: block.chainid,
+            expires: uint32(block.timestamp + 1 days),
+            fillDeadline: uint32(block.timestamp + 1 days),
+            inputOracle: address(0),
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        bytes memory signature = getPermit2Signature(sponsorPrivateKey, order);
+
+        assertEq(token.balanceOf(address(sponsor)), amount);
+
+        vm.prank(solver);
+        IInputSettlerEscrow(inputSettlerEscrow).openFor(order, sponsor, abi.encodePacked(bytes1(0x00), signature));
+        vm.snapshotGasLastCall("inputSettler", "escrowOpenForPermit2");
+
+        assertEq(token.balanceOf(address(sponsor)), 0);
+        assertEq(token.balanceOf(inputSettlerEscrow), amount);
+
+        // user should be able to refund after expiry
+        vm.warp(order.expires + 1);
+        vm.prank(user);
+        InputSettlerEscrow(inputSettlerEscrow).refund(order);
+
+        assertEq(token.balanceOf(address(user)), amount);
+        assertEq(token.balanceOf(inputSettlerEscrow), 0);
+    }
+
+    /// forge-config: default.isolate = true
+    function test_open_for_3009_single() external {
+        test_open_for_3009_single(10 ** 18, 251251);
+    }
+
+    function test_open_for_permit2_different_sponsor_reverts_with_wrong_order() public {
+        uint256 nonce = 1;
+        uint128 amountMint = 10 ** 18;
+        (address sponsor, uint256 sponsorPrivateKey) = makeAddrAndKey("sponsor");
+        token.mint(sponsor, amountMint);
+
+        uint256 amount = token.balanceOf(sponsor);
+
+        vm.prank(sponsor);
+        token.approve(address(permit2), amount);
+
+        MandateOutput[] memory outputs = new MandateOutput[](0);
+
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        address user = makeAddr("user");
+
+        StandardOrder memory originalOrder = StandardOrder({
+            user: user,
+            nonce: nonce,
+            originChainId: block.chainid,
+            expires: uint32(block.timestamp + 1 days),
+            fillDeadline: uint32(block.timestamp + 1 days),
+            inputOracle: address(0),
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        bytes memory signature = getPermit2Signature(sponsorPrivateKey, originalOrder);
+        assertEq(token.balanceOf(address(sponsor)), amount);
+
+        StandardOrder memory maliciousOrder = StandardOrder({
+            user: makeAddr("malicious"),
+            nonce: nonce,
+            originChainId: block.chainid,
+            expires: uint32(block.timestamp + 1 days),
+            fillDeadline: uint32(block.timestamp + 1 days),
+            inputOracle: address(0),
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        vm.prank(solver);
+        vm.expectRevert(abi.encodeWithSelector(InputSettlerBase.InvalidSigner.selector));
+        IInputSettlerEscrow(inputSettlerEscrow)
+            .openFor(maliciousOrder, sponsor, abi.encodePacked(bytes1(0x00), signature));
+    }
+
+    function test_open_for_3009_single(
+        uint128 amountMint,
+        uint256 nonce
+    ) public {
+        token.mint(swapper, amountMint);
+
+        uint256 amount = token.balanceOf(swapper);
+
+        // Permit2 has default infinite allowance. (Solady erc20)
+        // vm.prank(swapper);
+        // token.approve(address(permit2), amount);
+
+        MandateOutput[] memory outputs = new MandateOutput[](0);
+
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        StandardOrder memory order = StandardOrder({
+            user: swapper,
+            nonce: nonce,
+            originChainId: block.chainid,
+            expires: type(uint32).max,
+            fillDeadline: type(uint32).max,
+            inputOracle: address(0),
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        bytes memory signature = get3009Signature(swapperPrivateKey, inputSettlerEscrow, 0, order);
+
+        assertEq(token.balanceOf(address(swapper)), amount);
+
+        vm.prank(swapper);
+        IInputSettlerEscrow(inputSettlerEscrow).openFor(order, order.user, abi.encodePacked(bytes1(0x01), signature));
+        vm.snapshotGasLastCall("inputSettler", "escrowOpenFor3009Single");
+
+        assertEq(token.balanceOf(address(swapper)), 0);
+        assertEq(token.balanceOf(inputSettlerEscrow), amount);
+    }
+
+    /// forge-config: default.isolate = true
+    function test_open_for_3009_single_as_array() external {
+        test_open_for_3009_single_as_array(10 ** 18, 251251);
+    }
+
+    function test_open_for_3009_single_as_array(
+        uint128 amountMint,
+        uint256 nonce
+    ) public {
+        token.mint(swapper, amountMint);
+
+        uint256 amount = token.balanceOf(swapper);
+
+        MandateOutput[] memory outputs = new MandateOutput[](0);
+
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        StandardOrder memory order = StandardOrder({
+            user: swapper,
+            nonce: nonce,
+            originChainId: block.chainid,
+            expires: type(uint32).max,
+            fillDeadline: type(uint32).max,
+            inputOracle: address(0),
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        bytes memory signature = get3009Signature(swapperPrivateKey, inputSettlerEscrow, 0, order);
+        bytes[] memory signatures = new bytes[](1);
+        signatures[0] = signature;
+
+        assertEq(token.balanceOf(address(swapper)), amount);
+
+        vm.prank(swapper);
+        IInputSettlerEscrow(inputSettlerEscrow)
+            .openFor(order, order.user, abi.encodePacked(bytes1(0x01), abi.encode(signatures)));
+        vm.snapshotGasLastCall("inputSettler", "escrowOpenFor3009SingleArray");
+
+        assertEq(token.balanceOf(address(swapper)), 0);
+        assertEq(token.balanceOf(inputSettlerEscrow), amount);
+    }
+
+    /// forge-config: default.isolate = true
+    function test_open_for_3009_two_as_array() external {
+        test_open_for_3009_two_as_array(10 ** 18, 251251);
+    }
+
+    function test_open_for_3009_two_as_array(
+        uint128 amountMint,
+        uint256 nonce
+    ) public {
+        token.mint(swapper, amountMint);
+        anotherToken.mint(swapper, amountMint);
+
+        uint256 amount1 = token.balanceOf(swapper);
+        uint256 amount2 = anotherToken.balanceOf(swapper);
+
+        MandateOutput[] memory outputs = new MandateOutput[](0);
+
+        uint256[2][] memory inputs = new uint256[2][](2);
+        inputs[0] = [uint256(uint160(address(token))), amount1];
+        inputs[1] = [uint256(uint160(address(anotherToken))), amount2];
+
+        StandardOrder memory order = StandardOrder({
+            user: swapper,
+            nonce: nonce,
+            originChainId: block.chainid,
+            expires: type(uint32).max,
+            fillDeadline: type(uint32).max,
+            inputOracle: address(0),
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        bytes memory signature1 = get3009Signature(swapperPrivateKey, inputSettlerEscrow, 0, order);
+        bytes memory signature2 = get3009Signature(swapperPrivateKey, inputSettlerEscrow, 1, order);
+        bytes[] memory signatures = new bytes[](2);
+        signatures[0] = signature1;
+        signatures[1] = signature2;
+
+        assertEq(token.balanceOf(address(swapper)), amount1);
+        assertEq(anotherToken.balanceOf(address(swapper)), amount2);
+
+        vm.prank(swapper);
+        IInputSettlerEscrow(inputSettlerEscrow)
+            .openFor(order, order.user, abi.encodePacked(bytes1(0x01), abi.encode(signatures)));
+        vm.snapshotGasLastCall("inputSettler", "escrowOpenFor3009Two");
+
+        assertEq(token.balanceOf(address(swapper)), 0);
+        assertEq(token.balanceOf(inputSettlerEscrow), amount1);
+        assertEq(anotherToken.balanceOf(address(swapper)), 0);
+        assertEq(anotherToken.balanceOf(inputSettlerEscrow), amount2);
+    }
+
+    function test_refund(
+        uint32 expires,
+        uint128 amount,
+        address user
+    ) public {
+        vm.assume(amount < type(uint128).max);
+        StandardOrder memory order = test_open(expires, amount, user);
+        // Wrap into the future of the expiry.
+        vm.warp(order.expires + 1);
+
+        bytes32 orderId = InputSettlerEscrow(inputSettlerEscrow).orderIdentifier(order);
+
+        // Check order status:
+        InputSettlerEscrow.OrderStatus status = InputSettlerEscrow(inputSettlerEscrow).orderStatus(orderId);
+        assertEq(uint8(status), uint8(InputSettlerEscrow.OrderStatus.Deposited));
+
+        // State
+        uint256 amountBeforeRefund = token.balanceOf(address(order.user));
+
+        vm.expectEmit();
+        emit InputSettlerEscrow.Refunded(orderId);
+
+        // Do the refund
+        InputSettlerEscrow(inputSettlerEscrow).refund(order);
+        vm.snapshotGasLastCall("inputSettler", "escrowRefund");
+
+        // State
+        assertEq(token.balanceOf(address(order.user)), amountBeforeRefund + amount);
+        assertEq(token.balanceOf(inputSettlerEscrow), 0);
+
+        status = InputSettlerEscrow(inputSettlerEscrow).orderStatus(orderId);
+        assertEq(uint8(status), uint8(InputSettlerEscrow.OrderStatus.Refunded));
+    }
+
+    // -- Larger Integration tests -- //
+
+    /// forge-config: default.isolate = true
+    function test_finalise_gas() public {
+        test_finalise(makeAddr("non_solver"));
+    }
+
+    function test_finalise(
+        address non_solver
+    ) public {
+        vm.assume(non_solver != solver);
+
+        uint256 amount = 1e18 / 10;
+
+        MandateOutput[] memory outputs = new MandateOutput[](1);
+        outputs[0] = MandateOutput({
+            settler: address(outputSettlerCoin).toIdentifier(),
+            oracle: alwaysYesOracle.toIdentifier(),
+            chainId: block.chainid,
+            token: address(anotherToken).toIdentifier(),
+            amount: amount,
+            recipient: swapper.toIdentifier(),
+            callbackData: hex"",
+            context: hex""
+        });
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        StandardOrder memory order = StandardOrder({
+            user: swapper,
+            nonce: 0,
+            originChainId: block.chainid,
+            expires: type(uint32).max,
+            fillDeadline: type(uint32).max,
+            inputOracle: alwaysYesOracle,
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        // Deposit into the escrow
+        vm.prank(swapper);
+        token.approve(inputSettlerEscrow, amount);
+        vm.prank(swapper);
+        IInputSettlerEscrow(inputSettlerEscrow).open(order);
+
+        InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
+        solveParams[0] =
+            InputSettlerBase.SolveParams({ solver: solver.toIdentifier(), timestamp: uint32(block.timestamp) });
+
+        // Other callers are disallowed:
+        vm.prank(non_solver);
+
+        vm.expectRevert(abi.encodeWithSignature("NotOrderOwner()"));
+        IInputSettlerEscrow(inputSettlerEscrow).finalise(order, solveParams, solver.toIdentifier(), hex"");
+
+        assertEq(token.balanceOf(solver), 0);
+
+        bytes32 orderId = IInputSettlerEscrow(inputSettlerEscrow).orderIdentifier(order);
+        bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionMemory(
+            solver.toIdentifier(), orderId, uint32(block.timestamp), outputs[0]
+        );
+        bytes32 payloadHash = keccak256(payload);
+
+        vm.expectCall(
+            address(alwaysYesOracle),
+            abi.encodeWithSignature(
+                "efficientRequireProven(bytes)",
+                abi.encodePacked(
+                    order.outputs[0].chainId, order.outputs[0].oracle, order.outputs[0].settler, payloadHash
+                )
+            )
+        );
+
+        vm.prank(solver);
+        IInputSettlerEscrow(inputSettlerEscrow).finalise(order, solveParams, solver.toIdentifier(), hex"");
+        vm.snapshotGasLastCall("inputSettler", "EscrowFinalise");
+
+        assertEq(token.balanceOf(solver), amount);
+    }
+
+    function test_revert_finalise_self_too_late(
+        address non_solver,
+        uint32 fillDeadline,
+        uint32 filledAt
+    ) external {
+        vm.assume(non_solver != solver);
+        vm.assume(fillDeadline < filledAt);
+        vm.assume(block.timestamp < fillDeadline);
+
+        uint256 amount = 1e18 / 10;
+
+        MandateOutput[] memory outputs = new MandateOutput[](1);
+        outputs[0] = MandateOutput({
+            settler: address(outputSettlerCoin).toIdentifier(),
+            oracle: alwaysYesOracle.toIdentifier(),
+            chainId: block.chainid,
+            token: address(anotherToken).toIdentifier(),
+            amount: amount,
+            recipient: swapper.toIdentifier(),
+            callbackData: hex"",
+            context: hex""
+        });
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        StandardOrder memory order = StandardOrder({
+            user: swapper,
+            nonce: 0,
+            originChainId: block.chainid,
+            expires: type(uint32).max,
+            fillDeadline: fillDeadline,
+            inputOracle: alwaysYesOracle,
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        // Deposit into the escrow
+        vm.prank(swapper);
+        token.approve(inputSettlerEscrow, amount);
+        vm.prank(swapper);
+        IInputSettlerEscrow(inputSettlerEscrow).open(order);
+
+        InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
+        solveParams[0] = InputSettlerBase.SolveParams({ solver: solver.toIdentifier(), timestamp: filledAt });
+
+        vm.prank(solver);
+        vm.expectRevert(abi.encodeWithSignature("FilledTooLate(uint32,uint32)", fillDeadline, filledAt));
+        IInputSettlerEscrow(inputSettlerEscrow).finalise(order, solveParams, solver.toIdentifier(), hex"");
+    }
+
+    /// forge-config: default.isolate = true
+    function test_finalise_signature_gas() external {
+        test_finalise_signature(makeAddr("destination"));
+    }
+
+    function test_finalise_signature(
+        address destination
+    ) public {
+        vm.assume(destination != address(0));
+        vm.assume(token.balanceOf(destination) == 0);
+
+        uint256 amount = 1e18 / 10;
+
+        MandateOutput[] memory outputs = new MandateOutput[](1);
+        outputs[0] = MandateOutput({
+            settler: address(outputSettlerCoin).toIdentifier(),
+            oracle: alwaysYesOracle.toIdentifier(),
+            chainId: block.chainid,
+            token: address(anotherToken).toIdentifier(),
+            amount: amount,
+            recipient: swapper.toIdentifier(),
+            callbackData: hex"",
+            context: hex""
+        });
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        StandardOrder memory order = StandardOrder({
+            user: swapper,
+            nonce: 0,
+            originChainId: block.chainid,
+            expires: type(uint32).max,
+            fillDeadline: type(uint32).max,
+            inputOracle: alwaysYesOracle,
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        // Deposit into the escrow
+        vm.prank(swapper);
+        token.approve(inputSettlerEscrow, amount);
+        vm.prank(swapper);
+        IInputSettlerEscrow(inputSettlerEscrow).open(order);
+
+        uint32[] memory timestamps = new uint32[](1);
+        timestamps[0] = uint32(block.timestamp);
+
+        bytes32 orderId = IInputSettlerEscrow(inputSettlerEscrow).orderIdentifier(order);
+        {
+            bytes memory payload = MandateOutputEncodingLib.encodeFillDescriptionMemory(
+                solver.toIdentifier(), orderId, uint32(block.timestamp), outputs[0]
+            );
+            bytes32 payloadHash = keccak256(payload);
+
+            vm.expectCall(
+                address(alwaysYesOracle),
+                abi.encodeWithSignature(
+                    "efficientRequireProven(bytes)",
+                    abi.encodePacked(
+                        order.outputs[0].chainId, order.outputs[0].oracle, order.outputs[0].settler, payloadHash
+                    )
+                )
+            );
+        }
+
+        InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
+        solveParams[0] =
+            InputSettlerBase.SolveParams({ solver: solver.toIdentifier(), timestamp: uint32(block.timestamp) });
+
+        bytes memory orderOwnerSignature =
+            this.getOrderOpenSignature(solverPrivateKey, orderId, destination.toIdentifier(), hex"");
+
+        IInputSettlerEscrow(inputSettlerEscrow)
+            .finaliseWithSignature(order, solveParams, destination.toIdentifier(), hex"", orderOwnerSignature);
+        vm.snapshotGasLastCall("inputSettler", "escrowFinaliseWithSignature");
+
+        assertEq(token.balanceOf(destination), amount);
+    }
+
+    /// forge-config: default.isolate = true
+    function test_open_fill_deadline_after_expires() external {
+        uint128 amount = 10 ** 18;
+        address user = makeAddr("user");
+
+        // Set up user with tokens
+        token.mint(user, amount);
+        vm.prank(user);
+        token.approve(inputSettlerEscrow, amount);
+
+        MandateOutput[] memory outputs = new MandateOutput[](0);
+
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        // Create order where fillDeadline > expires (invalid order)
+        uint32 expires = uint32(block.timestamp + 1000);
+        uint32 fillDeadline = expires + 1; // fillDeadline is after expires
+
+        StandardOrder memory order = StandardOrder({
+            user: swapper,
+            nonce: 0,
+            originChainId: block.chainid,
+            expires: expires,
+            fillDeadline: fillDeadline,
+            inputOracle: address(0),
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        // Expect revert with FillDeadlineAfterExpiry error
+        vm.prank(user);
+        vm.expectRevert(abi.encodeWithSignature("FillDeadlineAfterExpiry(uint32,uint32)", fillDeadline, expires));
+        IInputSettlerEscrow(inputSettlerEscrow).open(order);
+    }
+
+    /// forge-config: default.isolate = true
+    function test_open_for_fill_deadline_after_expires() external {
+        uint128 amount = 10 ** 18;
+        address user = makeAddr("user");
+        address sponsor = makeAddr("sponsor");
+
+        // Set up sponsor with tokens
+        token.mint(sponsor, amount);
+        vm.prank(sponsor);
+        token.approve(inputSettlerEscrow, amount);
+
+        MandateOutput[] memory outputs = new MandateOutput[](0);
+
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        // Create order where fillDeadline > expires (invalid order)
+        uint32 expires = uint32(block.timestamp + 1000);
+        uint32 fillDeadline = expires + 1; // fillDeadline is after expires
+
+        StandardOrder memory order = StandardOrder({
+            user: user,
+            nonce: 0,
+            originChainId: block.chainid,
+            expires: expires,
+            fillDeadline: fillDeadline,
+            inputOracle: address(0),
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        // Expect revert with FillDeadlineAfterExpiry error
+        vm.prank(sponsor);
+        vm.expectRevert(abi.encodeWithSignature("FillDeadlineAfterExpiry(uint32,uint32)", fillDeadline, expires));
+        IInputSettlerEscrow(inputSettlerEscrow).openFor(order, sponsor, hex"");
+    }
+
+    /// forge-config: default.isolate = true
+    function test_open_fill_deadline_equals_expires() external {
+        uint128 amount = 10 ** 18;
+        address user = makeAddr("user");
+
+        // Set up user with tokens
+        token.mint(user, amount);
+        vm.prank(user);
+        token.approve(inputSettlerEscrow, amount);
+
+        MandateOutput[] memory outputs = new MandateOutput[](0);
+
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        // Create order where fillDeadline == expires (valid order)
+        uint32 expires = uint32(block.timestamp + 1000);
+        uint32 fillDeadline = expires; // fillDeadline equals expires
+
+        StandardOrder memory order = StandardOrder({
+            user: swapper,
+            nonce: 0,
+            originChainId: block.chainid,
+            expires: expires,
+            fillDeadline: fillDeadline,
+            inputOracle: address(0),
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        // This should succeed (fillDeadline == expires is allowed)
+        vm.prank(user);
+        IInputSettlerEscrow(inputSettlerEscrow).open(order);
+
+        // Verify the order was deposited
+        bytes32 orderId = IInputSettlerEscrow(inputSettlerEscrow).orderIdentifier(order);
+        InputSettlerEscrow.OrderStatus status = InputSettlerEscrow(inputSettlerEscrow).orderStatus(orderId);
+        assertEq(uint8(status), uint8(InputSettlerEscrow.OrderStatus.Deposited));
+    }
+
+    function test_purchase_order() public {
+        uint256 amount = 1e18 / 10;
+
+        bytes32 orderSolvedByIdentifier = solver.toIdentifier();
+
+        MandateOutput[] memory outputs = new MandateOutput[](1);
+        outputs[0] = MandateOutput({
+            settler: address(outputSettlerCoin).toIdentifier(),
+            oracle: alwaysYesOracle.toIdentifier(),
+            chainId: block.chainid,
+            token: address(anotherToken).toIdentifier(),
+            amount: amount,
+            recipient: swapper.toIdentifier(),
+            callbackData: hex"",
+            context: hex""
+        });
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        StandardOrder memory order = StandardOrder({
+            user: swapper,
+            nonce: 0,
+            originChainId: block.chainid,
+            expires: type(uint32).max,
+            fillDeadline: type(uint32).max,
+            inputOracle: alwaysYesOracle,
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        // Deposit into the escrow
+        vm.prank(swapper);
+        token.approve(inputSettlerEscrow, amount);
+        vm.prank(swapper);
+        IInputSettlerEscrow(inputSettlerEscrow).open(order);
+
+        bytes32 orderId = IInputSettlerEscrow(inputSettlerEscrow).orderIdentifier(order);
+
+        OrderPurchase memory orderPurchase =
+            OrderPurchase({ orderId: orderId, destination: solver, callData: hex"", discount: 0, timeToBuy: 1000 });
+        uint256 expiryTimestamp = type(uint256).max;
+        bytes memory solverSignature = this.getOrderPurchaseSignature(solverPrivateKey, orderPurchase);
+
+        vm.warp(uint32(10000));
+
+        token.mint(purchaser, amount);
+        vm.prank(purchaser);
+        token.approve(inputSettlerEscrow, amount);
+
+        // Check initial state:
+        assertEq(token.balanceOf(solver), 0);
+
+        (uint32 storageLastOrderTimestamp, bytes32 storagePurchaser) =
+            InputSettlerPurchase(inputSettlerEscrow).purchasedOrders(orderSolvedByIdentifier, orderId);
+        assertEq(storageLastOrderTimestamp, 0);
+        assertEq(storagePurchaser, bytes32(0));
+
+        vm.prank(purchaser);
+        InputSettlerEscrow(inputSettlerEscrow)
+            .purchaseOrder(
+                orderPurchase,
+                order,
+                orderSolvedByIdentifier,
+                purchaser.toIdentifier(),
+                expiryTimestamp,
+                solverSignature
+            );
+
+        // Check storage and balances.
+        assertEq(token.balanceOf(solver), amount);
+
+        (storageLastOrderTimestamp, storagePurchaser) =
+            InputSettlerPurchase(inputSettlerEscrow).purchasedOrders(orderSolvedByIdentifier, orderId);
+        assertEq(storageLastOrderTimestamp, uint32(10000) - orderPurchase.timeToBuy);
+        assertEq(storagePurchaser, purchaser.toIdentifier());
+
+        // Try to purchase the same order again
+        vm.expectRevert(abi.encodeWithSignature("AlreadyPurchased()"));
+        vm.prank(purchaser);
+        InputSettlerEscrow(inputSettlerEscrow)
+            .purchaseOrder(
+                orderPurchase,
+                order,
+                orderSolvedByIdentifier,
+                purchaser.toIdentifier(),
+                expiryTimestamp,
+                solverSignature
+            );
+    }
+
+    function test_purchase_order_reverts_when_not_deposited() public {
+        uint256 amount = 1e18 / 10;
+
+        bytes32 orderSolvedByIdentifier = solver.toIdentifier();
+
+        MandateOutput[] memory outputs = new MandateOutput[](1);
+        outputs[0] = MandateOutput({
+            settler: address(outputSettlerCoin).toIdentifier(),
+            oracle: alwaysYesOracle.toIdentifier(),
+            chainId: block.chainid,
+            token: address(anotherToken).toIdentifier(),
+            amount: amount,
+            recipient: swapper.toIdentifier(),
+            callbackData: hex"",
+            context: hex""
+        });
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        StandardOrder memory order = StandardOrder({
+            user: swapper,
+            nonce: 0,
+            originChainId: block.chainid,
+            expires: type(uint32).max,
+            fillDeadline: type(uint32).max,
+            inputOracle: alwaysYesOracle,
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        bytes32 orderId = IInputSettlerEscrow(inputSettlerEscrow).orderIdentifier(order);
+
+        OrderPurchase memory orderPurchase =
+            OrderPurchase({ orderId: orderId, destination: solver, callData: hex"", discount: 0, timeToBuy: 1000 });
+        bytes memory solverSignature = this.getOrderPurchaseSignature(solverPrivateKey, orderPurchase);
+
+        token.mint(purchaser, amount);
+        vm.prank(purchaser);
+        token.approve(inputSettlerEscrow, amount);
+
+        vm.prank(purchaser);
+        vm.expectRevert(abi.encodeWithSelector(InputSettlerEscrow.InvalidOrderStatus.selector));
+        InputSettlerEscrow(inputSettlerEscrow)
+            .purchaseOrder(
+                orderPurchase,
+                order,
+                orderSolvedByIdentifier,
+                purchaser.toIdentifier(),
+                type(uint256).max,
+                solverSignature
+            );
+    }
+
+    function test_purchase_order_reverts_when_finalised() public {
+        uint256 amount = 1e18 / 10;
+
+        bytes32 orderSolvedByIdentifier = solver.toIdentifier();
+
+        MandateOutput[] memory outputs = new MandateOutput[](1);
+        outputs[0] = MandateOutput({
+            settler: address(outputSettlerCoin).toIdentifier(),
+            oracle: alwaysYesOracle.toIdentifier(),
+            chainId: block.chainid,
+            token: address(anotherToken).toIdentifier(),
+            amount: amount,
+            recipient: swapper.toIdentifier(),
+            callbackData: hex"",
+            context: hex""
+        });
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        StandardOrder memory order = StandardOrder({
+            user: swapper,
+            nonce: 0,
+            originChainId: block.chainid,
+            expires: type(uint32).max,
+            fillDeadline: type(uint32).max,
+            inputOracle: alwaysYesOracle,
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        // Deposit into the escrow
+        vm.prank(swapper);
+        token.approve(inputSettlerEscrow, amount);
+        vm.prank(swapper);
+        IInputSettlerEscrow(inputSettlerEscrow).open(order);
+
+        bytes32 orderId = IInputSettlerEscrow(inputSettlerEscrow).orderIdentifier(order);
+
+        // Finalise the order so its status flips out of `Deposited`.
+        InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
+        solveParams[0] =
+            InputSettlerBase.SolveParams({ solver: orderSolvedByIdentifier, timestamp: uint32(block.timestamp) });
+
+        vm.prank(solver);
+        IInputSettlerEscrow(inputSettlerEscrow).finalise(order, solveParams, solver.toIdentifier(), hex"");
+
+        OrderPurchase memory orderPurchase =
+            OrderPurchase({ orderId: orderId, destination: solver, callData: hex"", discount: 0, timeToBuy: 1000 });
+        bytes memory solverSignature = this.getOrderPurchaseSignature(solverPrivateKey, orderPurchase);
+
+        token.mint(purchaser, amount);
+        vm.prank(purchaser);
+        token.approve(inputSettlerEscrow, amount);
+
+        vm.prank(purchaser);
+        vm.expectRevert(abi.encodeWithSelector(InputSettlerEscrow.InvalidOrderStatus.selector));
+        InputSettlerEscrow(inputSettlerEscrow)
+            .purchaseOrder(
+                orderPurchase,
+                order,
+                orderSolvedByIdentifier,
+                purchaser.toIdentifier(),
+                type(uint256).max,
+                solverSignature
+            );
+    }
+
+    /// @notice Purchaser buys under one bytes32 solver encoding; solver later attempts finalise under a different
+    /// encoding.
+    function test_purchase_order_finalise_with_different_solver_encoding() public {
+        uint256 amount = 1e18 / 10;
+
+        bytes32 purchaseEncoding = solver.toIdentifier();
+        bytes32 finaliseEncoding = bytes32((uint256(0xDEADBEEFDEADBEEFDEADBEEF) << 160) | uint256(uint160(solver)));
+
+        MandateOutput[] memory outputs = new MandateOutput[](1);
+        outputs[0] = MandateOutput({
+            settler: address(outputSettlerCoin).toIdentifier(),
+            oracle: alwaysYesOracle.toIdentifier(),
+            chainId: block.chainid,
+            token: address(anotherToken).toIdentifier(),
+            amount: amount,
+            recipient: swapper.toIdentifier(),
+            callbackData: hex"",
+            context: hex""
+        });
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        StandardOrder memory order = StandardOrder({
+            user: swapper,
+            nonce: 0,
+            originChainId: block.chainid,
+            expires: type(uint32).max,
+            fillDeadline: type(uint32).max,
+            inputOracle: alwaysYesOracle,
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        vm.prank(swapper);
+        token.approve(inputSettlerEscrow, amount);
+        vm.prank(swapper);
+        IInputSettlerEscrow(inputSettlerEscrow).open(order);
+
+        bytes32 orderId = IInputSettlerEscrow(inputSettlerEscrow).orderIdentifier(order);
+
+        OrderPurchase memory orderPurchase =
+            OrderPurchase({ orderId: orderId, destination: solver, callData: hex"", discount: 0, timeToBuy: 0 });
+        bytes memory solverSignature = this.getOrderPurchaseSignature(solverPrivateKey, orderPurchase);
+
+        token.mint(purchaser, amount);
+        vm.prank(purchaser);
+        token.approve(inputSettlerEscrow, amount);
+
+        vm.warp(uint32(10000));
+
+        vm.prank(purchaser);
+        InputSettlerEscrow(inputSettlerEscrow)
+            .purchaseOrder(
+                orderPurchase, order, purchaseEncoding, purchaser.toIdentifier(), type(uint256).max, solverSignature
+            );
+
+        InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
+        solveParams[0] = InputSettlerBase.SolveParams({ solver: finaliseEncoding, timestamp: uint32(block.timestamp) });
+
+        vm.prank(solver);
+        vm.expectRevert(abi.encodeWithSignature("NotOrderOwner()"));
+        IInputSettlerEscrow(inputSettlerEscrow).finalise(order, solveParams, solver.toIdentifier(), hex"");
+
+        vm.prank(purchaser);
+        IInputSettlerEscrow(inputSettlerEscrow).finalise(order, solveParams, purchaser.toIdentifier(), hex"");
+        assertEq(token.balanceOf(purchaser), amount);
+    }
+
+    /// @notice After an order has been purchased, a second purchase under a different bytes32 solver encoding is
+    /// attempted.
+    function test_purchase_order_second_purchase_with_different_solver_encoding() public {
+        uint256 amount = 1e18 / 10;
+
+        bytes32 firstEncoding = solver.toIdentifier();
+        bytes32 secondEncoding = bytes32((uint256(0xCAFEBABECAFEBABECAFEBABE) << 160) | uint256(uint160(solver)));
+
+        MandateOutput[] memory outputs = new MandateOutput[](1);
+        outputs[0] = MandateOutput({
+            settler: address(outputSettlerCoin).toIdentifier(),
+            oracle: alwaysYesOracle.toIdentifier(),
+            chainId: block.chainid,
+            token: address(anotherToken).toIdentifier(),
+            amount: amount,
+            recipient: swapper.toIdentifier(),
+            callbackData: hex"",
+            context: hex""
+        });
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        StandardOrder memory order = StandardOrder({
+            user: swapper,
+            nonce: 0,
+            originChainId: block.chainid,
+            expires: type(uint32).max,
+            fillDeadline: type(uint32).max,
+            inputOracle: alwaysYesOracle,
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        vm.prank(swapper);
+        token.approve(inputSettlerEscrow, amount);
+        vm.prank(swapper);
+        IInputSettlerEscrow(inputSettlerEscrow).open(order);
+
+        bytes32 orderId = IInputSettlerEscrow(inputSettlerEscrow).orderIdentifier(order);
+
+        OrderPurchase memory orderPurchase =
+            OrderPurchase({ orderId: orderId, destination: solver, callData: hex"", discount: 0, timeToBuy: 0 });
+        bytes memory solverSignature = this.getOrderPurchaseSignature(solverPrivateKey, orderPurchase);
+
+        (address otherPurchaser,) = makeAddrAndKey("otherPurchaser");
+        token.mint(purchaser, amount);
+        token.mint(otherPurchaser, amount);
+        vm.prank(purchaser);
+        token.approve(inputSettlerEscrow, amount);
+        vm.prank(otherPurchaser);
+        token.approve(inputSettlerEscrow, amount);
+
+        vm.warp(uint32(10000));
+
+        vm.prank(purchaser);
+        InputSettlerEscrow(inputSettlerEscrow)
+            .purchaseOrder(
+                orderPurchase, order, firstEncoding, purchaser.toIdentifier(), type(uint256).max, solverSignature
+            );
+
+        vm.prank(otherPurchaser);
+        vm.expectRevert(abi.encodeWithSignature("AlreadyPurchased()"));
+        InputSettlerEscrow(inputSettlerEscrow)
+            .purchaseOrder(
+                orderPurchase, order, secondEncoding, otherPurchaser.toIdentifier(), type(uint256).max, solverSignature
+            );
+
+        InputSettlerBase.SolveParams[] memory solveParams = new InputSettlerBase.SolveParams[](1);
+        solveParams[0] = InputSettlerBase.SolveParams({ solver: firstEncoding, timestamp: uint32(block.timestamp) });
+
+        vm.prank(purchaser);
+        IInputSettlerEscrow(inputSettlerEscrow).finalise(order, solveParams, purchaser.toIdentifier(), hex"");
+        assertEq(token.balanceOf(purchaser), amount);
+    }
+
+    function test_purchase_order_reverts_when_expired() public {
+        uint256 amount = 1e18 / 10;
+
+        bytes32 orderSolvedByIdentifier = solver.toIdentifier();
+
+        MandateOutput[] memory outputs = new MandateOutput[](1);
+        outputs[0] = MandateOutput({
+            settler: address(outputSettlerCoin).toIdentifier(),
+            oracle: alwaysYesOracle.toIdentifier(),
+            chainId: block.chainid,
+            token: address(anotherToken).toIdentifier(),
+            amount: amount,
+            recipient: swapper.toIdentifier(),
+            callbackData: hex"",
+            context: hex""
+        });
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        uint32 expires = uint32(block.timestamp) + 1000;
+
+        StandardOrder memory order = StandardOrder({
+            user: swapper,
+            nonce: 0,
+            originChainId: block.chainid,
+            expires: expires,
+            fillDeadline: expires,
+            inputOracle: alwaysYesOracle,
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        // Deposit into the escrow before the order expires.
+        vm.prank(swapper);
+        token.approve(inputSettlerEscrow, amount);
+        vm.prank(swapper);
+        IInputSettlerEscrow(inputSettlerEscrow).open(order);
+
+        bytes32 orderId = IInputSettlerEscrow(inputSettlerEscrow).orderIdentifier(order);
+
+        OrderPurchase memory orderPurchase =
+            OrderPurchase({ orderId: orderId, destination: solver, callData: hex"", discount: 0, timeToBuy: 1000 });
+        bytes memory solverSignature = this.getOrderPurchaseSignature(solverPrivateKey, orderPurchase);
+
+        token.mint(purchaser, amount);
+        vm.prank(purchaser);
+        token.approve(inputSettlerEscrow, amount);
+
+        vm.warp(uint256(expires) + 1);
+
+        vm.prank(purchaser);
+        vm.expectRevert(abi.encodeWithSignature("TimestampPassed()"));
+        InputSettlerEscrow(inputSettlerEscrow)
+            .purchaseOrder(
+                orderPurchase,
+                order,
+                orderSolvedByIdentifier,
+                purchaser.toIdentifier(),
+                type(uint256).max,
+                solverSignature
+            );
+    }
+
+    function test_purchase_order_reverts_when_destination_is_zero() public {
+        uint256 amount = 1e18 / 10;
+
+        bytes32 orderSolvedByIdentifier = solver.toIdentifier();
+
+        MandateOutput[] memory outputs = new MandateOutput[](1);
+        outputs[0] = MandateOutput({
+            settler: address(outputSettlerCoin).toIdentifier(),
+            oracle: alwaysYesOracle.toIdentifier(),
+            chainId: block.chainid,
+            token: address(anotherToken).toIdentifier(),
+            amount: amount,
+            recipient: swapper.toIdentifier(),
+            callbackData: hex"",
+            context: hex""
+        });
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(token))), amount];
+
+        StandardOrder memory order = StandardOrder({
+            user: swapper,
+            nonce: 0,
+            originChainId: block.chainid,
+            expires: type(uint32).max,
+            fillDeadline: type(uint32).max,
+            inputOracle: alwaysYesOracle,
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        vm.prank(swapper);
+        token.approve(inputSettlerEscrow, amount);
+        vm.prank(swapper);
+        IInputSettlerEscrow(inputSettlerEscrow).open(order);
+
+        bytes32 orderId = IInputSettlerEscrow(inputSettlerEscrow).orderIdentifier(order);
+
+        OrderPurchase memory orderPurchase =
+            OrderPurchase({ orderId: orderId, destination: address(0), callData: hex"", discount: 0, timeToBuy: 1000 });
+        bytes memory solverSignature = this.getOrderPurchaseSignature(solverPrivateKey, orderPurchase);
+
+        token.mint(purchaser, amount);
+        vm.prank(purchaser);
+        token.approve(inputSettlerEscrow, amount);
+
+        vm.prank(purchaser);
+        vm.expectRevert(abi.encodeWithSignature("NoDestination()"));
+        InputSettlerEscrow(inputSettlerEscrow)
+            .purchaseOrder(
+                orderPurchase,
+                order,
+                orderSolvedByIdentifier,
+                purchaser.toIdentifier(),
+                type(uint256).max,
+                solverSignature
+            );
+    }
+}
