@@ -1,6 +1,6 @@
 # Deployments
 
-OIF contracts are deployed at identical, predictable addresses on every supported chain.
+OIF settler contracts are deployed at identical, predictable addresses on every supported chain.
 
 | Contract             | Address                                      |
 | -------------------- | -------------------------------------------- |
