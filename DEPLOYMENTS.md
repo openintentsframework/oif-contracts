@@ -22,7 +22,9 @@ OIF settler contracts are deployed at identical, predictable addresses on every 
 | Linea        | [Lineascan](https://lineascan.build/address/0x52602D7cc3D833F5d28ee6D01C7F82C9b2322e10)                        |
 | Scroll       | [Scrollscan](https://scrollscan.com/address/0x52602D7cc3D833F5d28ee6D01C7F82C9b2322e10)                        |
 | ZkSync Era   | [ZkSync Explorer](https://explorer.zksync.io/address/0x52602D7cc3D833F5d28ee6D01C7F82C9b2322e10)               |
-| Katana       | [Katana Explorer](https://katanascan.com/address/0x52602D7cc3D833F5d28ee6D01C7F82C9b2322e10)               |
+| Katana       | [Katana Explorer](https://katanascan.com/address/0x52602D7cc3D833F5d28ee6D01C7F82C9b2322e10)                   |
+| BSC          | [Binance Smart Chain Explorer](https://bscscan.com/address/0x52602d7cc3d833f5d28ee6d01c7f82c9b2322e10)         |
+| Polygon      | [Polygon Explorer](https://polygonscan.com/address/0x52602D7cc3D833F5d28ee6D01C7F82C9b2322e10)                 |
 
 ### Testnets
 
@@ -35,7 +37,9 @@ OIF settler contracts are deployed at identical, predictable addresses on every 
 | Linea Sepolia           | [Lineascan](https://sepolia.lineascan.build/address/0x52602D7cc3D833F5d28ee6D01C7F82C9b2322e10)                       |
 | Scroll Sepolia          | [Scrollscan](https://sepolia.scrollscan.com/address/0x52602D7cc3D833F5d28ee6D01C7F82C9b2322e10)                       |
 | ZkSync Sepolia          | [ZkSync Explorer](https://sepolia.explorer.zksync.io/address/0x52602D7cc3D833F5d28ee6D01C7F82C9b2322e10)              |
-| Bokuto (Katana testnet) |[Bokuto Explorer](https://bokuto.katanascan.com/address/0x52602D7cc3D833F5d28ee6D01C7F82C9b2322e10)               |
+| Bokuto (Katana testnet) |[Bokuto Explorer](https://bokuto.katanascan.com/address/0x52602D7cc3D833F5d28ee6D01C7F82C9b2322e10)                    |
+| BSC Testnet             | [Binance Smart Chain Testnet Explorer](https://bscscan.com/address/0x52602d7cc3d833f5d28ee6d01c7f82c9b2322e10)        |
+| Polygon Amoy testnet    | [Polygon Amoy Explorer](https://amoy.polygonscan.com/address/0x52602d7cc3d833f5d28ee6d01c7f82c9b2322e10)              |
 
 ## InputSettlerEscrow
 
@@ -52,7 +56,9 @@ OIF settler contracts are deployed at identical, predictable addresses on every 
 | Linea        | [Lineascan](https://lineascan.build/address/0x1CC9260E285C2C8AC8D2E7102F3978056Ec1d0a8)                        |
 | Scroll       | [Scrollscan](https://scrollscan.com/address/0x1CC9260E285C2C8AC8D2E7102F3978056Ec1d0a8)                        |
 | ZkSync Era   | [ZkSync Explorer](https://explorer.zksync.io/address/0x1CC9260E285C2C8AC8D2E7102F3978056Ec1d0a8)               |
-| Katana       | [Katana Explorer](https://katanascan.com/address/0x1CC9260E285C2C8AC8D2E7102F3978056Ec1d0a8)               |
+| Katana       | [Katana Explorer](https://katanascan.com/address/0x1CC9260E285C2C8AC8D2E7102F3978056Ec1d0a8)                   |
+| BSC          | [Binance Smart Chain Explorer](https://bscscan.com/address/0x1CC9260E285C2C8AC8D2E7102F3978056Ec1d0a8)         |
+| Polygon      | [Polygon Explorer](https://polygonscan.com/address/0x1CC9260E285C2C8AC8D2E7102F3978056Ec1d0a8)                 |
 
 ### Testnets
 
@@ -65,4 +71,6 @@ OIF settler contracts are deployed at identical, predictable addresses on every 
 | Linea Sepolia           | [Lineascan](https://sepolia.lineascan.build/address/0x1CC9260E285C2C8AC8D2E7102F3978056Ec1d0a8)                       |
 | Scroll Sepolia          | [Scrollscan](https://sepolia.scrollscan.com/address/0x1CC9260E285C2C8AC8D2E7102F3978056Ec1d0a8)                       |
 | ZkSync Sepolia          | [ZkSync Explorer](https://sepolia.explorer.zksync.io/address/0x1CC9260E285C2C8AC8D2E7102F3978056Ec1d0a8)              |
-| Bokuto (Katana testnet) | [Bokuto Explorer](https://bokuto.katanascan.com/address/0x1CC9260E285C2C8AC8D2E7102F3978056Ec1d0a8)               |
+| Bokuto (Katana testnet) | [Bokuto Explorer](https://bokuto.katanascan.com/address/0x1CC9260E285C2C8AC8D2E7102F3978056Ec1d0a8)                   |
+| BSC Testnet             | [Binance Smart Chain Testnet Explorer](https://bscscan.com/address/0x1CC9260E285C2C8AC8D2E7102F3978056Ec1d0a8)        |
+| Polygon Amoy testnet    | [Polygon Amoy Explorer](https://amoy.polygonscan.com/address/0x1CC9260E285C2C8AC8D2E7102F3978056Ec1d0a8)              |
