@@ -19,6 +19,9 @@ To achieve this, the system has been modularised:
 ![System Diagram](./high-level-0.svg)
 Refer to the SVG diagram chart.
 
+### Deployments
+See [DEPLOYMENTS.md](./DEPLOYMENTS.md) for `OutputSettlerSimple` and `InputSettlerEscrow` addresses across all supported chains.
+
 ### Dictionary 
 
 - Lock: An escrow that provides system participants a claim to asset if a given action is performed. A lock can be a simple escrow implementation or more complicated like a resource lock.
