@@ -90,9 +90,6 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
 
     mapping(bytes32 orderId => OrderStatus) public orderStatus;
 
-    // Address of the Permit2 contract.
-    ISignatureTransfer constant PERMIT2 = ISignatureTransfer(0x000000000022D473030F116dDEE9F6B43aC78BA3);
-
     constructor() EIP712(_domainName(), _domainVersion()) { }
 
     /**
@@ -113,6 +110,16 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
      */
     function _domainVersion() internal view virtual returns (string memory) {
         return "1";
+    }
+
+    /**
+     * @notice Returns the Permit2 contract used to collect escrowed inputs.
+     * @dev Defaults to the canonical cross-chain Permit2 deployment. Override on chains where Permit2 is deployed at a
+     * different address (e.g. Tron, where CREATE2 address derivation differs from the EVM).
+     * @return The Permit2 (ISignatureTransfer) contract.
+     */
+    function _PERMIT2() internal pure virtual returns (ISignatureTransfer) {
+        return ISignatureTransfer(0x000000000022D473030F116dDEE9F6B43aC78BA3);
     }
 
     // --- Generic order identifier --- //
@@ -267,7 +274,7 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         ISignatureTransfer.PermitBatchTransferFrom memory permitBatch = ISignatureTransfer.PermitBatchTransferFrom({
             permitted: permitted, nonce: order.nonce, deadline: order.fillDeadline
         });
-        PERMIT2.permitWitnessTransferFrom(
+        _PERMIT2().permitWitnessTransferFrom(
             permitBatch,
             transferDetails,
             signer,
