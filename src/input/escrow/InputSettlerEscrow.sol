@@ -468,11 +468,26 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         uint256 numInputs = inputs.length;
         for (uint256 i; i < numInputs; ++i) {
             uint256[2] calldata input = inputs[i];
-            IERC20 token = IERC20(input[0].validatedCleanAddress());
+            address token = input[0].validatedCleanAddress();
             uint256 amount = input[1];
 
-            SafeERC20.safeTransfer(token, destination, amount);
+            _transfer(token, destination, amount);
         }
+    }
+
+    /**
+     * @dev Pays out a single escrowed input. Virtual so subclasses can customise the outbound transfer for
+     * non-standard tokens (e.g. {InputSettlerEscrowTron} for TRON USDT, whose `transfer` returns `false` on success).
+     * @param token The input token to transfer.
+     * @param destination The recipient of the tokens.
+     * @param amount The amount to transfer.
+     */
+    function _transfer(
+        address token,
+        address destination,
+        uint256 amount
+    ) internal virtual {
+        SafeERC20.safeTransfer(IERC20(token), destination, amount);
     }
 
     // --- Purchase Order --- //

@@ -7,8 +7,6 @@ pragma solidity ^0.8.26;
 import { ITRC20 } from "tron-contracts/token/TRC20/ITRC20.sol";
 import { SafeTRC20 } from "tron-contracts/token/TRC20/utils/SafeTRC20.sol";
 
-import { LibAddress } from "../../libs/LibAddress.sol";
-
 import { InputSettlerEscrow } from "./InputSettlerEscrow.sol";
 
 /**
@@ -17,19 +15,17 @@ import { InputSettlerEscrow } from "./InputSettlerEscrow.sol";
  * transfer (while reverting on real failure). OpenZeppelin's `SafeERC20.safeTransfer`, used by {InputSettlerEscrow}
  * to pay out escrowed inputs, reads that `false` as a failure and reverts — locking USDT in the escrow.
  *
- * This variant settles inputs with {SafeTRC20}, routing the configured {USDT} token through
- * {SafeTRC20-safeTransferUSDT} (which ignores the boolean and verifies the transfer by the recipient's balance
- * delta) and every other token through the regular {SafeTRC20-safeTransfer}.
+ * This variant overrides the {InputSettlerEscrow-_transfer} payout hook to settle inputs with {SafeTRC20}, routing
+ * the configured {USDT} token through {SafeTRC20-safeTransferUSDT} (which ignores the boolean and verifies the
+ * transfer by the recipient's balance delta) and every other token through the regular {SafeTRC20-safeTransfer}.
  *
- * Only the outbound payout ({_resolveLock}, used by both finalisation and refunds) needs this treatment. The
- * inbound `transferFrom` performed on `open` is unaffected, because USDT's `transferFrom` correctly returns `true`.
+ * Only the outbound payout needs this treatment. The inbound `transferFrom` performed on `open` is unaffected,
+ * because USDT's `transferFrom` correctly returns `true`.
  *
  * The USDT address is supplied at construction so the same code can be deployed against different USDT deployments
  * (and so a non-USDT chain can simply pass `address(0)`, disabling the special path).
  */
 contract InputSettlerEscrowTron is InputSettlerEscrow {
-    using LibAddress for uint256;
-
     /// @notice Address of the USDT token whose `transfer` returns `false` on success; `address(0)` to disable.
     address public immutable USDT;
 
@@ -40,27 +36,14 @@ contract InputSettlerEscrowTron is InputSettlerEscrow {
     }
 
     /**
-     * @dev Mirrors {InputSettlerEscrow-_resolveLock} (including its order-status reentry guard) but pays out inputs
-     * with {SafeTRC20}, sending the configured {USDT} via {SafeTRC20-safeTransferUSDT}.
+     * @dev Pays out an escrowed input with {SafeTRC20}, sending the configured {USDT} via {SafeTRC20-safeTransferUSDT}.
      */
-    function _resolveLock(
-        bytes32 orderId,
-        uint256[2][] calldata inputs,
+    function _transfer(
+        address token,
         address destination,
-        OrderStatus newStatus
+        uint256 amount
     ) internal virtual override {
-        // Check the order status, then update it (acts as a local reentry guard), as in the base implementation.
-        if (orderStatus[orderId] != OrderStatus.Deposited) revert InvalidOrderStatus();
-        orderStatus[orderId] = newStatus;
-
-        uint256 numInputs = inputs.length;
-        for (uint256 i; i < numInputs; ++i) {
-            uint256[2] calldata input = inputs[i];
-            address token = input[0].validatedCleanAddress();
-            uint256 amount = input[1];
-
-            if (token == USDT) SafeTRC20.safeTransferUSDT(ITRC20(token), destination, amount);
-            else SafeTRC20.safeTransfer(ITRC20(token), destination, amount);
-        }
+        if (token == USDT) SafeTRC20.safeTransferUSDT(ITRC20(token), destination, amount);
+        else SafeTRC20.safeTransfer(ITRC20(token), destination, amount);
     }
 }
