@@ -1,3 +1,7 @@
+[default]
+# TRON USDT contract address; the base58 substring `ot` trips the spell-checker.
+extend-ignore-re = ["TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t"]
+
 [default.extend-words]
 OIF = "OIF"
 oif = "oif"
