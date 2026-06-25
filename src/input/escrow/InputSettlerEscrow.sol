@@ -335,14 +335,14 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
             bytes calldata signature = BytesLib.getBytesOfArray(_signature_, i);
             // forgefmt: disable-next-line
             IERC3009(input[0].validatedCleanAddress()).receiveWithAuthorization({
-                    from: signer,
-                    to: address(this),
-                    value: input[1],
-                    validAfter: 0,
-                    validBefore: fillDeadline,
-                    nonce: orderId,
-                    signature: signature
-                });
+                from: signer,
+                to: address(this),
+                value: input[1],
+                validAfter: 0,
+                validBefore: fillDeadline,
+                nonce: orderId,
+                signature: signature
+            });
         }
     }
 
