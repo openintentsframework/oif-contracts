@@ -274,14 +274,15 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
         ISignatureTransfer.PermitBatchTransferFrom memory permitBatch = ISignatureTransfer.PermitBatchTransferFrom({
             permitted: permitted, nonce: order.nonce, deadline: order.fillDeadline
         });
-        _PERMIT2().permitWitnessTransferFrom(
-            permitBatch,
-            transferDetails,
-            signer,
-            Permit2WitnessType.Permit2WitnessHash(order),
-            Permit2WitnessType.PERMIT2_PERMIT2_TYPESTRING,
-            signature
-        );
+        _PERMIT2()
+            .permitWitnessTransferFrom(
+                permitBatch,
+                transferDetails,
+                signer,
+                Permit2WitnessType.Permit2WitnessHash(order),
+                Permit2WitnessType.PERMIT2_PERMIT2_TYPESTRING,
+                signature
+            );
     }
 
     /**
@@ -334,14 +335,14 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
             bytes calldata signature = BytesLib.getBytesOfArray(_signature_, i);
             // forgefmt: disable-next-line
             IERC3009(input[0].validatedCleanAddress()).receiveWithAuthorization({
-                from: signer,
-                to: address(this),
-                value: input[1],
-                validAfter: 0,
-                validBefore: fillDeadline,
-                nonce: orderId,
-                signature: signature
-            });
+                    from: signer,
+                    to: address(this),
+                    value: input[1],
+                    validAfter: 0,
+                    validBefore: fillDeadline,
+                    nonce: orderId,
+                    signature: signature
+                });
         }
     }
 
