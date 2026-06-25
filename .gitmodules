@@ -13,3 +13,6 @@
 [submodule "lib/broadcaster"]
 	path = lib/broadcaster
 	url = https://github.com/openintentsframework/broadcaster
+[submodule "lib/tron-contracts"]
+	path = lib/tron-contracts
+	url = https://github.com/OpenZeppelin/tron-contracts

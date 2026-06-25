@@ -7,3 +7,4 @@ openzeppelin/=lib/openzeppelin-contracts/contracts/
 @eth-optimism/=lib/@eth-optimism/
 broadcaster/=lib/broadcaster/src/contracts/
 broadcaster-test/=lib/broadcaster/test/
+tron-contracts/=lib/tron-contracts/contracts/
