@@ -12,6 +12,7 @@ import { MandateOutputEncodingLib } from "../../../src/libs/MandateOutputEncodin
 
 import { InputSettlerBase } from "../../../src/input/InputSettlerBase.sol";
 import { InputSettlerPurchase } from "../../../src/input/InputSettlerPurchase.sol";
+import { MockERC20Fallback } from "../../mocks/MockERC20Fallback.sol";
 import { InputSettlerEscrowTestBase } from "./InputSettlerEscrow.base.t.sol";
 
 contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
@@ -344,6 +345,70 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
 
         assertEq(token.balanceOf(address(swapper)), 0);
         assertEq(token.balanceOf(inputSettlerEscrow), amount);
+    }
+
+    function test_open_for_3009_single_fallback_reverts() external {
+        MockERC20Fallback fallbackToken = new MockERC20Fallback();
+        uint256 amount = 10 ** 18;
+
+        MandateOutput[] memory outputs = new MandateOutput[](0);
+
+        uint256[2][] memory inputs = new uint256[2][](1);
+        inputs[0] = [uint256(uint160(address(fallbackToken))), amount];
+
+        StandardOrder memory order = StandardOrder({
+            user: swapper,
+            nonce: 0,
+            originChainId: block.chainid,
+            expires: type(uint32).max,
+            fillDeadline: type(uint32).max,
+            inputOracle: address(0),
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        vm.prank(swapper);
+        vm.expectRevert(abi.encodeWithSelector(InputSettlerEscrow.InvalidBalanceDelta.selector, amount, 0));
+        IInputSettlerEscrow(inputSettlerEscrow)
+            .openFor(order, order.user, abi.encodePacked(bytes1(0x01), new bytes(65)));
+
+        bytes32 orderId = InputSettlerEscrow(inputSettlerEscrow).orderIdentifier(order);
+        assertEq(uint8(InputSettlerEscrow(inputSettlerEscrow).orderStatus(orderId)), 0);
+    }
+
+    function test_open_for_3009_two_fallback_as_array_reverts() external {
+        MockERC20Fallback fallbackToken = new MockERC20Fallback();
+        MockERC20Fallback anotherFallbackToken = new MockERC20Fallback();
+        uint256 amount = 10 ** 18;
+
+        MandateOutput[] memory outputs = new MandateOutput[](0);
+
+        uint256[2][] memory inputs = new uint256[2][](2);
+        inputs[0] = [uint256(uint160(address(fallbackToken))), amount];
+        inputs[1] = [uint256(uint160(address(anotherFallbackToken))), amount];
+
+        StandardOrder memory order = StandardOrder({
+            user: swapper,
+            nonce: 0,
+            originChainId: block.chainid,
+            expires: type(uint32).max,
+            fillDeadline: type(uint32).max,
+            inputOracle: address(0),
+            inputs: inputs,
+            outputs: outputs
+        });
+
+        bytes[] memory signatures = new bytes[](2);
+        signatures[0] = new bytes(65);
+        signatures[1] = new bytes(65);
+
+        vm.prank(swapper);
+        vm.expectRevert(abi.encodeWithSelector(InputSettlerEscrow.InvalidBalanceDelta.selector, amount, 0));
+        IInputSettlerEscrow(inputSettlerEscrow)
+            .openFor(order, order.user, abi.encodePacked(bytes1(0x01), abi.encode(signatures)));
+
+        bytes32 orderId = InputSettlerEscrow(inputSettlerEscrow).orderIdentifier(order);
+        assertEq(uint8(InputSettlerEscrow(inputSettlerEscrow).orderStatus(orderId)), 0);
     }
 
     /// forge-config: default.isolate = true
