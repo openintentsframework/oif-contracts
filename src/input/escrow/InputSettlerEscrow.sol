@@ -370,7 +370,11 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
      * @param balanceBefore This contract's balance of `token` before the collection.
      * @param amount The exact increase required.
      */
-    function _validateBalanceIncrease(address token, uint256 balanceBefore, uint256 amount) internal view {
+    function _validateBalanceIncrease(
+        address token,
+        uint256 balanceBefore,
+        uint256 amount
+    ) internal view {
         uint256 expectedBalance = balanceBefore + amount;
         uint256 actualBalance = IERC20(token).balanceOf(address(this));
         if (actualBalance != expectedBalance) revert InvalidBalanceDelta(expectedBalance, actualBalance);
