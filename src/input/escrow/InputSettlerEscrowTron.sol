@@ -4,6 +4,7 @@ pragma solidity ^0.8.26;
 // NOTE: SafeTRC20 is imported from OpenZeppelin's tron-contracts, pinned (as a git submodule) to the commit that
 // introduces `safeTransferUSDT`: OpenZeppelin/tron-contracts@ae352da. Once that change is merged, the submodule
 // should be repointed to tron-contracts `master`.
+import { ISignatureTransfer } from "permit2/src/interfaces/ISignatureTransfer.sol";
 import { ITRC20 } from "tron-contracts/token/TRC20/ITRC20.sol";
 import { SafeTRC20 } from "tron-contracts/token/TRC20/utils/SafeTRC20.sol";
 
@@ -45,5 +46,16 @@ contract InputSettlerEscrowTron is InputSettlerEscrow {
     ) internal virtual override {
         if (token == USDT) SafeTRC20.safeTransferUSDT(ITRC20(token), destination, amount);
         else SafeTRC20.safeTransfer(ITRC20(token), destination, amount);
+    }
+
+    /**
+     * @notice Returns the Permit2 contract used to collect escrowed inputs on TRON.
+     * @dev TRON's Permit2 is deployed at `TTJxU3P8rHycAyFY4kVtGNfmnMH4ezcuM9` (tagged `SUN: Permit2`), the
+     * deployment TRON protocols integrate against and that holds user approvals. TIP-26 derives CREATE2 addresses
+     * with the `0x41` hash prefix, giving TRON its own Permit2 address.
+     * @return The Permit2 (ISignatureTransfer) contract on TRON.
+     */
+    function _PERMIT2() internal pure override returns (ISignatureTransfer) {
+        return ISignatureTransfer(0xBE365314f2E77FD1257d60C346Bb32DbDa369403);
     }
 }
