@@ -19,5 +19,8 @@
   },
   "lib/the-compact": {
     "rev": "b9c3b544151106a23b8f9d800751166a6089cf00"
+  },
+  "lib/tron-contracts": {
+    "rev": "af2cd39421edc96f8ed9124c78fe52aaf50ec3ae"
   }
 }
