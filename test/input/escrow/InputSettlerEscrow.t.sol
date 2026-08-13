@@ -194,7 +194,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
 
         vm.prank(solver);
         IInputSettlerEscrow(inputSettlerEscrow).openFor(order, sponsor, abi.encodePacked(bytes1(0x00), signature));
-        _snapshotGas("escrowOpenForPermit2");
+        _snapshotGas("escrowOpenForPermit2DifferentSponsor");
 
         assertEq(token.balanceOf(address(sponsor)), 0);
         assertEq(token.balanceOf(inputSettlerEscrow), amount);
@@ -396,6 +396,11 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         assertEq(token.balanceOf(inputSettlerEscrow), amount1);
         assertEq(anotherToken.balanceOf(address(swapper)), 0);
         assertEq(anotherToken.balanceOf(inputSettlerEscrow), amount2);
+    }
+
+    /// forge-config: default.isolate = true
+    function test_refund_gas() external {
+        test_refund(10000, 10 ** 18, makeAddr("user"));
     }
 
     function test_refund(

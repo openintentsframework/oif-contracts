@@ -8,5 +8,7 @@
   "escrowOpenFor3009Two": "140764",
   "escrowOpenForMsgSender": "57167",
   "escrowOpenForPermit2": "94932",
+  "escrowOpenForPermit2DifferentSponsor": "93258",
+  "escrowRefund": "10391",
   "escrowRefundUsdt": "66035"
 }
