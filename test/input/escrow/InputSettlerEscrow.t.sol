@@ -57,7 +57,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
 
         vm.prank(user);
         IInputSettlerEscrow(inputSettlerEscrow).open(order);
-        vm.snapshotGasLastCall("inputSettler", "escrowOpen");
+        _snapshotGas("escrowOpen");
 
         assertEq(token.balanceOf(address(user)), 0);
         assertEq(token.balanceOf(inputSettlerEscrow), amount);
@@ -102,7 +102,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
 
         vm.prank(user);
         IInputSettlerEscrow(inputSettlerEscrow).openFor(order, user, hex"");
-        vm.snapshotGasLastCall("inputSettler", "escrowOpenForMsgSender");
+        _snapshotGas("escrowOpenForMsgSender");
 
         assertEq(token.balanceOf(address(user)), 0);
         assertEq(token.balanceOf(inputSettlerEscrow), amount);
@@ -147,7 +147,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
 
         vm.prank(swapper);
         IInputSettlerEscrow(inputSettlerEscrow).openFor(order, order.user, abi.encodePacked(bytes1(0x00), signature));
-        vm.snapshotGasLastCall("inputSettler", "escrowOpenForPermit2");
+        _snapshotGas("escrowOpenForPermit2");
 
         assertEq(token.balanceOf(address(swapper)), 0);
         assertEq(token.balanceOf(inputSettlerEscrow), amount);
@@ -194,7 +194,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
 
         vm.prank(solver);
         IInputSettlerEscrow(inputSettlerEscrow).openFor(order, sponsor, abi.encodePacked(bytes1(0x00), signature));
-        vm.snapshotGasLastCall("inputSettler", "escrowOpenForPermit2");
+        _snapshotGas("escrowOpenForPermit2");
 
         assertEq(token.balanceOf(address(sponsor)), 0);
         assertEq(token.balanceOf(inputSettlerEscrow), amount);
@@ -296,7 +296,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
 
         vm.prank(swapper);
         IInputSettlerEscrow(inputSettlerEscrow).openFor(order, order.user, abi.encodePacked(bytes1(0x01), signature));
-        vm.snapshotGasLastCall("inputSettler", "escrowOpenFor3009Single");
+        _snapshotGas("escrowOpenFor3009Single");
 
         assertEq(token.balanceOf(address(swapper)), 0);
         assertEq(token.balanceOf(inputSettlerEscrow), amount);
@@ -340,7 +340,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         vm.prank(swapper);
         IInputSettlerEscrow(inputSettlerEscrow)
             .openFor(order, order.user, abi.encodePacked(bytes1(0x01), abi.encode(signatures)));
-        vm.snapshotGasLastCall("inputSettler", "escrowOpenFor3009SingleArray");
+        _snapshotGas("escrowOpenFor3009SingleArray");
 
         assertEq(token.balanceOf(address(swapper)), 0);
         assertEq(token.balanceOf(inputSettlerEscrow), amount);
@@ -390,7 +390,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
         vm.prank(swapper);
         IInputSettlerEscrow(inputSettlerEscrow)
             .openFor(order, order.user, abi.encodePacked(bytes1(0x01), abi.encode(signatures)));
-        vm.snapshotGasLastCall("inputSettler", "escrowOpenFor3009Two");
+        _snapshotGas("escrowOpenFor3009Two");
 
         assertEq(token.balanceOf(address(swapper)), 0);
         assertEq(token.balanceOf(inputSettlerEscrow), amount1);
@@ -422,7 +422,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
 
         // Do the refund
         InputSettlerEscrow(inputSettlerEscrow).refund(order);
-        vm.snapshotGasLastCall("inputSettler", "escrowRefund");
+        _snapshotGas("escrowRefund");
 
         // State
         assertEq(token.balanceOf(address(order.user)), amountBeforeRefund + amount);
@@ -507,7 +507,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
 
         vm.prank(solver);
         IInputSettlerEscrow(inputSettlerEscrow).finalise(order, solveParams, solver.toIdentifier(), hex"");
-        vm.snapshotGasLastCall("inputSettler", "EscrowFinalise");
+        _snapshotGas("EscrowFinalise");
 
         assertEq(token.balanceOf(solver), amount);
     }
@@ -636,7 +636,7 @@ contract InputSettlerEscrowTest is InputSettlerEscrowTestBase {
 
         IInputSettlerEscrow(inputSettlerEscrow)
             .finaliseWithSignature(order, solveParams, destination.toIdentifier(), hex"", orderOwnerSignature);
-        vm.snapshotGasLastCall("inputSettler", "escrowFinaliseWithSignature");
+        _snapshotGas("escrowFinaliseWithSignature");
 
         assertEq(token.balanceOf(destination), amount);
     }

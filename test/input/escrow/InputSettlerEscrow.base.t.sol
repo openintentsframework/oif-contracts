@@ -68,7 +68,7 @@ contract InputSettlerEscrowTestBase is Permit2Test {
 
     function setUp() public virtual override {
         super.setUp();
-        inputSettlerEscrow = address(new InputSettlerEscrow());
+        inputSettlerEscrow = _deployInputSettler();
 
         DOMAIN_SEPARATOR = EIP712(inputSettlerEscrow).DOMAIN_SEPARATOR();
 
@@ -91,6 +91,19 @@ contract InputSettlerEscrowTestBase is Permit2Test {
         token.approve(address(permit2), type(uint256).max);
         vm.prank(solver);
         anotherToken.approve(address(outputSettlerCoin), type(uint256).max);
+    }
+
+    /// @dev Deploys the settler under test; variant suites override this to run the same tests against their settler.
+    function _deployInputSettler() internal virtual returns (address) {
+        return address(new InputSettlerEscrow());
+    }
+
+    /// @dev Records a gas snapshot under the suite's snapshot group; variant suites override this to record their
+    /// numbers in a separate snapshot file.
+    function _snapshotGas(
+        string memory name
+    ) internal virtual {
+        vm.snapshotGasLastCall("inputSettler", name);
     }
 
     function witnessHash(
