@@ -962,6 +962,45 @@ contract OutputSettlerSimpleTestFill is Test {
         assertEq(sender.balance, senderBalanceBeforeSecond);
     }
 
+    /// @notice A native fill must revert when `msg.value` does not cover the output, rather than paying it out of a
+    /// residual balance held by the settler.
+    /// @dev The settler is not meant to hold a balance, but it is not prevented from receiving one (for example via a
+    /// SELFDESTRUCT force-feed). Without the coverage check, a self-order with a native output and `msg.value = 0`
+    /// would let anyone sweep that balance.
+    function test_fill_native_token_insufficient_value_with_residual_balance(
+        bytes32 orderId,
+        bytes32 filler,
+        uint128 amount
+    ) public {
+        vm.assume(filler != bytes32(0) && amount > 0);
+
+        address sender = makeAddr("sender");
+        // Residual balance on the settler, as a SELFDESTRUCT force-feed could produce.
+        vm.deal(outputSettlerCoinAddress, amount);
+
+        bytes memory fillerData = abi.encodePacked(filler);
+
+        // A self-order: the caller is also the recipient of the native output.
+        MandateOutput memory outputStruct = MandateOutput({
+            oracle: bytes32(0),
+            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            chainId: block.chainid,
+            token: bytes32(0),
+            amount: amount,
+            recipient: bytes32(uint256(uint160(sender))),
+            callbackData: bytes(""),
+            context: bytes("")
+        });
+
+        vm.prank(sender);
+        vm.expectRevert(abi.encodeWithSignature("InsufficientNativeValue(uint256,uint256)", uint256(amount), 0));
+        outputSettlerCoin.fill{ value: 0 }(orderId, outputStruct, type(uint48).max, fillerData);
+
+        // The settler's balance was not swept.
+        assertEq(outputSettlerCoinAddress.balance, uint256(amount));
+        assertEq(sender.balance, 0);
+    }
+
     function test_fill_native_token_with_callback(
         bytes32 orderId,
         uint256 amount,

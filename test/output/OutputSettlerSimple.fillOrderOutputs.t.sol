@@ -416,6 +416,117 @@ contract OutputSettlerSimpleTestfillOrderOutputs is Test {
         outputSettlerCoin.fillOrderOutputs{ value: sentValue }(orderId, outputs, type(uint48).max, fillerData);
     }
 
+    /// @notice A batch whose native outputs sum to more than `msg.value` must revert, even when the settler holds a
+    /// residual balance large enough to cover the difference.
+    /// @dev This is the case that a per-output check inside `_fill` would miss: `msg.value` covers each individual
+    /// output, but not their sum. Only the cumulative check in `_refundNativeExcess` catches it.
+    function test_fill_batch_native_token_total_exceeds_value(
+        bytes32 orderId,
+        bytes32 filler,
+        uint128 amount1,
+        uint128 amount2
+    ) public {
+        vm.assume(filler != bytes32(0));
+        vm.assume(amount1 > 0 && amount2 > 0 && amount1 != amount2);
+
+        address sender = makeAddr("sender");
+        uint256 totalRequired = uint256(amount1) + uint256(amount2);
+        // Enough to cover either output on its own, but not both together.
+        uint256 sentValue = amount1 > amount2 ? uint256(amount1) : uint256(amount2);
+        vm.deal(sender, sentValue);
+        // Residual balance on the settler, as a SELFDESTRUCT force-feed could produce. Without it the second
+        // `Address.sendValue` would revert on an empty balance and mask the overdraw.
+        vm.deal(outputSettlerCoinAddress, totalRequired);
+
+        MandateOutput[] memory outputs = new MandateOutput[](2);
+
+        outputs[0] = MandateOutput({
+            oracle: bytes32(0),
+            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            chainId: block.chainid,
+            token: bytes32(0), // native token
+            amount: amount1,
+            recipient: bytes32(uint256(uint160(swapper))),
+            callbackData: bytes(""),
+            context: bytes("")
+        });
+
+        outputs[1] = MandateOutput({
+            oracle: bytes32(0),
+            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            chainId: block.chainid,
+            token: bytes32(0), // native token
+            amount: amount2,
+            recipient: bytes32(uint256(uint160(swapper))),
+            callbackData: bytes(""),
+            context: bytes("")
+        });
+
+        bytes memory fillerData = abi.encodePacked(filler);
+
+        vm.prank(sender);
+        vm.expectRevert(abi.encodeWithSignature("InsufficientNativeValue(uint256,uint256)", totalRequired, sentValue));
+        outputSettlerCoin.fillOrderOutputs{ value: sentValue }(orderId, outputs, type(uint48).max, fillerData);
+
+        // The revert unwound both sends, so the residual balance is intact.
+        assertEq(outputSettlerCoinAddress.balance, totalRequired);
+    }
+
+    /// @notice A correctly funded batch still fills and still refunds the excess, and leaves any residual balance
+    /// held by the settler untouched.
+    function test_fill_batch_native_token_excess_refund_leaves_residual(
+        bytes32 orderId,
+        bytes32 filler,
+        uint128 amount1,
+        uint128 amount2,
+        uint128 excess,
+        uint128 residual
+    ) public {
+        vm.assume(filler != bytes32(0));
+        vm.assume(amount1 > 0 && amount2 > 0 && amount1 != amount2);
+
+        address sender = makeAddr("sender");
+        uint256 totalRequired = uint256(amount1) + uint256(amount2);
+        uint256 totalSent = totalRequired + uint256(excess);
+        vm.deal(sender, totalSent);
+        vm.deal(outputSettlerCoinAddress, residual);
+
+        MandateOutput[] memory outputs = new MandateOutput[](2);
+
+        outputs[0] = MandateOutput({
+            oracle: bytes32(0),
+            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            chainId: block.chainid,
+            token: bytes32(0), // native token
+            amount: amount1,
+            recipient: bytes32(uint256(uint160(swapper))),
+            callbackData: bytes(""),
+            context: bytes("")
+        });
+
+        outputs[1] = MandateOutput({
+            oracle: bytes32(0),
+            settler: bytes32(uint256(uint160(outputSettlerCoinAddress))),
+            chainId: block.chainid,
+            token: bytes32(0), // native token
+            amount: amount2,
+            recipient: bytes32(uint256(uint160(swapper))),
+            callbackData: bytes(""),
+            context: bytes("")
+        });
+
+        bytes memory fillerData = abi.encodePacked(filler);
+
+        uint256 swapperBalanceBefore = swapper.balance;
+
+        vm.prank(sender);
+        outputSettlerCoin.fillOrderOutputs{ value: totalSent }(orderId, outputs, type(uint48).max, fillerData);
+
+        assertEq(swapper.balance, swapperBalanceBefore + totalRequired);
+        assertEq(sender.balance, uint256(excess)); // Excess refunded
+        assertEq(outputSettlerCoinAddress.balance, uint256(residual)); // Residual untouched
+    }
+
     /// @notice Recipient of the first (native) output reenters `fill` while the batch fills a subsequent ERC20 output.
     function test_fill_batch_native_then_erc20_excess_refund_with_reentering_recipient() public {
         bytes32 orderId = keccak256(bytes("orderId"));

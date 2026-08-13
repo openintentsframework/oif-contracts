@@ -83,6 +83,8 @@ abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
     error InvalidAttestation(bytes32 storedFillRecordHash, bytes32 givenFillRecordHash);
     /// @dev Payload is too small to be a valid fill description
     error PayloadTooSmall();
+    /// @dev `msg.value` does not cover the native output(s) paid out by the fill
+    error InsufficientNativeValue(uint256 required, uint256 provided);
 
     /**
      * @notice Sets outputs as filled by their solver identifier, such that outputs won't be filled twice.
@@ -273,12 +275,16 @@ abstract contract OutputSettlerBase is IAttester, BaseInputOracle {
     }
 
     /**
-     * @notice Refunds the unused native value to msg.sender.
+     * @notice Checks that `msg.value` covers the native paid out, and refunds the unused remainder to msg.sender.
+     * @dev The coverage check lives here rather than in `_fill` because `fillOrderOutputs` accumulates `nativeSent`
+     * across every output and settles once. A per-output check would pass on each individual output while the total
+     * overdrew the contract's balance.
      * @param nativeSent Amount of native already paid out by `_fill`.
      */
     function _refundNativeExcess(
         uint256 nativeSent
     ) internal {
+        if (msg.value < nativeSent) revert InsufficientNativeValue(nativeSent, msg.value);
         if (msg.value > nativeSent) Address.sendValue(payable(msg.sender), msg.value - nativeSent);
     }
 
