@@ -345,22 +345,40 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
             if (numInputs != numSignatures) revert SignatureAndInputsNotEqual();
         }
         for (uint256 i; i < numInputs; ++i) {
-            uint256[2] calldata input = inputs[i];
-            bytes calldata signature = BytesLib.getBytesOfArray(_signature_, i);
-            address token = input[0].validatedCleanAddress();
-            uint256 balanceBefore = IERC20(token).balanceOf(address(this));
-            // forgefmt: disable-next-line
-            IERC3009(token).receiveWithAuthorization({
-                from: signer,
-                to: address(this),
-                value: input[1],
-                validAfter: 0,
-                validBefore: fillDeadline,
-                nonce: orderId,
-                signature: signature
-            });
-            _validateBalanceIncrease(token, balanceBefore, input[1]);
+            _receiveWithAuthorization(
+                inputs[i], fillDeadline, signer, BytesLib.getBytesOfArray(_signature_, i), orderId
+            );
         }
+    }
+
+    /**
+     * @notice Collects a single ERC-3009 input and validates the exact balance increase.
+     * @param input Order input to be collected.
+     * @param fillDeadline Deadline for calling the open function.
+     * @param signer Provider of the ERC-3009 funds and signer of the intent.
+     * @param signature ERC-3009 signature authorizing the collection of `input`.
+     * @param orderId The order identifier, used as the authorization nonce.
+     */
+    function _receiveWithAuthorization(
+        uint256[2] calldata input,
+        uint32 fillDeadline,
+        address signer,
+        bytes calldata signature,
+        bytes32 orderId
+    ) internal {
+        address token = input[0].validatedCleanAddress();
+        uint256 balanceBefore = IERC20(token).balanceOf(address(this));
+        // forgefmt: disable-next-line
+        IERC3009(token).receiveWithAuthorization({
+            from: signer,
+            to: address(this),
+            value: input[1],
+            validAfter: 0,
+            validBefore: fillDeadline,
+            nonce: orderId,
+            signature: signature
+        });
+        _validateBalanceIncrease(token, balanceBefore, input[1]);
     }
 
     /**
