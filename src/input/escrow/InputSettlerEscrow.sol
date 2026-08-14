@@ -62,6 +62,10 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
      * Signature type not supported.
      */
     error SignatureNotSupported(bytes1);
+    /**
+     * @dev An ERC-3009 collection did not increase this contract's token balance by exactly the input amount.
+     */
+    error InvalidBalanceDelta(uint256 expectedBalance, uint256 actualBalance);
 
     /**
      * @notice Emitted when an order is opened.
@@ -289,6 +293,11 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
      * @notice Helper function for using ERC-3009 to collect assets represented by a StandardOrder.
      * @dev For the `receiveWithAuthorization` call, the nonce is set as the orderId to select the order associated with
      * the authorization.
+     *
+     * Every collection is strictly balance-checked: this contract's token balance must increase by exactly the input
+     * amount or the call reverts with {InvalidBalanceDelta}. This is required on the ERC-3009 path in particular
+     * because the single-input branch performs a raw `call` whose success would otherwise be trusted without any
+     * evidence that tokens moved.
      * @param inputs Order inputs to be collected.
      * @param fillDeadline Deadline for calling the open function.
      * @param signer Provider of the ERC-3009 funds and signer of the intent.
@@ -322,8 +331,13 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
             // })
             address token = input[0].validatedCleanAddress();
             IsContractLib.validateContainsCode(token); // Ensure called contract has code.
+            uint256 balanceBefore = IERC20(token).balanceOf(address(this));
             (bool success,) = token.call(callData);
-            if (success) return;
+            // If the call succeeded, require the exact balance increase.
+            if (success) {
+                _validateBalanceIncrease(token, balanceBefore, input[1]);
+                return;
+            }
             // Otherwise it could be because of a lot of reasons. One being the signature is abi.encoded as bytes[].
         }
         {
@@ -331,19 +345,57 @@ contract InputSettlerEscrow is InputSettlerPurchase, IInputSettlerEscrow {
             if (numInputs != numSignatures) revert SignatureAndInputsNotEqual();
         }
         for (uint256 i; i < numInputs; ++i) {
-            uint256[2] calldata input = inputs[i];
-            bytes calldata signature = BytesLib.getBytesOfArray(_signature_, i);
-            // forgefmt: disable-next-line
-            IERC3009(input[0].validatedCleanAddress()).receiveWithAuthorization({
-                from: signer,
-                to: address(this),
-                value: input[1],
-                validAfter: 0,
-                validBefore: fillDeadline,
-                nonce: orderId,
-                signature: signature
-            });
+            _receiveWithAuthorization(
+                inputs[i], fillDeadline, signer, BytesLib.getBytesOfArray(_signature_, i), orderId
+            );
         }
+    }
+
+    /**
+     * @notice Collects a single ERC-3009 input and validates the exact balance increase.
+     * @param input Order input to be collected.
+     * @param fillDeadline Deadline for calling the open function.
+     * @param signer Provider of the ERC-3009 funds and signer of the intent.
+     * @param signature ERC-3009 signature authorizing the collection of `input`.
+     * @param orderId The order identifier, used as the authorization nonce.
+     */
+    function _receiveWithAuthorization(
+        uint256[2] calldata input,
+        uint32 fillDeadline,
+        address signer,
+        bytes calldata signature,
+        bytes32 orderId
+    ) internal {
+        address token = input[0].validatedCleanAddress();
+        uint256 balanceBefore = IERC20(token).balanceOf(address(this));
+        // forgefmt: disable-next-line
+        IERC3009(token).receiveWithAuthorization({
+            from: signer,
+            to: address(this),
+            value: input[1],
+            validAfter: 0,
+            validBefore: fillDeadline,
+            nonce: orderId,
+            signature: signature
+        });
+        _validateBalanceIncrease(token, balanceBefore, input[1]);
+    }
+
+    /**
+     * @notice Validates that this contract's balance of `token` increased by exactly `amount` over `balanceBefore`.
+     * @dev The expected balance is computed with checked arithmetic because `amount` is attacker-controlled.
+     * @param token The collected token.
+     * @param balanceBefore This contract's balance of `token` before the collection.
+     * @param amount The exact increase required.
+     */
+    function _validateBalanceIncrease(
+        address token,
+        uint256 balanceBefore,
+        uint256 amount
+    ) internal view {
+        uint256 expectedBalance = balanceBefore + amount;
+        uint256 actualBalance = IERC20(token).balanceOf(address(this));
+        if (actualBalance != expectedBalance) revert InvalidBalanceDelta(expectedBalance, actualBalance);
     }
 
     // --- Refund --- //
