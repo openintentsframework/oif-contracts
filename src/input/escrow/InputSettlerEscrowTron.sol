@@ -25,6 +25,11 @@ import { InputSettlerEscrow } from "./InputSettlerEscrow.sol";
  *
  * The USDT address is supplied at construction so the same code can be deployed against different USDT deployments
  * (and so a non-USDT chain can simply pass `address(0)`, disabling the special path).
+ *
+ * Addresses carried in OIF identifiers must be the 20-byte TVM account. The 21-byte `0x41`-prefixed form that TRON
+ * wallets and explorers display is an off-chain encoding only: it leaves `0x41` above the low 20 bytes, so
+ * `LibAddress.validatedCleanAddress` rejects such an identifier with `HasDirtyBits`. Strip the prefix before
+ * encoding an address into an identifier.
  */
 contract InputSettlerEscrowTron is InputSettlerEscrow {
     /// @notice Address of the USDT token whose `transfer` returns `false` on success; `address(0)` to disable.
