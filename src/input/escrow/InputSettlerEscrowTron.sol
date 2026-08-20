@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-// NOTE: SafeTRC20 is imported from OpenZeppelin's tron-contracts, pinned (as a git submodule) to the commit that
-// introduces `safeTransferUSDT`: OpenZeppelin/tron-contracts@ae352da. Once that change is merged, the submodule
-// should be repointed to tron-contracts `master`.
 import { ISignatureTransfer } from "permit2/src/interfaces/ISignatureTransfer.sol";
 import { ITRC20 } from "tron-contracts/token/TRC20/ITRC20.sol";
 import { SafeTRC20 } from "tron-contracts/token/TRC20/utils/SafeTRC20.sol";
@@ -17,8 +14,8 @@ import { InputSettlerEscrow } from "./InputSettlerEscrow.sol";
  * to pay out escrowed inputs, reads that `false` as a failure and reverts — locking USDT in the escrow.
  *
  * This variant overrides the {InputSettlerEscrow-_transfer} payout hook to settle inputs with {SafeTRC20}, routing
- * the configured {USDT} token through {SafeTRC20-safeTransferUSDT} (which ignores the boolean and verifies the
- * transfer by the recipient's balance delta) and every other token through the regular {SafeTRC20-safeTransfer}.
+ * the configured {USDT} token through {SafeTRC20-safeTransferChecked} (which ignores the boolean and verifies the
+ * transfer by the sender's balance delta) and every other token through the regular {SafeTRC20-safeTransfer}.
  *
  * Only the outbound payout needs this treatment. The inbound `transferFrom` performed on `open` is unaffected,
  * because USDT's `transferFrom` correctly returns `true`.
@@ -37,14 +34,15 @@ contract InputSettlerEscrowTron is InputSettlerEscrow {
     }
 
     /**
-     * @dev Pays out an escrowed input with {SafeTRC20}, sending the configured {USDT} via {SafeTRC20-safeTransferUSDT}.
+     * @dev Pays out an escrowed input with {SafeTRC20}, sending the configured {USDT} via
+     * {SafeTRC20-safeTransferChecked}.
      */
     function _transfer(
         address token,
         address destination,
         uint256 amount
     ) internal virtual override {
-        if (token == USDT) SafeTRC20.safeTransferUSDT(ITRC20(token), destination, amount);
+        if (token == USDT) SafeTRC20.safeTransferChecked(ITRC20(token), destination, amount);
         else SafeTRC20.safeTransfer(ITRC20(token), destination, amount);
     }
 
